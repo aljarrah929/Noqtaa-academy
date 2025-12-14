@@ -10,25 +10,33 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { GraduationCap, Moon, Sun, LogOut, User, LayoutDashboard, Menu, X } from "lucide-react";
-import { getRoleDisplayName, isExternalDevWindow } from "@/lib/authUtils";
+import { GraduationCap, Moon, Sun, LogOut, LayoutDashboard, Menu, X } from "lucide-react";
+import { getRoleDisplayName } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { BRAND_NAME } from "@/lib/branding";
-import { ExternalAuthHelper } from "@/components/auth/ExternalAuthHelper";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export function Header() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { isDark, toggleDark, collegeTheme } = useTheme();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showAuthHelper, setShowAuthHelper] = useState(false);
 
-  const handleLoginClick = (e: React.MouseEvent) => {
-    if (isExternalDevWindow()) {
-      e.preventDefault();
-      setShowAuthHelper(true);
-    }
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/auth/logout");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setLocation("/");
+    },
+  });
+
+  const handleLogout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    logoutMutation.mutate();
   };
 
   const navLinks = [
@@ -160,26 +168,25 @@ export function Header() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <a href="/api/logout" className="flex items-center gap-2 cursor-pointer text-destructive" data-testid="button-logout">
-                      <LogOut className="w-4 h-4" />
-                      Log out
-                    </a>
+                  <DropdownMenuItem 
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 cursor-pointer text-destructive" 
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button 
-                asChild 
-                className={isCollegeThemed ? 'bg-white text-gray-900 hover:bg-white/90' : ''} 
-                data-testid="button-login"
-              >
-                <a href="/api/login" onClick={handleLoginClick}>Log in</a>
-              </Button>
-            )}
-
-            {showAuthHelper && (
-              <ExternalAuthHelper onDismiss={() => setShowAuthHelper(false)} />
+              <Link href="/login">
+                <Button 
+                  className={isCollegeThemed ? 'bg-white text-gray-900 hover:bg-white/90' : ''} 
+                  data-testid="button-login"
+                >
+                  Log in
+                </Button>
+              </Link>
             )}
 
             <Button

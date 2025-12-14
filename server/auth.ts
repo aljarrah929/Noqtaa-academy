@@ -176,16 +176,24 @@ export const requireRole = (...roles: string[]): RequestHandler => {
 export async function seedSuperAdmin() {
   const email = "cpeacademy5@gmail.com";
   const existingUser = await storage.getUserByEmail(email);
+  const passwordHash = await bcrypt.hash("admin123", 10);
   
   if (existingUser) {
+    let updated = false;
     if (existingUser.role !== "SUPER_ADMIN") {
       await storage.updateUserRole(existingUser.id, "SUPER_ADMIN");
-      console.log("Updated existing user to SUPER_ADMIN:", email);
+      updated = true;
+    }
+    if (!existingUser.passwordHash) {
+      await storage.updateUserPassword(existingUser.id, passwordHash);
+      updated = true;
+    }
+    if (updated) {
+      console.log("Updated existing user to SUPER_ADMIN with password:", email);
     }
     return;
   }
 
-  const passwordHash = await bcrypt.hash("admin123", 10);
   await storage.createUserWithPassword({
     email,
     passwordHash,
