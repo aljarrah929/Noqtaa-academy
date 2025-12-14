@@ -24,9 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { GraduationCap, Loader2 } from "lucide-react";
 import { BRAND_NAME } from "@/lib/branding";
-import cpeAcademyLogo from "@assets/Untitled_1765744945101.png";
 
 export default function Signup() {
   const [, setLocation] = useLocation();
@@ -80,12 +79,9 @@ export default function Signup() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <img 
-                src={cpeAcademyLogo} 
-                alt="CPE Academy" 
-                className="h-12 w-auto"
-                data-testid="img-signup-logo"
-              />
+              <div className="p-3 rounded-md bg-primary/10">
+                <GraduationCap className="w-8 h-8 text-primary" />
+              </div>
             </div>
             <CardTitle className="text-2xl">Create an account</CardTitle>
             <CardDescription>

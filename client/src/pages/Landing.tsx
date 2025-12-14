@@ -8,10 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { CourseCard, CourseCardSkeleton } from "@/components/courses/CourseCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Users, Award, ArrowRight, Building2, Trophy, Star, Target, GraduationCap, type LucideIcon } from "lucide-react";
+import { GraduationCap, BookOpen, Users, Award, ArrowRight, Building2, Trophy, Star, Target, type LucideIcon } from "lucide-react";
 import type { CourseWithRelations, College, FeaturedProfile, HomeStats } from "@shared/schema";
 import { BRAND_NAME, BRAND_COPYRIGHT } from "@/lib/branding";
-import cpeAcademyLogo from "@assets/Untitled_1765744945101.png";
 
 const heroImages = [
   { src: "/images/hero-pharmacy.png", alt: "Pharmacy" },
@@ -353,12 +352,12 @@ export default function Landing() {
       <footer className="border-t border-border py-12">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <img 
-              src={cpeAcademyLogo} 
-              alt="CPE Academy" 
-              className="h-10 w-auto"
-              data-testid="img-footer-logo"
-            />
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-md bg-primary/10">
+                <GraduationCap className="w-5 h-5 text-primary" />
+              </div>
+              <span className="font-semibold">{BRAND_NAME}</span>
+            </div>
             <p className="text-sm text-muted-foreground">
               {BRAND_COPYRIGHT}
             </p>
