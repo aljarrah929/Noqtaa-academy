@@ -66,10 +66,21 @@ export default function ResetPassword() {
       });
     },
     onError: (error: Error) => {
-      setError(error.message || "Failed to reset password");
+      let errorMessage = "Failed to reset password";
+      try {
+        const errorText = error.message || "";
+        const jsonStart = errorText.indexOf("{");
+        if (jsonStart !== -1) {
+          const json = JSON.parse(errorText.substring(jsonStart));
+          errorMessage = json.message || errorMessage;
+        }
+      } catch {
+        errorMessage = error.message || errorMessage;
+      }
+      setError(errorMessage);
       toast({
         title: "Reset failed",
-        description: error.message || "Failed to reset password",
+        description: errorMessage,
         variant: "destructive",
       });
     },
