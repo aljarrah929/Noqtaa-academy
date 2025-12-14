@@ -314,7 +314,12 @@ export class DatabaseStorage implements IStorage {
       ? await db.select({ courseId: lessons.courseId, count: count() }).from(lessons).where(sql`${lessons.courseId} IN ${courseIds}`).groupBy(lessons.courseId)
       : [];
 
+    const enrollmentCounts = courseIds.length > 0
+      ? await db.select({ courseId: enrollments.courseId, count: count() }).from(enrollments).where(sql`${enrollments.courseId} IN ${courseIds}`).groupBy(enrollments.courseId)
+      : [];
+
     const lessonMap = new Map(lessonCounts.map(l => [l.courseId, Number(l.count)]));
+    const enrollmentMap = new Map(enrollmentCounts.map(e => [e.courseId, Number(e.count)]));
 
     return results.map(r => ({
       ...r.enrollments,
@@ -324,7 +329,7 @@ export class DatabaseStorage implements IStorage {
         teacher: r.users || undefined,
         _count: {
           lessons: lessonMap.get(r.courses.id) || 0,
-          enrollments: 0,
+          enrollments: enrollmentMap.get(r.courses.id) || 0,
         },
       },
     }));
