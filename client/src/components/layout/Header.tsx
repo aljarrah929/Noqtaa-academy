@@ -17,6 +17,25 @@ import { useState } from "react";
 import { BRAND_NAME } from "@/lib/branding";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import cpeIconUrl from "@assets/Untitled_(1)_1765745611438.png";
+
+function BrandIcon({ className, isCollegeThemed }: { className?: string; isCollegeThemed?: boolean }) {
+  const [hasError, setHasError] = useState(false);
+  
+  if (hasError) {
+    return <GraduationCap className={`w-6 h-6 ${isCollegeThemed ? 'text-white' : 'text-primary'}`} />;
+  }
+  
+  return (
+    <img 
+      src={cpeIconUrl} 
+      alt="CPE" 
+      className={className}
+      onError={() => setHasError(true)}
+      data-testid="img-brand-icon"
+    />
+  );
+}
 
 export function Header() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -81,13 +100,8 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16 gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className={`p-1.5 rounded-md ${isCollegeThemed ? 'bg-white/20' : 'bg-primary/10'}`}>
-              <img 
-                src="/brand/cpe-icon.png" 
-                alt="CPE" 
-                className="h-7 w-auto object-contain"
-                data-testid="img-brand-icon"
-              />
+            <div className={`p-1.5 rounded-md flex items-center justify-center ${isCollegeThemed ? 'bg-white/20' : 'bg-primary/10'}`} style={{ width: '36px', height: '36px' }}>
+              <BrandIcon className="h-7 w-auto object-contain" isCollegeThemed={isCollegeThemed} />
             </div>
             <span className={`font-semibold text-lg hidden sm:block ${isCollegeThemed ? 'text-white' : 'text-foreground'}`} data-testid="text-logo">
               {BRAND_NAME}

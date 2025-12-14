@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { getRoleDisplayName, canAccessAdminDashboard, canAccessTeacherDashboard, canManageColleges, canManageRoles } from "@/lib/authUtils";
 import { BRAND_NAME } from "@/lib/branding";
+import cpeIconUrl from "@assets/Untitled_(1)_1765745611438.png";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -144,9 +145,9 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         <Sidebar>
           <SidebarHeader className="border-b border-sidebar-border p-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="p-1.5 rounded-md bg-primary/10">
+              <div className="p-1.5 rounded-md bg-primary/10 flex items-center justify-center" style={{ width: '32px', height: '32px' }}>
                 <img 
-                  src="/brand/cpe-icon.png" 
+                  src={cpeIconUrl} 
                   alt="CPE" 
                   className="h-6 w-auto object-contain"
                   data-testid="img-sidebar-brand-icon"
