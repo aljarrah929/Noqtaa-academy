@@ -144,8 +144,13 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         <Sidebar>
           <SidebarHeader className="border-b border-sidebar-border p-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="p-2 rounded-md bg-primary/10">
-                <GraduationCap className="w-5 h-5 text-primary" />
+              <div className="p-1.5 rounded-md bg-primary/10">
+                <img 
+                  src="/brand/cpe-icon.png" 
+                  alt="CPE" 
+                  className="h-6 w-auto object-contain"
+                  data-testid="img-sidebar-brand-icon"
+                />
               </div>
               <span className="font-semibold">{BRAND_NAME}</span>
             </Link>

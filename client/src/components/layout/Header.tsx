@@ -81,8 +81,13 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16 gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className={`p-2 rounded-md ${isCollegeThemed ? 'bg-white/20' : 'bg-primary/10'}`}>
-              <GraduationCap className={`w-6 h-6 ${isCollegeThemed ? 'text-white' : 'text-primary'}`} />
+            <div className={`p-1.5 rounded-md ${isCollegeThemed ? 'bg-white/20' : 'bg-primary/10'}`}>
+              <img 
+                src="/brand/cpe-icon.png" 
+                alt="CPE" 
+                className="h-7 w-auto object-contain"
+                data-testid="img-brand-icon"
+              />
             </div>
             <span className={`font-semibold text-lg hidden sm:block ${isCollegeThemed ? 'text-white' : 'text-foreground'}`} data-testid="text-logo">
               {BRAND_NAME}
