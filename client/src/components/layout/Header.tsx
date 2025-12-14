@@ -10,13 +10,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { GraduationCap, Moon, Sun, LogOut, LayoutDashboard, Menu, X } from "lucide-react";
+import { Moon, Sun, LogOut, LayoutDashboard, Menu, X } from "lucide-react";
 import { getRoleDisplayName } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
-import { BRAND_NAME } from "@/lib/branding";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import cpeAcademyLogo from "@assets/Untitled_1765744945101.png";
 
 export function Header() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -81,12 +81,12 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16 gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className={`p-2 rounded-md ${isCollegeThemed ? 'bg-white/20' : 'bg-primary/10'}`}>
-              <GraduationCap className={`w-6 h-6 ${isCollegeThemed ? 'text-white' : 'text-primary'}`} />
-            </div>
-            <span className={`font-semibold text-lg hidden sm:block ${isCollegeThemed ? 'text-white' : 'text-foreground'}`} data-testid="text-logo">
-              {BRAND_NAME}
-            </span>
+            <img 
+              src={cpeAcademyLogo} 
+              alt="CPE Academy" 
+              className="h-10 w-auto"
+              data-testid="img-logo"
+            />
             {collegeTheme && user?.role === "STUDENT" && (
               <Badge variant="secondary" className="ml-2 hidden md:flex bg-white/20 text-white border-white/30">
                 {collegeTheme.name}

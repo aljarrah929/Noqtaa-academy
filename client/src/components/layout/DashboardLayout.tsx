@@ -23,7 +23,6 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import {
-  GraduationCap,
   BookOpen,
   Users,
   Settings,
@@ -39,7 +38,7 @@ import {
   Star,
 } from "lucide-react";
 import { getRoleDisplayName, canAccessAdminDashboard, canAccessTeacherDashboard, canManageColleges, canManageRoles } from "@/lib/authUtils";
-import { BRAND_NAME } from "@/lib/branding";
+import cpeAcademyLogo from "@assets/Untitled_1765744945101.png";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -144,10 +143,12 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         <Sidebar>
           <SidebarHeader className="border-b border-sidebar-border p-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="p-2 rounded-md bg-primary/10">
-                <GraduationCap className="w-5 h-5 text-primary" />
-              </div>
-              <span className="font-semibold">{BRAND_NAME}</span>
+              <img 
+                src={cpeAcademyLogo} 
+                alt="CPE Academy" 
+                className="h-8 w-auto"
+                data-testid="img-sidebar-logo"
+              />
             </Link>
             {collegeTheme && user?.role === "STUDENT" && (
               <Badge variant="outline" className="mt-2 w-fit">

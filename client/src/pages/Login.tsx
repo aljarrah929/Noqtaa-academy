@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,8 +17,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { GraduationCap, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { BRAND_NAME } from "@/lib/branding";
+import cpeAcademyLogo from "@assets/Untitled_1765744945101.png";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -77,9 +77,12 @@ export default function Login() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="p-3 rounded-md bg-primary/10">
-                <GraduationCap className="w-8 h-8 text-primary" />
-              </div>
+              <img 
+                src={cpeAcademyLogo} 
+                alt="CPE Academy" 
+                className="h-12 w-auto"
+                data-testid="img-login-logo"
+              />
             </div>
             <CardTitle className="text-2xl">Welcome back</CardTitle>
             <CardDescription>
