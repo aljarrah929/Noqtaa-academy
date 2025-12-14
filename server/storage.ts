@@ -5,6 +5,7 @@ import {
   lessons,
   enrollments,
   courseApprovalLogs,
+  featuredProfiles,
   type User,
   type UpsertUser,
   type College,
@@ -19,6 +20,8 @@ import {
   type InsertCourseApprovalLog,
   type CourseWithRelations,
   type UserWithCollege,
+  type FeaturedProfile,
+  type InsertFeaturedProfile,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
@@ -58,6 +61,11 @@ export interface IStorage {
   getTeacherStats(teacherId: string): Promise<{ totalCourses: number; totalStudents: number; publishedCourses: number }>;
   getAdminStats(collegeId?: number): Promise<{ totalCourses: number; totalStudents: number; totalTeachers: number; pendingApprovals: number }>;
   getTeachersWithStats(collegeId?: number): Promise<(UserWithCollege & { _count: { courses: number; students: number } })[]>;
+  getFeaturedProfiles(activeOnly?: boolean): Promise<FeaturedProfile[]>;
+  getFeaturedProfileById(id: number): Promise<FeaturedProfile | undefined>;
+  createFeaturedProfile(profile: InsertFeaturedProfile): Promise<FeaturedProfile>;
+  updateFeaturedProfile(id: number, profile: Partial<InsertFeaturedProfile>): Promise<FeaturedProfile | undefined>;
+  deleteFeaturedProfile(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -457,6 +465,37 @@ export class DatabaseStorage implements IStorage {
         students: teacherStudentCounts.get(t.users.id) || 0,
       },
     }));
+  }
+
+  async getFeaturedProfiles(activeOnly: boolean = false): Promise<FeaturedProfile[]> {
+    if (activeOnly) {
+      return db.select().from(featuredProfiles)
+        .where(eq(featuredProfiles.isActive, true))
+        .orderBy(featuredProfiles.sortOrder);
+    }
+    return db.select().from(featuredProfiles).orderBy(featuredProfiles.sortOrder);
+  }
+
+  async getFeaturedProfileById(id: number): Promise<FeaturedProfile | undefined> {
+    const [profile] = await db.select().from(featuredProfiles).where(eq(featuredProfiles.id, id));
+    return profile;
+  }
+
+  async createFeaturedProfile(profile: InsertFeaturedProfile): Promise<FeaturedProfile> {
+    const [created] = await db.insert(featuredProfiles).values(profile).returning();
+    return created;
+  }
+
+  async updateFeaturedProfile(id: number, profile: Partial<InsertFeaturedProfile>): Promise<FeaturedProfile | undefined> {
+    const [updated] = await db.update(featuredProfiles)
+      .set({ ...profile, updatedAt: new Date() })
+      .where(eq(featuredProfiles.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteFeaturedProfile(id: number): Promise<void> {
+    await db.delete(featuredProfiles).where(eq(featuredProfiles.id, id));
   }
 }
 

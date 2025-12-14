@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema } from "@shared/schema";
+import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -666,6 +666,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching students:", error);
       res.status(500).json({ message: "Failed to fetch students" });
+    }
+  });
+
+  // Featured Profiles - Public endpoint (active only)
+  app.get("/api/featured-profiles", async (_req, res) => {
+    try {
+      const profiles = await storage.getFeaturedProfiles(true);
+      res.json(profiles);
+    } catch (error) {
+      console.error("Error fetching featured profiles:", error);
+      res.status(500).json({ message: "Failed to fetch featured profiles" });
+    }
+  });
+
+  // Featured Profiles - Admin endpoints (SUPER_ADMIN only)
+  app.get("/api/admin/featured-profiles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "Only super admins can manage featured profiles" });
+      }
+      
+      const profiles = await storage.getFeaturedProfiles(false);
+      res.json(profiles);
+    } catch (error) {
+      console.error("Error fetching featured profiles:", error);
+      res.status(500).json({ message: "Failed to fetch featured profiles" });
+    }
+  });
+
+  app.post("/api/admin/featured-profiles", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "Only super admins can create featured profiles" });
+      }
+      
+      const data = insertFeaturedProfileSchema.parse({
+        ...req.body,
+        createdByUserId: userId,
+        updatedByUserId: userId,
+      });
+      const profile = await storage.createFeaturedProfile(data);
+      res.status(201).json(profile);
+    } catch (error) {
+      console.error("Error creating featured profile:", error);
+      res.status(500).json({ message: "Failed to create featured profile" });
+    }
+  });
+
+  app.patch("/api/admin/featured-profiles/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "Only super admins can update featured profiles" });
+      }
+      
+      const id = parseInt(req.params.id);
+      const data = insertFeaturedProfileSchema.partial().parse({
+        ...req.body,
+        updatedByUserId: userId,
+      });
+      const profile = await storage.updateFeaturedProfile(id, data);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Featured profile not found" });
+      }
+      
+      res.json(profile);
+    } catch (error) {
+      console.error("Error updating featured profile:", error);
+      res.status(500).json({ message: "Failed to update featured profile" });
+    }
+  });
+
+  app.delete("/api/admin/featured-profiles/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "Only super admins can delete featured profiles" });
+      }
+      
+      const id = parseInt(req.params.id);
+      await storage.deleteFeaturedProfile(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting featured profile:", error);
+      res.status(500).json({ message: "Failed to delete featured profile" });
     }
   });
 
