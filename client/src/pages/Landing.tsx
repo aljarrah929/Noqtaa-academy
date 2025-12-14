@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
@@ -11,6 +12,12 @@ import { GraduationCap, BookOpen, Users, Award, ArrowRight, Building2, Trophy, S
 import type { CourseWithRelations, College, FeaturedProfile, HomeStats } from "@shared/schema";
 import { BRAND_NAME, BRAND_COPYRIGHT } from "@/lib/branding";
 
+const heroImages = [
+  { src: "/images/hero-pharmacy.png", alt: "Pharmacy" },
+  { src: "/images/hero-engineering.png", alt: "Engineering" },
+  { src: "/images/hero-it.png", alt: "IT" },
+];
+
 const iconMap: Record<string, LucideIcon> = {
   BookOpen,
   Users,
@@ -23,6 +30,8 @@ const iconMap: Record<string, LucideIcon> = {
 };
 
 export default function Landing() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
   const { data: courses, isLoading: coursesLoading } = useQuery<CourseWithRelations[]>({
     queryKey: ["/api/courses", "featured"],
   });
@@ -38,6 +47,13 @@ export default function Landing() {
   const { data: homeStats, isLoading: statsLoading } = useQuery<HomeStats>({
     queryKey: ["/api/home-stats"],
   });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
 
   const stats = homeStats ? [
     { icon: iconMap[homeStats.stat1Icon] || BookOpen, label: homeStats.stat1Label, value: homeStats.stat1Value },
@@ -83,18 +99,31 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/10" />
-        <div className="relative max-w-7xl mx-auto px-4 py-20 md:py-32">
+      <section className="relative overflow-hidden min-h-[500px] md:min-h-[600px]">
+        {heroImages.map((image, index) => (
+          <div
+            key={image.src}
+            className="absolute inset-0 transition-opacity duration-[800ms] ease-in-out"
+            style={{ opacity: currentSlide === index ? 1 : 0 }}
+          >
+            <img
+              src={image.src}
+              alt={image.alt}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ))}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
+        <div className="relative max-w-7xl mx-auto px-4 py-20 md:py-32 flex flex-col justify-center min-h-[500px] md:min-h-[600px]">
           <div className="text-center max-w-3xl mx-auto">
-            <Badge variant="secondary" className="mb-6">
-              University E-Learning Platform
+            <Badge variant="secondary" className="mb-6 bg-white/20 text-white border-white/30">
+              {BRAND_NAME}
             </Badge>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6" data-testid="text-hero-title">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-white" data-testid="text-hero-title">
               Learn from the Best
-              <span className="block text-primary mt-2">Academic Courses</span>
+              <span className="block text-white/90 mt-2">Academic Courses</span>
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
               Access high-quality courses from top university professors across Pharmacy, Engineering, and IT colleges.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -104,11 +133,26 @@ export default function Landing() {
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild data-testid="button-login-hero">
+              <Button size="lg" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20" asChild data-testid="button-login-hero">
                 <a href="/api/login">
                   Get Started
                 </a>
               </Button>
+            </div>
+            <div className="flex justify-center gap-2 mt-8">
+              {heroImages.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    currentSlide === index 
+                      ? "bg-white scale-110" 
+                      : "bg-white/40 hover:bg-white/60"
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                  data-testid={`hero-dot-${index}`}
+                />
+              ))}
             </div>
           </div>
         </div>

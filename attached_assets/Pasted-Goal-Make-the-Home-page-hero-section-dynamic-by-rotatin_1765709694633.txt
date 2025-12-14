@@ -1,0 +1,110 @@
+Goal
+
+Make the Home page hero section dynamic by rotating (slideshow) between 3 provided images automatically, with smooth transitions, while keeping the existing hero text and buttons readable.
+
+Assets (Use these 3 images)
+
+Use the three images already available in the project assets (or add them to /public and reference them):
+
+Pharmacy image
+
+Engineering gears image
+
+IT/Code image
+
+If the images are currently not in /public, place them there and use stable paths like:
+
+/images/hero-pharmacy.png (or .jpg/.webp)
+
+/images/hero-engineering.jpg
+
+/images/hero-it.webp
+
+Required Behavior
+
+Auto-rotate
+
+Rotate between the 3 images automatically.
+
+Interval: 5–7 seconds per image (pick 6s default).
+
+Loop forever.
+
+Smooth transition
+
+Use fade (opacity) transition.
+
+Duration: 600–900ms (pick 800ms default).
+
+No flicker, no layout shift.
+
+Overlay for readability
+
+Add a dark/gradient overlay on top of the image so the text/buttons stay readable in all images.
+
+Keep the current design vibe (Tailwind/shadcn style).
+
+Keep hero content unchanged
+
+Do not change:
+
+The headline
+
+Subtext
+
+Buttons (Browse Courses / Get Started)
+
+Only make the background image rotate.
+
+Controls (nice to have, but do it if easy)
+
+Add small dots (indicators) below the hero text showing the active slide.
+
+Clicking a dot switches to that slide.
+
+Add left/right arrows ONLY if it’s simple and doesn’t clutter.
+
+Performance
+
+Use object-cover to fill hero area.
+
+Ensure images are optimized (prefer webp where possible).
+
+Preload next image if possible (lightweight approach).
+
+Responsive
+
+Works on mobile and desktop.
+
+Hero height remains consistent.
+
+Optional (Smart enhancement)
+
+If a student is logged in and has a selected college:
+
+Start the slideshow on the image that matches their college:
+
+Pharmacy → pharmacy image
+
+Engineering → engineering image
+
+IT → IT image
+Then continue rotating normally.
+
+Acceptance Criteria
+
+On Home page, hero background changes automatically between the 3 images.
+
+Transition is smooth (fade), no jitter.
+
+Text/buttons remain readable (overlay works).
+
+Dots (if implemented) correctly reflect and switch slides.
+
+No console errors.
+
+Deliverables
+
+Mention the exact file(s) modified (Home page component + any new slider component).
+
+Mention the final image paths used.
