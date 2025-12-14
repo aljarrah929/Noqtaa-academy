@@ -1,0 +1,89 @@
+Goal
+
+Update the platform branding text from “EduLearn” to “CPE Academy” everywhere it appears in the UI (especially the Header/Navbar and Footer), and ensure there are no leftover mentions of the old name.
+
+Required Changes
+
+Header / Navbar
+
+Replace the brand name text next to the logo from:
+
+EduLearn → CPE Academy
+
+Keep the logo/icon as-is unless it is tied to the old name (do not change icon unless needed).
+
+Make sure the spacing and alignment remain correct after the longer name.
+
+Footer
+
+Replace footer brand name:
+
+EduLearn → CPE Academy
+
+Replace any footer copyright line that references the platform name, for example:
+
+University E-Learning Platform. All rights reserved.
+should remain, but if it includes EduLearn, update it to CPE Academy.
+
+Global Search & Replace (Safe + Verified)
+
+Search the entire codebase for occurrences of:
+
+"EduLearn"
+
+Edu Learn
+
+edulearn
+
+Update them appropriately to CPE Academy (respect case sensitivity for IDs/paths if they exist).
+
+Important: Do not rename technical identifiers or packages unless they are clearly a display string.
+
+App Metadata (Important for real branding)
+Update these (if present):
+
+Browser tab title (document title): CPE Academy
+
+Meta title / description (if you have SEO component)
+
+Any config file like siteName, appName, constants, etc.
+
+Optional “fs” Requirement (Clarify in Implementation)
+If “fs” is intended to be appended to the visible brand name, implement branding as:
+
+CPE Academy fs
+Otherwise ignore “fs”.
+✅ Implement it as a configurable constant (e.g., BRAND_NAME) so we can change it later without hunting strings.
+
+Implementation Approach (Preferred)
+
+Create a single constant like:
+
+const BRAND_NAME = "CPE Academy";
+
+Use it in:
+
+Navbar brand text
+
+Footer brand text
+
+Page title
+This avoids missing future places.
+
+Acceptance Criteria
+
+Header shows CPE Academy (not EduLearn).
+
+Footer shows CPE Academy (not EduLearn).
+
+No visible “EduLearn” remains anywhere in the UI.
+
+Page title (tab name) uses CPE Academy.
+
+Layout still looks clean (no overflow or broken alignment).
+
+Deliverables
+
+Provide the exact file paths updated (Navbar component + Footer component + any config).
+
+Provide a quick note of all places changed (search results count is fine).

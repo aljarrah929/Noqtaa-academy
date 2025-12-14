@@ -35,6 +35,7 @@ import {
   Plus,
 } from "lucide-react";
 import { getRoleDisplayName, canAccessAdminDashboard, canAccessTeacherDashboard, canManageColleges, canManageRoles } from "@/lib/authUtils";
+import { BRAND_NAME } from "@/lib/branding";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -123,7 +124,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               <div className="p-2 rounded-md bg-primary/10">
                 <GraduationCap className="w-5 h-5 text-primary" />
               </div>
-              <span className="font-semibold">EduLearn</span>
+              <span className="font-semibold">{BRAND_NAME}</span>
             </Link>
             {collegeTheme && user?.role === "STUDENT" && (
               <Badge variant="outline" className="mt-2 w-fit">

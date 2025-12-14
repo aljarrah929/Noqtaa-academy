@@ -14,6 +14,7 @@ import { GraduationCap, Moon, Sun, LogOut, User, LayoutDashboard, Menu, X } from
 import { getRoleDisplayName } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { BRAND_NAME } from "@/lib/branding";
 
 export function Header() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -65,7 +66,7 @@ export function Header() {
               <GraduationCap className={`w-6 h-6 ${isCollegeThemed ? 'text-white' : 'text-primary'}`} />
             </div>
             <span className={`font-semibold text-lg hidden sm:block ${isCollegeThemed ? 'text-white' : 'text-foreground'}`} data-testid="text-logo">
-              EduLearn
+              {BRAND_NAME}
             </span>
             {collegeTheme && user?.role === "STUDENT" && (
               <Badge variant="secondary" className="ml-2 hidden md:flex bg-white/20 text-white border-white/30">

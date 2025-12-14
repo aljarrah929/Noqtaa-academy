@@ -7,6 +7,7 @@ import { GraduationCap, Building2, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { College } from "@shared/schema";
+import { BRAND_NAME } from "@/lib/branding";
 
 export default function CollegeOnboarding() {
   const [selectedCollegeId, setSelectedCollegeId] = useState<number | null>(null);
@@ -44,7 +45,7 @@ export default function CollegeOnboarding() {
             <GraduationCap className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-bold mb-2" data-testid="text-onboarding-title">
-            Welcome to EduLearn
+            Welcome to {BRAND_NAME}
           </h1>
           <p className="text-muted-foreground">
             Please select your college to personalize your learning experience.
