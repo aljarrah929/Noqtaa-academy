@@ -42,10 +42,11 @@ export const colleges = pgTable("colleges", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Users table - extends Replit Auth user with role and college
+// Users table with native authentication
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email", { length: 255 }).unique(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  passwordHash: varchar("password_hash", { length: 255 }),
   firstName: varchar("first_name", { length: 100 }),
   lastName: varchar("last_name", { length: 100 }),
   profileImageUrl: varchar("profile_image_url", { length: 500 }),
@@ -203,8 +204,22 @@ export const insertCollegeSchema = createInsertSchema(colleges).omit({
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
+  passwordHash: true,
   createdAt: true,
   updatedAt: true,
+});
+
+export const signupSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  collegeId: z.number().int().positive("Please select a college"),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
 });
 
 export const insertCourseSchema = createInsertSchema(courses).omit({
@@ -263,6 +278,8 @@ export type FeaturedProfile = typeof featuredProfiles.$inferSelect;
 export type InsertHomeStats = z.infer<typeof insertHomeStatsSchema>;
 export type UpdateHomeStats = z.infer<typeof updateHomeStatsSchema>;
 export type HomeStats = typeof homeStats.$inferSelect;
+export type SignupInput = z.infer<typeof signupSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
 
 // Extended types for frontend
 export type CourseWithRelations = Course & {

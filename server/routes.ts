@@ -1,16 +1,17 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, seedSuperAdmin } from "./auth";
 import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
+  await seedSuperAdmin();
 
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUserWithCollege(userId);
       res.json(user);
     } catch (error) {
@@ -21,7 +22,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/auth/user/college", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { collegeId } = req.body;
       
       if (!collegeId || typeof collegeId !== "number") {
@@ -71,7 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/colleges", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user || user.role !== "SUPER_ADMIN") {
         return res.status(403).json({ message: "Only super admins can create colleges" });
@@ -87,7 +88,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/colleges/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user || user.role !== "SUPER_ADMIN") {
         return res.status(403).json({ message: "Only super admins can update colleges" });
@@ -107,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/colleges/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user || user.role !== "SUPER_ADMIN") {
         return res.status(403).json({ message: "Only super admins can delete colleges" });
@@ -162,7 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/courses", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user || (user.role !== "TEACHER" && user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
         return res.status(403).json({ message: "Only teachers can create courses" });
@@ -178,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/courses/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       const id = parseInt(req.params.id);
       const course = await storage.getCourseById(id);
@@ -205,7 +206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/courses/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       const id = parseInt(req.params.id);
       const course = await storage.getCourseById(id);
@@ -231,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/courses/:id/submit", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const id = parseInt(req.params.id);
       const course = await storage.getCourseById(id);
       
@@ -257,7 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/courses/:id/approve", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
@@ -291,7 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/courses/:id/reject", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
@@ -336,7 +337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/courses/:id/lessons", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const courseId = parseInt(req.params.id);
       const course = await storage.getCourseById(courseId);
       
@@ -373,7 +374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/lessons/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const id = parseInt(req.params.id);
       const lesson = await storage.getLessonById(id);
       
@@ -397,7 +398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/lessons/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const id = parseInt(req.params.id);
       const lesson = await storage.getLessonById(id);
       
@@ -420,7 +421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/courses/:id/enrollments", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       const courseId = parseInt(req.params.id);
       const course = await storage.getCourseById(courseId);
@@ -446,7 +447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/courses/:id/enrollments", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       const courseId = parseInt(req.params.id);
       const course = await storage.getCourseById(courseId);
@@ -482,7 +483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/enrollments/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       const id = parseInt(req.params.id);
       
@@ -502,7 +503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/enrollments/check/:courseId", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const courseId = parseInt(req.params.courseId);
       const enrolled = await storage.isEnrolled(userId, courseId);
       res.json({ enrolled });
@@ -514,7 +515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/my/enrollments", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const enrollmentList = await storage.getEnrollmentsByStudent(userId);
       res.json(enrollmentList);
     } catch (error) {
@@ -525,7 +526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/enrollments/my-courses", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const enrollmentList = await storage.getEnrollmentsByStudent(userId);
       const courseList = enrollmentList.map(e => e.course);
       res.json(courseList);
@@ -537,7 +538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/teacher/courses", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const courseList = await storage.getCoursesByTeacher(userId);
       res.json(courseList);
     } catch (error) {
@@ -548,7 +549,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/teacher/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const stats = await storage.getTeacherStats(userId);
       res.json(stats);
     } catch (error) {
@@ -559,7 +560,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/stats", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
@@ -577,7 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/pending", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
@@ -595,7 +596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/teachers", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
@@ -613,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/users", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== "SUPER_ADMIN") {
@@ -630,7 +631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/admin/users/:id/role", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== "SUPER_ADMIN") {
@@ -653,7 +654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/students", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || (user.role !== "TEACHER" && user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
@@ -683,7 +684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Featured Profiles - Admin endpoints (SUPER_ADMIN only)
   app.get("/api/admin/featured-profiles", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== "SUPER_ADMIN") {
@@ -700,7 +701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/featured-profiles", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== "SUPER_ADMIN") {
@@ -722,7 +723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/admin/featured-profiles/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== "SUPER_ADMIN") {
@@ -749,7 +750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/admin/featured-profiles/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== "SUPER_ADMIN") {
@@ -779,7 +780,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Home Stats - Admin endpoint (SUPER_ADMIN only)
   app.patch("/api/admin/home-stats", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== "SUPER_ADMIN") {

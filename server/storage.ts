@@ -31,6 +31,8 @@ import { eq, and, desc, count, sql } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUserWithPassword(data: { email: string; passwordHash: string; firstName: string; lastName: string; collegeId: number; role?: User["role"] }): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   getUserWithCollege(id: string): Promise<UserWithCollege | undefined>;
   updateUserRole(id: string, role: User["role"], collegeId?: number | null): Promise<User | undefined>;
@@ -77,6 +79,23 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUserWithPassword(data: { email: string; passwordHash: string; firstName: string; lastName: string; collegeId: number; role?: User["role"] }): Promise<User> {
+    const [user] = await db.insert(users).values({
+      email: data.email,
+      passwordHash: data.passwordHash,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      collegeId: data.collegeId,
+      role: data.role || "STUDENT",
+    }).returning();
     return user;
   }
 
