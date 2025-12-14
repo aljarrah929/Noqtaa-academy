@@ -1,0 +1,92 @@
+# University E-Learning Platform
+
+## Overview
+
+A scalable university e-learning platform (MVP) for paid academic courses targeting university students across multiple colleges. The platform features strict role-based access control with four user roles (Student, Teacher, Admin, Super Admin) and supports three colleges (Pharmacy, Engineering, IT) with distinct visual themes.
+
+Key features:
+- Course browsing with locked lesson content for non-enrolled students
+- Teacher course creation with admin approval workflow
+- Role-based dashboards for students, teachers, and administrators
+- College-specific theming with custom primary/secondary colors
+- Email-only communication between students and teachers (mailto links)
+- External payment handling (no in-platform payment processing)
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React 18 with TypeScript
+- **Routing**: Wouter (lightweight React router)
+- **State Management**: TanStack React Query for server state
+- **UI Components**: shadcn/ui component library built on Radix UI primitives
+- **Styling**: Tailwind CSS with CSS custom properties for theming
+- **Build Tool**: Vite with hot module replacement
+
+**Design Pattern**: Material Design-inspired with educational refinement, emphasizing clear information hierarchy for complex course/enrollment data and consistent patterns across role-based dashboards.
+
+### Backend Architecture
+- **Runtime**: Node.js with Express
+- **Language**: TypeScript with ES modules
+- **API Style**: RESTful JSON API under `/api` prefix
+- **Authentication**: Replit OpenID Connect (OIDC) with Passport.js
+- **Session Management**: PostgreSQL-backed sessions via connect-pg-simple
+
+**Route Structure**:
+- `/api/auth/*` - Authentication endpoints
+- `/api/colleges/*` - College CRUD operations
+- `/api/courses/*` - Course management with approval workflow
+- `/api/lessons/*` - Lesson content management
+- `/api/enrollments/*` - Student enrollment management
+- `/api/users/*` - User management (admin only)
+
+### Data Storage
+- **Database**: PostgreSQL with Drizzle ORM
+- **Schema Location**: `shared/schema.ts` (shared between client and server)
+- **Migrations**: Drizzle Kit with `drizzle-kit push` for schema synchronization
+
+**Core Entities**:
+- `users` - Extended Replit Auth users with roles and college associations
+- `colleges` - College definitions with theme colors
+- `courses` - Courses with status workflow (DRAFT → PENDING_APPROVAL → PUBLISHED/REJECTED)
+- `lessons` - Course content with ordering and content types (video, text, link, file)
+- `enrollments` - Student-course relationships
+- `courseApprovalLogs` - Audit trail for course approval decisions
+- `sessions` - PostgreSQL-backed session storage
+
+### Role-Based Access Control
+- **STUDENT**: Browse courses, view enrolled content, access student dashboard
+- **TEACHER**: Create/edit own courses, submit for approval, manage lesson content
+- **ADMIN**: Approve/reject courses, manage teachers within assigned college
+- **SUPER_ADMIN**: Full system access, manage all users/roles, manage colleges
+
+### Client-Server Communication
+- **Data Fetching**: TanStack Query with automatic caching and refetching
+- **API Client**: Custom `apiRequest` utility with credentials and error handling
+- **Type Sharing**: Zod schemas generated from Drizzle for runtime validation
+
+## External Dependencies
+
+### Authentication
+- **Replit OIDC**: Primary authentication provider via `openid-client`
+- **Passport.js**: Session-based authentication middleware
+
+### Database
+- **PostgreSQL**: Primary data store (requires `DATABASE_URL` environment variable)
+- **Drizzle ORM**: Type-safe database queries and schema management
+- **connect-pg-simple**: PostgreSQL session store
+
+### UI Framework
+- **Radix UI**: Headless component primitives (dialogs, dropdowns, tabs, etc.)
+- **shadcn/ui**: Pre-styled component library built on Radix
+- **Lucide React**: Icon library
+- **Tailwind CSS**: Utility-first CSS framework
+
+### Environment Requirements
+- `DATABASE_URL`: PostgreSQL connection string
+- `SESSION_SECRET`: Secret for session encryption
+- `REPL_ID`: Replit environment identifier (auto-provided in Replit)
+- `ISSUER_URL`: OIDC issuer URL (defaults to Replit OIDC)
