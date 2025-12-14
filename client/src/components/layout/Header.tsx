@@ -74,43 +74,43 @@ export function Header() {
             )}
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href}>
-                <Button
-                  variant="ghost"
-                  className={`${isCollegeThemed ? 'text-white/90 hover:text-white hover:bg-white/10' : ''} ${
-                    location === link.href ? (isCollegeThemed ? 'bg-white/20 text-white' : 'bg-accent') : ''
-                  }`}
-                  data-testid={`link-${link.label.toLowerCase()}`}
-                >
-                  {link.label}
-                </Button>
-              </Link>
-            ))}
-            {isAuthenticated && (
-              <Link href={getDashboardLink()}>
-                <Button
-                  variant="ghost"
-                  className={`${isCollegeThemed ? 'text-white/90 hover:text-white hover:bg-white/10' : ''} ${
-                    location.startsWith("/dashboard") || location.startsWith("/teacher") || location.startsWith("/admin") 
-                      ? (isCollegeThemed ? 'bg-white/20 text-white' : 'bg-accent') : ''
-                  }`}
-                  data-testid="link-dashboard"
-                >
-                  <LayoutDashboard className="w-4 h-4 mr-1" />
-                  Dashboard
-                </Button>
-              </Link>
-            )}
-          </nav>
+          <div className="flex items-center justify-end gap-1 flex-1">
+            <nav className="hidden md:flex items-center gap-1">
+              {navLinks.map((link) => (
+                <Link key={link.href} href={link.href}>
+                  <Button
+                    variant="ghost"
+                    className={`${isCollegeThemed ? 'text-white/90 hover:text-white hover:bg-white/10' : ''} ${
+                      location === link.href ? (isCollegeThemed ? 'bg-white/20 text-white' : 'bg-accent') : ''
+                    }`}
+                    data-testid={`link-${link.label.toLowerCase()}`}
+                  >
+                    {link.label}
+                  </Button>
+                </Link>
+              ))}
+              {isAuthenticated && (
+                <Link href={getDashboardLink()}>
+                  <Button
+                    variant="ghost"
+                    className={`${isCollegeThemed ? 'text-white/90 hover:text-white hover:bg-white/10' : ''} ${
+                      location.startsWith("/dashboard") || location.startsWith("/teacher") || location.startsWith("/admin") 
+                        ? (isCollegeThemed ? 'bg-white/20 text-white' : 'bg-accent') : ''
+                    }`}
+                    data-testid="link-dashboard"
+                  >
+                    <LayoutDashboard className="w-4 h-4 mr-1" />
+                    Dashboard
+                  </Button>
+                </Link>
+              )}
+            </nav>
 
-          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleDark}
-              className={isCollegeThemed ? 'text-white hover:bg-white/10' : ''}
+              className={`hidden md:flex ${isCollegeThemed ? 'text-white hover:bg-white/10' : ''}`}
               data-testid="button-theme-toggle"
             >
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -202,6 +202,15 @@ export function Header() {
                   </Button>
                 </Link>
               )}
+              <Button
+                variant="ghost"
+                onClick={toggleDark}
+                className={`w-full justify-start ${isCollegeThemed ? 'text-white/90 hover:text-white hover:bg-white/10' : ''}`}
+                data-testid="button-mobile-theme-toggle"
+              >
+                {isDark ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+                {isDark ? "Light Mode" : "Dark Mode"}
+              </Button>
             </nav>
           </div>
         )}
