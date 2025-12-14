@@ -99,6 +99,16 @@ export const courseApprovalLogs = pgTable("course_approval_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Password Reset Tokens table
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: varchar("token_hash", { length: 255 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Featured Profiles table (for home page display)
 export const featuredProfiles = pgTable("featured_profiles", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -222,6 +232,19 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string().min(1, "Confirm password is required"),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
 export const insertCourseSchema = createInsertSchema(courses).omit({
   id: true,
   createdAt: true,
@@ -280,6 +303,9 @@ export type UpdateHomeStats = z.infer<typeof updateHomeStatsSchema>;
 export type HomeStats = typeof homeStats.$inferSelect;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 
 // Extended types for frontend
 export type CourseWithRelations = Course & {

@@ -127,6 +127,12 @@ export default function Login() {
                   )}
                 />
 
+                <div className="text-right">
+                  <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-foreground" data-testid="link-forgot-password">
+                    Forgot password?
+                  </Link>
+                </div>
+
                 <Button
                   type="submit"
                   className="w-full"

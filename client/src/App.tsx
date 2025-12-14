@@ -8,6 +8,8 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import Courses from "@/pages/Courses";
 import CourseDetail from "@/pages/CourseDetail";
 import LessonDetail from "@/pages/LessonDetail";
@@ -31,6 +33,8 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/courses" component={Courses} />
       <Route path="/courses/:id" component={CourseDetail} />
       <Route path="/courses/:courseId/lessons/:lessonId" component={LessonDetail} />
