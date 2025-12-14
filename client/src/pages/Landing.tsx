@@ -199,27 +199,6 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4">
-          <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0">
-            <CardContent className="py-12 px-8 text-center">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">
-                Ready to Start Learning?
-              </h2>
-              <p className="text-primary-foreground/80 mb-6 max-w-xl mx-auto">
-                Join thousands of students already learning on our platform. Sign up today and start your academic journey.
-              </p>
-              <Button size="lg" variant="secondary" asChild data-testid="button-cta-login">
-                <a href="/api/login">
-                  Get Started Free
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </a>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
       <footer className="border-t border-border py-12">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
