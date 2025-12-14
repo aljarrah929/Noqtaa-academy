@@ -4,26 +4,44 @@ export function isUnauthorizedError(error: Error): boolean {
 
 export function isExternalDevWindow(): boolean {
   const hostname = window.location.hostname;
-  const isReplit = hostname.includes('replit') || hostname.includes('repl.co');
-  const isPreview = hostname.includes('.replit.dev') || hostname.includes('.repl.co');
-  const isPublished = hostname.includes('.replit.app');
   
-  if (!isReplit) {
+  const isPublished = hostname.includes('.replit.app');
+  if (isPublished) {
     return false;
   }
   
-  return !isPreview && !isPublished;
+  const isReplCo = hostname.includes('.repl.co');
+  if (isReplCo) {
+    const isEmbedded = window.top !== window.self;
+    return !isEmbedded;
+  }
+  
+  const isReplitDev = hostname.includes('.replit.dev');
+  if (isReplitDev) {
+    return false;
+  }
+  
+  const isCustomDomain = !hostname.includes('replit') && !hostname.includes('repl.co') && !hostname.includes('localhost');
+  if (isCustomDomain) {
+    return false;
+  }
+  
+  return false;
 }
 
 export function getPreviewUrl(): string {
   const hostname = window.location.hostname;
   
   if (hostname.includes('.replit.dev')) {
-    return window.location.href;
+    return window.location.origin;
   }
   
-  const replId = hostname.split('.')[0];
-  return `https://${replId}.replit.dev${window.location.pathname}`;
+  if (hostname.includes('.repl.co')) {
+    const devHostname = hostname.replace('.repl.co', '.replit.dev');
+    return `https://${devHostname}`;
+  }
+  
+  return window.location.origin;
 }
 
 export function isDevelopmentMode(): boolean {

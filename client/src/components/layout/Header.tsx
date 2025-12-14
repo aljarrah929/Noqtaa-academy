@@ -11,16 +11,25 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { GraduationCap, Moon, Sun, LogOut, User, LayoutDashboard, Menu, X } from "lucide-react";
-import { getRoleDisplayName } from "@/lib/authUtils";
+import { getRoleDisplayName, isExternalDevWindow } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { BRAND_NAME } from "@/lib/branding";
+import { ExternalAuthHelper } from "@/components/auth/ExternalAuthHelper";
 
 export function Header() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { isDark, toggleDark, collegeTheme } = useTheme();
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showAuthHelper, setShowAuthHelper] = useState(false);
+
+  const handleLoginClick = (e: React.MouseEvent) => {
+    if (isExternalDevWindow()) {
+      e.preventDefault();
+      setShowAuthHelper(true);
+    }
+  };
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -160,9 +169,17 @@ export function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button asChild className={isCollegeThemed ? 'bg-white text-gray-900 hover:bg-white/90' : ''} data-testid="button-login">
-                <a href="/api/login">Log in</a>
+              <Button 
+                asChild 
+                className={isCollegeThemed ? 'bg-white text-gray-900 hover:bg-white/90' : ''} 
+                data-testid="button-login"
+              >
+                <a href="/api/login" onClick={handleLoginClick}>Log in</a>
               </Button>
+            )}
+
+            {showAuthHelper && (
+              <ExternalAuthHelper onDismiss={() => setShowAuthHelper(false)} />
             )}
 
             <Button

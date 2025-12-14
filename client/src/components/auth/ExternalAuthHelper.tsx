@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Copy, Check, ExternalLink, Monitor, AlertCircle } from "lucide-react";
 import { BRAND_NAME } from "@/lib/branding";
+import { getPreviewUrl } from "@/lib/authUtils";
 
 interface ExternalAuthHelperProps {
   onDismiss?: () => void;
@@ -12,17 +13,7 @@ interface ExternalAuthHelperProps {
 export function ExternalAuthHelper({ onDismiss }: ExternalAuthHelperProps) {
   const [copied, setCopied] = useState(false);
   
-  const getDevUrl = () => {
-    const hostname = window.location.hostname;
-    if (hostname.includes('.replit.dev')) {
-      return window.location.origin;
-    }
-    const parts = hostname.split('.');
-    const replSlug = parts[0];
-    return `https://${replSlug}.replit.dev`;
-  };
-  
-  const devUrl = getDevUrl();
+  const devUrl = getPreviewUrl();
   
   const handleCopyUrl = async () => {
     try {
