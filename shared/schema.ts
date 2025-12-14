@@ -143,6 +143,18 @@ export const homeStats = pgTable("home_stats", {
   updatedByUserId: varchar("updated_by_user_id").references(() => users.id),
 });
 
+// Admin Dashboard Stats Config table (single-row config for admin dashboard stats)
+export const adminDashboardStatsConfig = pgTable("admin_dashboard_stats_config", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  mode: varchar("mode", { length: 20 }).notNull().default("AUTO"),
+  pendingApprovalsValue: varchar("pending_approvals_value", { length: 50 }).notNull().default("0"),
+  totalTeachersValue: varchar("total_teachers_value", { length: 50 }).notNull().default("0"),
+  publishedCoursesValue: varchar("published_courses_value", { length: 50 }).notNull().default("0"),
+  totalStudentsValue: varchar("total_students_value", { length: 50 }).notNull().default("0"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedByUserId: varchar("updated_by_user_id").references(() => users.id),
+});
+
 // Relations
 export const collegesRelations = relations(colleges, ({ many }) => ({
   users: many(users),
@@ -283,6 +295,18 @@ export const updateHomeStatsSchema = createInsertSchema(homeStats).omit({
   updatedByUserId: true,
 });
 
+export const updateAdminDashboardStatsConfigSchema = createInsertSchema(adminDashboardStatsConfig).omit({
+  id: true,
+  updatedAt: true,
+  updatedByUserId: true,
+}).extend({
+  mode: z.enum(["AUTO", "MANUAL"]).optional(),
+  pendingApprovalsValue: z.string().max(50).regex(/^\d+$/, "Must be a non-negative integer").optional(),
+  totalTeachersValue: z.string().max(50).regex(/^\d+$/, "Must be a non-negative integer").optional(),
+  publishedCoursesValue: z.string().max(50).regex(/^\d+$/, "Must be a non-negative integer").optional(),
+  totalStudentsValue: z.string().max(50).regex(/^\d+$/, "Must be a non-negative integer").optional(),
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -301,6 +325,8 @@ export type FeaturedProfile = typeof featuredProfiles.$inferSelect;
 export type InsertHomeStats = z.infer<typeof insertHomeStatsSchema>;
 export type UpdateHomeStats = z.infer<typeof updateHomeStatsSchema>;
 export type HomeStats = typeof homeStats.$inferSelect;
+export type UpdateAdminDashboardStatsConfig = z.infer<typeof updateAdminDashboardStatsConfigSchema>;
+export type AdminDashboardStatsConfig = typeof adminDashboardStatsConfig.$inferSelect;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;

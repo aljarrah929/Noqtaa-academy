@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, seedSuperAdmin } from "./auth";
-import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema } from "@shared/schema";
+import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema, updateAdminDashboardStatsConfigSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -805,6 +805,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating home stats:", error);
       res.status(500).json({ message: "Failed to update home stats" });
+    }
+  });
+
+  // Admin Dashboard Stats - returns stats based on config mode (AUTO or MANUAL)
+  app.get("/api/admin/dashboard/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only admins can view dashboard stats" });
+      }
+      
+      const config = await storage.getOrCreateAdminDashboardStatsConfig();
+      const collegeId = user.role === "ADMIN" ? user.collegeId || undefined : undefined;
+      const computedStats = await storage.getAdminStats(collegeId);
+      
+      if (config.mode === "MANUAL") {
+        res.json({
+          mode: "MANUAL",
+          pendingApprovals: config.pendingApprovalsValue,
+          totalTeachers: config.totalTeachersValue,
+          publishedCourses: config.publishedCoursesValue,
+          totalStudents: config.totalStudentsValue,
+          config,
+        });
+      } else {
+        res.json({
+          mode: "AUTO",
+          pendingApprovals: String(computedStats.pendingApprovals),
+          totalTeachers: String(computedStats.totalTeachers),
+          publishedCourses: String(computedStats.totalCourses),
+          totalStudents: String(computedStats.totalStudents),
+          config,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching admin dashboard stats:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard stats" });
+    }
+  });
+
+  // Admin Dashboard Stats Config - SUPER_ADMIN only update
+  app.patch("/api/super-admin/admin-dashboard-stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "Only super admins can update dashboard stats config" });
+      }
+      
+      const parseResult = updateAdminDashboardStatsConfigSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: parseResult.error.flatten().fieldErrors 
+        });
+      }
+      
+      const config = await storage.updateAdminDashboardStatsConfig(parseResult.data, userId);
+      res.json(config);
+    } catch (error) {
+      console.error("Error updating admin dashboard stats config:", error);
+      res.status(500).json({ message: "Failed to update dashboard stats config" });
     }
   });
 

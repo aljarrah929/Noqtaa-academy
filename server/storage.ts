@@ -7,6 +7,7 @@ import {
   courseApprovalLogs,
   featuredProfiles,
   homeStats,
+  adminDashboardStatsConfig,
   passwordResetTokens,
   type User,
   type UpsertUser,
@@ -26,6 +27,8 @@ import {
   type InsertFeaturedProfile,
   type HomeStats,
   type UpdateHomeStats,
+  type AdminDashboardStatsConfig,
+  type UpdateAdminDashboardStatsConfig,
   type PasswordResetToken,
 } from "@shared/schema";
 import { db } from "./db";
@@ -81,6 +84,9 @@ export interface IStorage {
   getPasswordResetTokenByHash(tokenHash: string): Promise<PasswordResetToken | undefined>;
   markPasswordResetTokenUsed(id: number): Promise<void>;
   deleteExpiredPasswordResetTokens(): Promise<void>;
+  getAdminDashboardStatsConfig(): Promise<AdminDashboardStatsConfig | undefined>;
+  getOrCreateAdminDashboardStatsConfig(): Promise<AdminDashboardStatsConfig>;
+  updateAdminDashboardStatsConfig(data: UpdateAdminDashboardStatsConfig, userId: string): Promise<AdminDashboardStatsConfig>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -581,6 +587,28 @@ export class DatabaseStorage implements IStorage {
 
   async deleteExpiredPasswordResetTokens(): Promise<void> {
     await db.delete(passwordResetTokens).where(sql`${passwordResetTokens.expiresAt} < NOW()`);
+  }
+
+  async getAdminDashboardStatsConfig(): Promise<AdminDashboardStatsConfig | undefined> {
+    const [config] = await db.select().from(adminDashboardStatsConfig).limit(1);
+    return config;
+  }
+
+  async getOrCreateAdminDashboardStatsConfig(): Promise<AdminDashboardStatsConfig> {
+    const existing = await this.getAdminDashboardStatsConfig();
+    if (existing) return existing;
+    const [created] = await db.insert(adminDashboardStatsConfig).values({}).returning();
+    return created;
+  }
+
+  async updateAdminDashboardStatsConfig(data: UpdateAdminDashboardStatsConfig, userId: string): Promise<AdminDashboardStatsConfig> {
+    const existing = await this.getOrCreateAdminDashboardStatsConfig();
+    const [updated] = await db
+      .update(adminDashboardStatsConfig)
+      .set({ ...data, updatedAt: new Date(), updatedByUserId: userId })
+      .where(eq(adminDashboardStatsConfig.id, existing.id))
+      .returning();
+    return updated;
   }
 }
 
