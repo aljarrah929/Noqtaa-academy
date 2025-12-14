@@ -1,0 +1,101 @@
+Goal
+
+Fix logout UX and session persistence:
+
+The user must ONLY be logged out when clicking the explicit “Log out” button.
+
+Refreshing the page must NOT log the user out. Session should persist reliably.
+
+Part A — Logout must only happen on the Log out button
+
+Review the profile dropdown/menu behavior:
+
+Clicking outside should ONLY close the dropdown (no logout).
+
+Clicking on menu items should only trigger their intended action.
+
+Ensure the logout handler is attached ONLY to the Log out button.
+
+No parent container onClick that triggers logout.
+
+No event bubbling causing logout when clicking other items.
+
+Add event.stopPropagation() on the Log out click if needed.
+
+Make logout reliable immediately without needing refresh:
+
+After successful /api/auth/logout, update auth state instantly:
+
+clear current user in client state (set user=null)
+
+close dropdown
+
+redirect to /login (or home) right away
+
+If using react-query/swr: invalidate me query + clear cache.
+
+Acceptance check:
+
+Clicking anywhere else does NOT log out.
+
+Only “Log out” logs out.
+
+Part B — Refresh should not log out (session persistence)
+
+Ensure auth is server-backed and cookie-based:
+
+Logout should clear the session cookie on the server.
+
+Login should set session cookie with proper options.
+
+Verify cookie settings:
+
+httpOnly: true
+
+sameSite: "lax" (or "none" if needed with https)
+
+secure: true in production
+
+Make sure cookie path is /
+
+On app load/refresh:
+
+The client must call GET /api/auth/me (or equivalent)
+
+If cookie session is valid, restore user state automatically
+
+Ensure the logout endpoint actually destroys server session:
+
+clear cookie
+
+invalidate session in DB/memory
+
+Acceptance check:
+
+After login, refresh keeps the user logged in.
+
+Closing/opening tab still keeps session (until cookie expires).
+
+Logout clears session and refresh does NOT bring it back.
+
+Implementation Notes (required output)
+
+After fixing, provide:
+
+The file path where the dropdown/logout is implemented
+
+The file path for auth state provider/hook
+
+The logout endpoint path
+
+Manual test steps:
+
+Login → refresh → still logged in
+
+Click around UI → no logout
+
+Click “Log out” → instantly logged out (no refresh)
+
+Refresh after logout → stays logged out
+
+Do not mark complete until all acceptance checks pass.

@@ -29,6 +29,7 @@ export function Header() {
       await apiRequest("POST", "/api/auth/logout");
     },
     onSuccess: () => {
+      queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/");
     },
@@ -36,6 +37,7 @@ export function Header() {
 
   const handleLogout = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     logoutMutation.mutate();
   };
 

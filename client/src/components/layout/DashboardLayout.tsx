@@ -3,6 +3,8 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/context/ThemeContext";
 import { Button } from "@/components/ui/button";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,7 +47,24 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const { user, isLoading } = useAuth();
   const { isDark, toggleDark, collegeTheme } = useTheme();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/auth/logout");
+    },
+    onSuccess: () => {
+      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setLocation("/");
+    },
+  });
+
+  const handleLogout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    logoutMutation.mutate();
+  };
 
   const getInitials = () => {
     if (!user) return "U";
@@ -177,10 +196,8 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               <Button variant="ghost" size="icon" onClick={toggleDark} data-testid="sidebar-theme-toggle">
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </Button>
-              <Button variant="ghost" size="icon" asChild data-testid="sidebar-logout">
-                <a href="/api/logout">
-                  <LogOut className="w-4 h-4" />
-                </a>
+              <Button variant="ghost" size="icon" onClick={handleLogout} data-testid="sidebar-logout">
+                <LogOut className="w-4 h-4" />
               </Button>
             </div>
           </SidebarFooter>
