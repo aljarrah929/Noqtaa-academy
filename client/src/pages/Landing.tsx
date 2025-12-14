@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CourseCard, CourseCardSkeleton } from "@/components/courses/CourseCard";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { GraduationCap, BookOpen, Users, Award, ArrowRight, Building2 } from "lucide-react";
-import type { CourseWithRelations, College } from "@shared/schema";
+import type { CourseWithRelations, College, FeaturedProfile } from "@shared/schema";
 
 export default function Landing() {
   const { data: courses, isLoading: coursesLoading } = useQuery<CourseWithRelations[]>({
@@ -17,7 +19,20 @@ export default function Landing() {
     queryKey: ["/api/colleges"],
   });
 
+  const { data: featuredProfiles, isLoading: profilesLoading } = useQuery<FeaturedProfile[]>({
+    queryKey: ["/api/featured-profiles"],
+  });
+
   const featuredCourses = courses?.slice(0, 3) || [];
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   const getCollegeGradient = (slug: string) => {
     switch (slug) {
@@ -198,6 +213,64 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {(profilesLoading || (featuredProfiles && featuredProfiles.length > 0)) && (
+        <section className="py-20">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="text-team-title">Platform Team</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Meet the people behind our university e-learning platform
+              </p>
+            </div>
+            
+            {profilesLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="p-6">
+                    <div className="flex flex-col items-center text-center">
+                      <Skeleton className="w-24 h-24 rounded-full mb-4" />
+                      <Skeleton className="w-32 h-5 mb-2" />
+                      <Skeleton className="w-24 h-4 mb-3" />
+                      <Skeleton className="w-full h-16" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {featuredProfiles?.map((profile) => (
+                  <Card 
+                    key={profile.id} 
+                    className="p-6"
+                    data-testid={`card-team-member-${profile.id}`}
+                  >
+                    <div className="flex flex-col items-center text-center">
+                      <Avatar className="w-24 h-24 mb-4">
+                        <AvatarImage src={profile.imageUrl || undefined} alt={profile.name} />
+                        <AvatarFallback className="text-xl">{getInitials(profile.name)}</AvatarFallback>
+                      </Avatar>
+                      <h3 className="font-semibold text-lg mb-1" data-testid={`text-team-name-${profile.id}`}>
+                        {profile.name}
+                      </h3>
+                      {profile.title && (
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {profile.title}
+                        </p>
+                      )}
+                      {profile.bio && (
+                        <p className="text-sm text-muted-foreground line-clamp-3">
+                          {profile.bio}
+                        </p>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <footer className="border-t border-border py-12">
         <div className="max-w-7xl mx-auto px-4">
