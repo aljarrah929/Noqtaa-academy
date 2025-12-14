@@ -2,6 +2,36 @@ export function isUnauthorizedError(error: Error): boolean {
   return /^401: .*Unauthorized/.test(error.message);
 }
 
+export function isExternalDevWindow(): boolean {
+  const hostname = window.location.hostname;
+  const isReplit = hostname.includes('replit') || hostname.includes('repl.co');
+  const isPreview = hostname.includes('.replit.dev') || hostname.includes('.repl.co');
+  const isPublished = hostname.includes('.replit.app');
+  
+  if (!isReplit) {
+    return false;
+  }
+  
+  return !isPreview && !isPublished;
+}
+
+export function getPreviewUrl(): string {
+  const hostname = window.location.hostname;
+  
+  if (hostname.includes('.replit.dev')) {
+    return window.location.href;
+  }
+  
+  const replId = hostname.split('.')[0];
+  return `https://${replId}.replit.dev${window.location.pathname}`;
+}
+
+export function isDevelopmentMode(): boolean {
+  return window.location.hostname.includes('.replit.dev') || 
+         window.location.hostname.includes('.repl.co') ||
+         window.location.hostname === 'localhost';
+}
+
 export function getRoleDisplayName(role: string): string {
   switch (role) {
     case "SUPER_ADMIN":
