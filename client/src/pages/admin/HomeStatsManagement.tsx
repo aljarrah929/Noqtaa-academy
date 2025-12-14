@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useLocation } from "wouter";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { BarChart3, Save } from "lucide-react";
 import type { HomeStats } from "@shared/schema";
@@ -58,6 +61,14 @@ type HomeStatsFormValues = z.infer<typeof homeStatsFormSchema>;
 
 export default function HomeStatsManagement() {
   const { toast } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== "SUPER_ADMIN")) {
+      setLocation("/admin");
+    }
+  }, [user, authLoading, setLocation]);
 
   const { data: stats, isLoading } = useQuery<HomeStats>({
     queryKey: ["/api/home-stats"],

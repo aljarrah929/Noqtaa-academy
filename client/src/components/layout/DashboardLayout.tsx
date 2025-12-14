@@ -35,6 +35,8 @@ import {
   Building2,
   UserCog,
   Plus,
+  BarChart3,
+  Star,
 } from "lucide-react";
 import { getRoleDisplayName, canAccessAdminDashboard, canAccessTeacherDashboard, canManageColleges, canManageRoles } from "@/lib/authUtils";
 import { BRAND_NAME } from "@/lib/branding";
@@ -92,6 +94,8 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const superAdminMenuItems = [
     { href: "/admin/users", label: "User Management", icon: UserCog },
     { href: "/admin/colleges", label: "Colleges", icon: Building2 },
+    { href: "/admin/featured-profiles", label: "Featured Profiles", icon: Star },
+    { href: "/admin/home-stats", label: "Home Stats", icon: BarChart3 },
   ];
 
   const getMenuItems = () => {
