@@ -35,6 +35,47 @@ function getEmailConfig(): EmailConfig | null {
   };
 }
 
+function getFromAddress(): string {
+  return process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com";
+}
+
+export function getAppUrl(): string {
+  if (process.env.APP_URL) {
+    return process.env.APP_URL.replace(/\/$/, "");
+  }
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  if (process.env.REPLIT_DOMAINS) {
+    return `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`;
+  }
+  return "http://localhost:5000";
+}
+
+export async function verifySmtpConnection(): Promise<boolean> {
+  const config = getEmailConfig();
+  
+  if (!config) {
+    console.log("[SMTP] Not configured - missing SMTP_HOST, SMTP_USER, or SMTP_PASS");
+    return false;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport(config);
+    await transporter.verify();
+    console.log("[SMTP] Connection verified successfully");
+    console.log(`[SMTP] Host: ${config.host}:${config.port}, Secure: ${config.secure}`);
+    return true;
+  } catch (error: any) {
+    console.error("[SMTP] Connection verification failed:");
+    console.error(`[SMTP] Error: ${error.message}`);
+    if (error.code) {
+      console.error(`[SMTP] Error code: ${error.code}`);
+    }
+    return false;
+  }
+}
+
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   const config = getEmailConfig();
 
@@ -44,23 +85,37 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
     console.log(`Subject: ${options.subject}`);
     console.log(`Text: ${options.text}`);
     console.log("============================================");
+    console.log("[SMTP] Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS to enable email sending");
     return true;
   }
+
+  const fromAddress = getFromAddress();
 
   try {
     const transporter = nodemailer.createTransport(config);
     
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || config.auth.user,
+    const info = await transporter.sendMail({
+      from: fromAddress,
       to: options.to,
       subject: options.subject,
       text: options.text,
       html: options.html,
     });
 
+    console.log(`[SMTP] Email sent successfully to ${options.to}`);
+    console.log(`[SMTP] Message ID: ${info.messageId}`);
     return true;
-  } catch (error) {
-    console.error("Failed to send email:", error);
+  } catch (error: any) {
+    console.error("[SMTP] Failed to send email:");
+    console.error(`[SMTP] To: ${options.to}`);
+    console.error(`[SMTP] From: ${fromAddress}`);
+    console.error(`[SMTP] Error: ${error.message}`);
+    if (error.code) {
+      console.error(`[SMTP] Error code: ${error.code}`);
+    }
+    if (error.responseCode) {
+      console.error(`[SMTP] Response code: ${error.responseCode}`);
+    }
     return false;
   }
 }

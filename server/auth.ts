@@ -6,7 +6,7 @@ import crypto from "crypto";
 import { storage } from "./storage";
 import { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "@shared/schema";
 import { z } from "zod";
-import { sendEmail, getPasswordResetEmailContent } from "./email";
+import { sendEmail, getPasswordResetEmailContent, getAppUrl, verifySmtpConnection } from "./email";
 
 declare module "express-session" {
   interface SessionData {
@@ -153,12 +153,7 @@ export async function setupAuth(app: Express) {
         
         await storage.createPasswordResetToken(user.id, tokenHash, expiresAt);
         
-        const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-          : process.env.REPLIT_DOMAINS
-            ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
-            : "http://localhost:5000";
-        
+        const baseUrl = getAppUrl();
         const resetUrl = `${baseUrl}/reset-password?token=${token}`;
         const emailContent = getPasswordResetEmailContent(resetUrl);
         
