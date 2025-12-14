@@ -1,0 +1,123 @@
+Replace the single “Platform Spotlight” record with a Super Admin managed list of profiles shown on the Home page.
+
+Goal
+
+Create a “Platform Team / Featured Profiles” section on the Home page that displays multiple profile cards. Only SUPER_ADMIN can add/edit/remove profiles. Other roles and visitors can only view.
+
+Functional Requirements
+
+Home Page Display
+
+Show a section on the Home page (in place of the removed CTA).
+
+Display a grid/list of profile cards.
+
+Each card includes:
+
+image (avatar/photo)
+
+name
+
+role/title (optional)
+
+description/bio (short)
+
+Everyone can view it (public).
+
+CRUD Permissions (Super Admin only)
+
+Only SUPER_ADMIN can:
+
+Add new profile
+
+Edit existing profile
+
+Remove profile (soft delete) OR mark as inactive
+
+Reorder profiles (optional but preferred)
+
+Admin/Teacher/Student/Visitors cannot edit or delete.
+
+Enforce via backend RBAC + hide UI controls for non-super-admin.
+
+Data Model
+Create FeaturedProfile (or similar):
+
+id
+
+name
+
+title (nullable)
+
+bio/description
+
+imageUrl (nullable)
+
+isActive (boolean)
+
+sortOrder (integer)
+
+createdAt
+
+updatedAt
+
+createdByUserId
+
+updatedByUserId
+
+Notes:
+
+Home page shows only isActive = true, ordered by sortOrder ASC.
+
+Super Admin Dashboard UI
+Add a management page:
+
+List all profiles (active/inactive)
+
+Buttons:
+
+Add profile
+
+Edit
+
+Disable/Enable (instead of hard delete)
+
+Delete (optional; only if you already support delete safely)
+
+Move up/down (for ordering) OR drag-and-drop (optional)
+
+Validation & Security
+
+Name <= 80 chars
+
+Title <= 80 chars
+
+Bio <= 800 chars
+
+Render bio as plain text (line breaks ok) to avoid injection.
+
+Unauthorized actions return 403.
+
+UI Requirements
+
+Use existing design system (Tailwind/shadcn).
+
+Responsive grid.
+
+Looks clean and professional.
+
+Acceptance Criteria
+
+Home page shows multiple profiles (not a single one).
+
+Super Admin can add new profiles without overwriting existing ones.
+
+Super Admin can disable/remove a specific profile.
+
+Non-super-admin users cannot modify anything (UI + API).
+
+After implementing, provide:
+
+File paths for Home section and Super Admin management page
+
+Manual test steps for each role

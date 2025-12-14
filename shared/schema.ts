@@ -98,6 +98,21 @@ export const courseApprovalLogs = pgTable("course_approval_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Featured Profiles table (for home page display)
+export const featuredProfiles = pgTable("featured_profiles", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar("name", { length: 80 }).notNull(),
+  title: varchar("title", { length: 80 }),
+  bio: text("bio"),
+  imageUrl: varchar("image_url", { length: 500 }),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  updatedByUserId: varchar("updated_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const collegesRelations = relations(colleges, ({ many }) => ({
   users: many(users),
@@ -194,6 +209,12 @@ export const insertCourseApprovalLogSchema = createInsertSchema(courseApprovalLo
   createdAt: true,
 });
 
+export const insertFeaturedProfileSchema = createInsertSchema(featuredProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -207,6 +228,8 @@ export type InsertEnrollment = z.infer<typeof insertEnrollmentSchema>;
 export type Enrollment = typeof enrollments.$inferSelect;
 export type InsertCourseApprovalLog = z.infer<typeof insertCourseApprovalLogSchema>;
 export type CourseApprovalLog = typeof courseApprovalLogs.$inferSelect;
+export type InsertFeaturedProfile = z.infer<typeof insertFeaturedProfileSchema>;
+export type FeaturedProfile = typeof featuredProfiles.$inferSelect;
 
 // Extended types for frontend
 export type CourseWithRelations = Course & {
