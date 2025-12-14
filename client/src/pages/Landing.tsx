@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GraduationCap, BookOpen, Users, Award, ArrowRight, Building2, Trophy, Star, Target, type LucideIcon } from "lucide-react";
 import type { CourseWithRelations, College, FeaturedProfile, HomeStats } from "@shared/schema";
-import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/branding";
+import { BRAND_NAME, BRAND_COPYRIGHT } from "@/lib/branding";
 
 const iconMap: Record<string, LucideIcon> = {
   BookOpen,
@@ -315,7 +315,7 @@ export default function Landing() {
               <span className="font-semibold">{BRAND_NAME}</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              {BRAND_TAGLINE}. All rights reserved.
+              {BRAND_COPYRIGHT}
             </p>
           </div>
         </div>
