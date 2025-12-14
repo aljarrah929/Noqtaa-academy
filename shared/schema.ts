@@ -113,6 +113,25 @@ export const featuredProfiles = pgTable("featured_profiles", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Home Stats table (single-row config for landing page stats)
+export const homeStats = pgTable("home_stats", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  stat1Value: varchar("stat1_value", { length: 20 }).notNull().default("50+"),
+  stat1Label: varchar("stat1_label", { length: 60 }).notNull().default("Quality Courses"),
+  stat1Icon: varchar("stat1_icon", { length: 50 }).notNull().default("BookOpen"),
+  stat2Value: varchar("stat2_value", { length: 20 }).notNull().default("1000+"),
+  stat2Label: varchar("stat2_label", { length: 60 }).notNull().default("Active Students"),
+  stat2Icon: varchar("stat2_icon", { length: 50 }).notNull().default("Users"),
+  stat3Value: varchar("stat3_value", { length: 20 }).notNull().default("30+"),
+  stat3Label: varchar("stat3_label", { length: 60 }).notNull().default("Expert Teachers"),
+  stat3Icon: varchar("stat3_icon", { length: 50 }).notNull().default("GraduationCap"),
+  stat4Value: varchar("stat4_value", { length: 20 }).notNull().default("3"),
+  stat4Label: varchar("stat4_label", { length: 60 }).notNull().default("Colleges"),
+  stat4Icon: varchar("stat4_icon", { length: 50 }).notNull().default("Award"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedByUserId: varchar("updated_by_user_id").references(() => users.id),
+});
+
 // Relations
 export const collegesRelations = relations(colleges, ({ many }) => ({
   users: many(users),
@@ -215,6 +234,17 @@ export const insertFeaturedProfileSchema = createInsertSchema(featuredProfiles).
   updatedAt: true,
 });
 
+export const insertHomeStatsSchema = createInsertSchema(homeStats).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const updateHomeStatsSchema = createInsertSchema(homeStats).omit({
+  id: true,
+  updatedAt: true,
+  updatedByUserId: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -230,6 +260,9 @@ export type InsertCourseApprovalLog = z.infer<typeof insertCourseApprovalLogSche
 export type CourseApprovalLog = typeof courseApprovalLogs.$inferSelect;
 export type InsertFeaturedProfile = z.infer<typeof insertFeaturedProfileSchema>;
 export type FeaturedProfile = typeof featuredProfiles.$inferSelect;
+export type InsertHomeStats = z.infer<typeof insertHomeStatsSchema>;
+export type UpdateHomeStats = z.infer<typeof updateHomeStatsSchema>;
+export type HomeStats = typeof homeStats.$inferSelect;
 
 // Extended types for frontend
 export type CourseWithRelations = Course & {
