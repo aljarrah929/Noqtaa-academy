@@ -1,0 +1,119 @@
+Do NOT consider the project finished.
+
+I need you to continue and complete all remaining tasks properly. Follow this process strictly and show proof of completion.
+
+Step 1: Audit (Mandatory)
+
+First, perform a full audit of the current project and list everything in a checklist format:
+
+What is already implemented correctly
+
+What is partially implemented
+
+What is missing or incorrect
+
+Use this format:
+
+✅ Done
+
+🟡 Partial
+
+❌ Missing
+
+Step 2: Complete Missing Core Features
+
+You must implement all missing or partial features below without changing the existing UI unless required:
+
+Course workflow
+
+Course statuses: DRAFT → PENDING_APPROVAL → PUBLISHED / REJECTED
+
+Teachers can submit courses for approval
+
+Admin & Super Admin can approve or reject courses
+
+Store approval actions in an approval log (who approved/rejected, when, optional reason)
+
+Lesson locking
+
+Students can open lesson pages
+
+If NOT enrolled, lesson content must be fully locked (no content visible)
+
+Show a lock UI and a “Contact Teacher” button (mailto)
+
+Enrolled students see full content
+
+Enrollment rules
+
+Students cannot self-enroll
+
+Teachers can enroll students to their own courses (ADD ONLY)
+
+Teachers cannot remove enrollments
+
+Super Admin can enroll students to any course
+
+Student onboarding
+
+Student signup MUST require selecting a college
+
+College selection is saved in the user profile
+
+Signup cannot complete without college selection
+
+College-based theming
+
+Each college has its own theme (primary + secondary color)
+
+After student login/signup, apply the selected college theme globally
+
+Theme must persist after refresh and re-login
+
+Visitors and non-students use a neutral theme
+
+RBAC enforcement
+
+Enforce permissions on both frontend and backend
+
+Block unauthorized API access
+
+No role-based bypasses allowed
+
+Admin features
+
+Admin dashboard:
+
+View all teachers
+
+View number of courses per teacher
+
+View total enrolled students per teacher
+
+Course approval queue for Admin & Super Admin
+
+Seed data
+
+Seed 3 colleges: Pharmacy, Engineering, IT (with themes)
+
+Seed at least:
+
+1 Super Admin
+
+1 Admin
+
+1 Teacher
+
+1 Student
+
+Step 3: Verification
+
+Before saying anything is complete, you MUST:
+
+Provide a final checklist where every item above is marked ✅ Done
+
+Provide manual test steps to verify each feature
+
+Clearly state which routes/pages implement each feature
+
+Do NOT say “ready to publish” until every checklist item is complete and verified.

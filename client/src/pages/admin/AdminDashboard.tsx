@@ -23,14 +23,18 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/teachers"],
   });
 
+  const { data: apiStats, isLoading: statsLoading } = useQuery<AdminStats>({
+    queryKey: ["/api/admin/stats"],
+  });
+
   const stats: AdminStats = {
-    pendingApprovals: pendingCourses?.length || 0,
-    totalTeachers: teachers?.length || 0,
-    totalCourses: 0,
-    totalStudents: 0,
+    pendingApprovals: apiStats?.pendingApprovals || pendingCourses?.length || 0,
+    totalTeachers: apiStats?.totalTeachers || teachers?.length || 0,
+    totalCourses: apiStats?.totalCourses || 0,
+    totalStudents: apiStats?.totalStudents || 0,
   };
 
-  const isLoading = coursesLoading || teachersLoading;
+  const isLoading = coursesLoading || teachersLoading || statsLoading;
 
   return (
     <DashboardLayout title="Admin Dashboard">

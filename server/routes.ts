@@ -19,6 +19,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/auth/user/college", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { collegeId } = req.body;
+      
+      if (!collegeId || typeof collegeId !== "number") {
+        return res.status(400).json({ message: "Valid college ID is required" });
+      }
+      
+      const college = await storage.getCollegeById(collegeId);
+      if (!college) {
+        return res.status(404).json({ message: "College not found" });
+      }
+      
+      const user = await storage.updateUserCollege(userId, collegeId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user college:", error);
+      res.status(500).json({ message: "Failed to update college" });
+    }
+  });
+
   app.get("/api/colleges", async (_req, res) => {
     try {
       const collegeList = await storage.getColleges();
@@ -460,10 +486,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       const id = parseInt(req.params.id);
       
-      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN" || user?.role === "TEACHER";
+      const canDelete = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
       
-      if (!isAdmin) {
-        return res.status(403).json({ message: "Not authorized to remove enrollments" });
+      if (!canDelete) {
+        return res.status(403).json({ message: "Only admins can remove enrollments" });
       }
       
       await storage.deleteEnrollment(id);

@@ -39,6 +39,38 @@ async function seed() {
 
   console.log("Created colleges:", pharmacyCollege.name, engineeringCollege.name, itCollege.name);
 
+  const [superAdmin] = await db
+    .insert(users)
+    .values([
+      {
+        id: "demo-super-admin",
+        email: "superadmin@edulearn.edu",
+        firstName: "System",
+        lastName: "Administrator",
+        role: "SUPER_ADMIN",
+        collegeId: null,
+      },
+    ])
+    .returning();
+
+  console.log("Created Super Admin:", superAdmin.email);
+
+  const [admin1] = await db
+    .insert(users)
+    .values([
+      {
+        id: "demo-admin-1",
+        email: "admin@pharmacy.edu",
+        firstName: "Alice",
+        lastName: "Admin",
+        role: "ADMIN",
+        collegeId: pharmacyCollege.id,
+      },
+    ])
+    .returning();
+
+  console.log("Created Admin:", admin1.email);
+
   const [teacher1, teacher2, teacher3] = await db
     .insert(users)
     .values([
@@ -70,6 +102,22 @@ async function seed() {
     .returning();
 
   console.log("Created demo teachers");
+
+  const [student1] = await db
+    .insert(users)
+    .values([
+      {
+        id: "demo-student-1",
+        email: "student@pharmacy.edu",
+        firstName: "Sam",
+        lastName: "Student",
+        role: "STUDENT",
+        collegeId: pharmacyCollege.id,
+      },
+    ])
+    .returning();
+
+  console.log("Created Student:", student1.email);
 
   const [pharmacyCourse1] = await db
     .insert(courses)
