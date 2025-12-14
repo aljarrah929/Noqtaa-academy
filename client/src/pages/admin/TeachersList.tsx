@@ -27,7 +27,7 @@ interface TeacherWithStats {
 
 export default function TeachersList() {
   const { data: teachers, isLoading } = useQuery<TeacherWithStats[]>({
-    queryKey: ["/api/users/teachers/stats"],
+    queryKey: ["/api/admin/teachers"],
   });
 
   const getInitials = (teacher: TeacherWithStats) => {

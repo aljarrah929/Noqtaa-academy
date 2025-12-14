@@ -46,7 +46,7 @@ export default function UserManagement() {
   const [newRole, setNewRole] = useState<string>("");
 
   const { data: users, isLoading } = useQuery<User[]>({
-    queryKey: ["/api/users"],
+    queryKey: ["/api/admin/users"],
   });
 
   const updateRoleMutation = useMutation({
@@ -54,7 +54,7 @@ export default function UserManagement() {
       await apiRequest("PATCH", `/api/users/${userId}/role`, { role });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({ title: "Role Updated", description: "User role has been changed." });
       setSelectedUser(null);
       setNewRole("");

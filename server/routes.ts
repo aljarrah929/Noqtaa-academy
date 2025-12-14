@@ -497,6 +497,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/enrollments/my-courses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const enrollmentList = await storage.getEnrollmentsByStudent(userId);
+      const courseList = enrollmentList.map(e => e.course);
+      res.json(courseList);
+    } catch (error) {
+      console.error("Error fetching my courses:", error);
+      res.status(500).json({ message: "Failed to fetch courses" });
+    }
+  });
+
   app.get("/api/teacher/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

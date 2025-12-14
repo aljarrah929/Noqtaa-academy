@@ -67,7 +67,7 @@ export default function CourseEnrollments() {
   });
 
   const { data: students } = useQuery<User[]>({
-    queryKey: ["/api/users/students"],
+    queryKey: ["/api/students"],
   });
 
   const form = useForm<EnrollFormValues>({

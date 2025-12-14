@@ -18,7 +18,7 @@ import {
   Building2
 } from "lucide-react";
 import { Link } from "wouter";
-import type { CourseWithRelations, Enrollment } from "@shared/schema";
+import type { CourseWithRelations } from "@shared/schema";
 
 export default function CourseDetail() {
   const [match, params] = useRoute("/courses/:id");
@@ -30,12 +30,12 @@ export default function CourseDetail() {
     enabled: !!courseId,
   });
 
-  const { data: enrollment, isLoading: enrollmentLoading } = useQuery<Enrollment | null>({
+  const { data: enrollmentCheck, isLoading: enrollmentLoading } = useQuery<{ enrolled: boolean }>({
     queryKey: ["/api/enrollments/check", courseId],
     enabled: !!courseId && isAuthenticated,
   });
 
-  const isEnrolled = !!enrollment;
+  const isEnrolled = enrollmentCheck?.enrolled ?? false;
 
   const getCollegeBadgeColor = (slug?: string) => {
     switch (slug) {

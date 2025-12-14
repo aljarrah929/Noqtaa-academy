@@ -36,7 +36,7 @@ export default function CourseApprovals() {
   const [reason, setReason] = useState("");
 
   const { data: pendingCourses, isLoading } = useQuery<CourseWithRelations[]>({
-    queryKey: ["/api/courses/pending"],
+    queryKey: ["/api/admin/pending"],
   });
 
   const approvalMutation = useMutation({
@@ -44,7 +44,7 @@ export default function CourseApprovals() {
       await apiRequest("POST", `/api/courses/${courseId}/${action}`, { reason });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/courses/pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending"] });
       queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
       toast({
         title: variables.action === "approve" ? "Course Approved" : "Course Rejected",

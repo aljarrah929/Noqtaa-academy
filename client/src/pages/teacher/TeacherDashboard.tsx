@@ -9,7 +9,7 @@ import type { CourseWithRelations } from "@shared/schema";
 
 export default function TeacherDashboard() {
   const { data: courses, isLoading } = useQuery<CourseWithRelations[]>({
-    queryKey: ["/api/courses/my-courses"],
+    queryKey: ["/api/teacher/courses"],
   });
 
   const stats = {

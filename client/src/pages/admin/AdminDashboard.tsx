@@ -16,11 +16,11 @@ interface AdminStats {
 
 export default function AdminDashboard() {
   const { data: pendingCourses, isLoading: coursesLoading } = useQuery<CourseWithRelations[]>({
-    queryKey: ["/api/courses/pending"],
+    queryKey: ["/api/admin/pending"],
   });
 
   const { data: teachers, isLoading: teachersLoading } = useQuery<User[]>({
-    queryKey: ["/api/users/teachers"],
+    queryKey: ["/api/admin/teachers"],
   });
 
   const stats: AdminStats = {

@@ -17,7 +17,7 @@ import {
   ChevronRight,
   ExternalLink
 } from "lucide-react";
-import type { Lesson, CourseWithRelations, Enrollment } from "@shared/schema";
+import type { Lesson, CourseWithRelations } from "@shared/schema";
 
 export default function LessonDetail() {
   const [match, params] = useRoute("/courses/:courseId/lessons/:lessonId");
@@ -35,12 +35,12 @@ export default function LessonDetail() {
     enabled: !!lessonId,
   });
 
-  const { data: enrollment, isLoading: enrollmentLoading } = useQuery<Enrollment | null>({
+  const { data: enrollmentCheck, isLoading: enrollmentLoading } = useQuery<{ enrolled: boolean }>({
     queryKey: ["/api/enrollments/check", courseId],
     enabled: !!courseId && isAuthenticated,
   });
 
-  const isEnrolled = !!enrollment;
+  const isEnrolled = enrollmentCheck?.enrolled ?? false;
   const isLoading = courseLoading || lessonLoading || enrollmentLoading;
 
   const sortedLessons = course?.lessons?.sort((a, b) => a.orderIndex - b.orderIndex) || [];

@@ -33,7 +33,7 @@ export default function TeacherCourses() {
   const [selectedCourse, setSelectedCourse] = useState<CourseWithRelations | null>(null);
 
   const { data: courses, isLoading } = useQuery<CourseWithRelations[]>({
-    queryKey: ["/api/courses/my-courses"],
+    queryKey: ["/api/teacher/courses"],
   });
 
   const submitMutation = useMutation({
@@ -41,7 +41,7 @@ export default function TeacherCourses() {
       await apiRequest("POST", `/api/courses/${courseId}/submit`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/courses/my-courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teacher/courses"] });
       toast({
         title: "Course Submitted",
         description: "Your course has been submitted for approval.",

@@ -110,7 +110,7 @@ export default function CourseEditor() {
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/courses/my-courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teacher/courses"] });
       toast({ title: "Course Created", description: "Your course has been created." });
       setLocation(`/teacher/courses/${data.id}/edit`);
     },
@@ -128,7 +128,7 @@ export default function CourseEditor() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/courses/my-courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teacher/courses"] });
       toast({ title: "Course Updated", description: "Your changes have been saved." });
     },
     onError: (error: Error) => {
