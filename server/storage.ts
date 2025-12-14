@@ -6,6 +6,7 @@ import {
   enrollments,
   courseApprovalLogs,
   featuredProfiles,
+  homeStats,
   type User,
   type UpsertUser,
   type College,
@@ -22,6 +23,8 @@ import {
   type UserWithCollege,
   type FeaturedProfile,
   type InsertFeaturedProfile,
+  type HomeStats,
+  type UpdateHomeStats,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql } from "drizzle-orm";
@@ -66,6 +69,9 @@ export interface IStorage {
   createFeaturedProfile(profile: InsertFeaturedProfile): Promise<FeaturedProfile>;
   updateFeaturedProfile(id: number, profile: Partial<InsertFeaturedProfile>): Promise<FeaturedProfile | undefined>;
   deleteFeaturedProfile(id: number): Promise<void>;
+  getHomeStats(): Promise<HomeStats | undefined>;
+  getOrCreateHomeStats(): Promise<HomeStats>;
+  updateHomeStats(data: UpdateHomeStats, userId: string): Promise<HomeStats>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -496,6 +502,28 @@ export class DatabaseStorage implements IStorage {
 
   async deleteFeaturedProfile(id: number): Promise<void> {
     await db.delete(featuredProfiles).where(eq(featuredProfiles.id, id));
+  }
+
+  async getHomeStats(): Promise<HomeStats | undefined> {
+    const [stats] = await db.select().from(homeStats).limit(1);
+    return stats;
+  }
+
+  async getOrCreateHomeStats(): Promise<HomeStats> {
+    const existing = await this.getHomeStats();
+    if (existing) return existing;
+    const [created] = await db.insert(homeStats).values({}).returning();
+    return created;
+  }
+
+  async updateHomeStats(data: UpdateHomeStats, userId: string): Promise<HomeStats> {
+    const existing = await this.getOrCreateHomeStats();
+    const [updated] = await db
+      .update(homeStats)
+      .set({ ...data, updatedAt: new Date(), updatedByUserId: userId })
+      .where(eq(homeStats.id, existing.id))
+      .returning();
+    return updated;
   }
 }
 

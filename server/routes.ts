@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema } from "@shared/schema";
+import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -762,6 +762,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting featured profile:", error);
       res.status(500).json({ message: "Failed to delete featured profile" });
+    }
+  });
+
+  // Home Stats - Public endpoint (returns stats or defaults)
+  app.get("/api/home-stats", async (_req, res) => {
+    try {
+      const stats = await storage.getOrCreateHomeStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching home stats:", error);
+      res.status(500).json({ message: "Failed to fetch home stats" });
+    }
+  });
+
+  // Home Stats - Admin endpoint (SUPER_ADMIN only)
+  app.patch("/api/admin/home-stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "Only super admins can update home stats" });
+      }
+      
+      const parseResult = updateHomeStatsSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: parseResult.error.flatten().fieldErrors 
+        });
+      }
+      
+      const stats = await storage.updateHomeStats(parseResult.data, userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error updating home stats:", error);
+      res.status(500).json({ message: "Failed to update home stats" });
     }
   });
 

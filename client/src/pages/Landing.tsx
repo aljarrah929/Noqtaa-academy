@@ -7,8 +7,19 @@ import { Badge } from "@/components/ui/badge";
 import { CourseCard, CourseCardSkeleton } from "@/components/courses/CourseCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { GraduationCap, BookOpen, Users, Award, ArrowRight, Building2 } from "lucide-react";
-import type { CourseWithRelations, College, FeaturedProfile } from "@shared/schema";
+import { GraduationCap, BookOpen, Users, Award, ArrowRight, Building2, Trophy, Star, Target, type LucideIcon } from "lucide-react";
+import type { CourseWithRelations, College, FeaturedProfile, HomeStats } from "@shared/schema";
+
+const iconMap: Record<string, LucideIcon> = {
+  BookOpen,
+  Users,
+  GraduationCap,
+  Award,
+  Building2,
+  Trophy,
+  Star,
+  Target,
+};
 
 export default function Landing() {
   const { data: courses, isLoading: coursesLoading } = useQuery<CourseWithRelations[]>({
@@ -22,6 +33,22 @@ export default function Landing() {
   const { data: featuredProfiles, isLoading: profilesLoading } = useQuery<FeaturedProfile[]>({
     queryKey: ["/api/featured-profiles"],
   });
+
+  const { data: homeStats, isLoading: statsLoading } = useQuery<HomeStats>({
+    queryKey: ["/api/home-stats"],
+  });
+
+  const stats = homeStats ? [
+    { icon: iconMap[homeStats.stat1Icon] || BookOpen, label: homeStats.stat1Label, value: homeStats.stat1Value },
+    { icon: iconMap[homeStats.stat2Icon] || Users, label: homeStats.stat2Label, value: homeStats.stat2Value },
+    { icon: iconMap[homeStats.stat3Icon] || GraduationCap, label: homeStats.stat3Label, value: homeStats.stat3Value },
+    { icon: iconMap[homeStats.stat4Icon] || Award, label: homeStats.stat4Label, value: homeStats.stat4Value },
+  ] : [
+    { icon: BookOpen, label: "Quality Courses", value: "50+" },
+    { icon: Users, label: "Active Students", value: "1000+" },
+    { icon: GraduationCap, label: "Expert Teachers", value: "30+" },
+    { icon: Award, label: "Colleges", value: "3" },
+  ];
 
   const featuredCourses = courses?.slice(0, 3) || [];
 
@@ -89,20 +116,25 @@ export default function Landing() {
       <section className="py-16 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {[
-              { icon: BookOpen, label: "Quality Courses", value: "50+" },
-              { icon: Users, label: "Active Students", value: "1000+" },
-              { icon: GraduationCap, label: "Expert Teachers", value: "30+" },
-              { icon: Award, label: "Colleges", value: "3" },
-            ].map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                  <stat.icon className="w-6 h-6 text-primary" />
+            {statsLoading ? (
+              [1, 2, 3, 4].map((i) => (
+                <div key={i} className="text-center">
+                  <Skeleton className="w-12 h-12 rounded-full mx-auto mb-3" />
+                  <Skeleton className="h-8 w-16 mx-auto mb-1" />
+                  <Skeleton className="h-4 w-24 mx-auto" />
                 </div>
-                <p className="text-2xl md:text-3xl font-bold mb-1">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
-            ))}
+              ))
+            ) : (
+              stats.map((stat, i) => (
+                <div key={i} className="text-center" data-testid={`stat-item-${i}`}>
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                    <stat.icon className="w-6 h-6 text-primary" />
+                  </div>
+                  <p className="text-2xl md:text-3xl font-bold mb-1" data-testid={`stat-value-${i}`}>{stat.value}</p>
+                  <p className="text-sm text-muted-foreground" data-testid={`stat-label-${i}`}>{stat.label}</p>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </section>

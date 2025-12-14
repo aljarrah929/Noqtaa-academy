@@ -20,6 +20,7 @@ import TeachersList from "@/pages/admin/TeachersList";
 import UserManagement from "@/pages/admin/UserManagement";
 import CollegeManagement from "@/pages/admin/CollegeManagement";
 import FeaturedProfilesManagement from "@/pages/admin/FeaturedProfilesManagement";
+import HomeStatsManagement from "@/pages/admin/HomeStatsManagement";
 import CollegeOnboarding from "@/pages/CollegeOnboarding";
 
 function Router() {
@@ -41,6 +42,7 @@ function Router() {
       <Route path="/admin/users" component={UserManagement} />
       <Route path="/admin/colleges" component={CollegeManagement} />
       <Route path="/admin/featured-profiles" component={FeaturedProfilesManagement} />
+      <Route path="/admin/home-stats" component={HomeStatsManagement} />
       <Route path="/onboarding" component={CollegeOnboarding} />
       <Route component={NotFound} />
     </Switch>
