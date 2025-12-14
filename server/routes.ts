@@ -641,10 +641,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const targetId = req.params.id;
       const { role, collegeId } = req.body;
       
+      console.log("[ROLE UPDATE] Target:", targetId, "New role:", role, "CollegeId:", collegeId);
+      
       const updated = await storage.updateUserRole(targetId, role, collegeId);
       if (!updated) {
+        console.log("[ROLE UPDATE] User not found:", targetId);
         return res.status(404).json({ message: "User not found" });
       }
+      
+      console.log("[ROLE UPDATE] Success - Updated role:", updated.role);
       res.json(updated);
     } catch (error) {
       console.error("Error updating user role:", error);
