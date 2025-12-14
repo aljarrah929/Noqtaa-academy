@@ -1,0 +1,377 @@
+✅ MASTER PROMPT – University E-Learning Platform (MVP)
+Goal
+
+Build a scalable university e-learning platform (MVP first) for paid academic courses (external payment), targeting university students across multiple colleges, with strict role-based access control, approval workflows, locked content, and college-based theming.
+
+Context
+
+The platform is an online educational system for universities, not certificates.
+Students do not self-enroll or pay inside the platform.
+Teachers upload courses, but publishing requires approval by Admin or Super Admin.
+Students can browse all courses and open lessons, but lesson content is locked unless enrolled.
+Communication between students and teachers is email-only (mailto).
+The platform starts minimal and is designed to scale later.
+
+User Roles
+
+There are 4 roles with strict permissions:
+
+STUDENT
+
+TEACHER
+
+ADMIN
+
+SUPER_ADMIN
+
+Colleges
+
+The platform starts with 3 colleges:
+
+Pharmacy
+
+Engineering
+
+IT
+
+Each college:
+
+Has its own courses
+
+Has its own UI theme
+
+Is selectable by students during signup
+
+Core Entities & Data Models
+
+Implement the following models (or equivalent):
+
+College
+
+id
+
+name
+
+slug
+
+themeName
+
+primaryColor
+
+secondaryColor
+
+logoUrl (nullable)
+
+User
+
+id
+
+name
+
+email
+
+passwordHash
+
+role (STUDENT | TEACHER | ADMIN | SUPER_ADMIN)
+
+collegeId (required for STUDENT, nullable for others)
+
+createdAt
+
+isActive
+
+Course
+
+id
+
+collegeId
+
+teacherId
+
+title
+
+description
+
+status (DRAFT | PENDING_APPROVAL | PUBLISHED | REJECTED)
+
+createdAt
+
+updatedAt
+
+Lesson
+
+id
+
+courseId
+
+title
+
+contentType (video | text | link | file)
+
+content (url or text)
+
+orderIndex
+
+createdAt
+
+Enrollment
+
+id
+
+courseId
+
+studentId
+
+createdAt
+
+createdByUserId
+
+CourseApprovalLog
+
+id
+
+courseId
+
+action (APPROVE | REJECT)
+
+actorUserId
+
+reason (nullable)
+
+createdAt
+
+Authentication & Onboarding
+
+Email + password authentication
+
+Signup & Login pages
+
+During Student Signup:
+
+Student must choose one college (Pharmacy / Engineering / IT)
+
+College choice is saved in profile
+
+After login/signup:
+
+Apply the college theme automatically for students
+
+Visitors (not logged in) see a neutral theme
+
+Teachers/Admins/Super Admins use neutral theme
+
+College Theme System
+
+Each college has its own theme (colors + optional logo)
+
+Theme is applied globally after student login:
+
+Header
+
+Buttons
+
+Highlights
+
+Dashboard UI
+
+Theme persists across refresh and re-login
+
+Theme source of truth = user profile (collegeId)
+
+Permissions & Rules
+Student
+
+Can view shared home page
+
+Can browse all published courses
+
+Can view course details and lesson list
+
+Can open lesson pages
+
+If not enrolled:
+
+Lesson content is locked
+
+Show lock UI (no content leakage)
+
+Show “Contact Teacher” button (mailto)
+
+If enrolled:
+
+Full access to lesson content
+
+Cannot enroll or unenroll
+
+Cannot message inside platform
+
+Teacher
+
+Can create and edit own courses
+
+Courses start as DRAFT
+
+Can submit course for approval → status becomes PENDING_APPROVAL
+
+Cannot publish directly
+
+Can create/edit lessons
+
+Can enroll students to own courses (add only)
+
+Cannot remove students from courses
+
+Can see number of students per course
+
+Admin
+
+Can view all teachers
+
+Can see teacher stats:
+
+Number of courses
+
+Number of enrolled students
+
+Can approve or reject courses:
+
+Approve → status = PUBLISHED
+
+Reject → status = REJECTED (optional reason)
+
+Can manage users (delete / disable – scaffold endpoints at minimum)
+
+Cannot change user roles unless explicitly allowed later
+
+Super Admin
+
+Full system access
+
+Can:
+
+Create / update / delete colleges
+
+Approve or reject courses
+
+Assign or change user roles:
+
+Student ↔ Teacher ↔ Admin ↔ Super Admin
+
+Enroll students into any course
+
+Manage all users and content
+
+Pages & UI Structure
+Public / Shared
+
+Home Page (shared for everyone)
+
+Course Catalog
+
+Filter by college
+
+Course Details Page
+
+Lesson Page
+
+If enrolled → show content
+
+If not enrolled → locked UI + mailto teacher
+
+Auth Pages
+
+Login
+
+Signup
+
+Student signup includes college selection
+
+Dashboards
+
+Student Dashboard
+
+My Courses
+
+Teacher Dashboard
+
+My Courses
+
+Course editor
+
+Submit for approval
+
+Enroll students (add only)
+
+Admin Dashboard
+
+Course approval queue
+
+Teachers list with stats
+
+Super Admin Dashboard
+
+User role management
+
+College management
+
+Full admin control
+
+Communication Rules
+
+No internal chat
+
+No comments
+
+No messaging system
+
+Only communication:
+
+mailto:teacherEmail?subject=Course Inquiry
+
+Constraints
+
+No payment integration
+
+No certificates
+
+No projects (for now)
+
+No internal messaging
+
+MVP first, clean architecture, expandable later
+
+Deliverables
+
+Fully working MVP
+
+Role-based access enforced everywhere
+
+Locked lesson content for unenrolled students
+
+Course approval workflow
+
+College-based theming
+
+Seed data:
+
+3 colleges with themes
+
+Sample users and courses
+
+README with setup instructions
+
+Acceptance Criteria
+
+Student must choose a college during signup
+
+Student sees college theme after login
+
+Student can open lessons but cannot see content unless enrolled
+
+Teacher cannot publish without admin approval
+
+Admin can approve/reject courses and view teacher stats
+
+Super Admin can change roles and manage everything
+
+No payment or internal chat exists
