@@ -42,6 +42,7 @@ Preferred communication style: Simple, everyday language.
 - `/api/lessons/*` - Lesson content management
 - `/api/enrollments/*` - Student enrollment management
 - `/api/users/*` - User management (admin only)
+- `/api/stream/*` - Cloudflare Stream video upload integration
 
 ### Data Storage
 - **Database**: PostgreSQL with Drizzle ORM
@@ -85,8 +86,16 @@ Preferred communication style: Simple, everyday language.
 - **Lucide React**: Icon library
 - **Tailwind CSS**: Utility-first CSS framework
 
+### Video Hosting
+- **Cloudflare Stream**: Direct creator uploads for lesson videos
+- **Endpoint**: `POST /api/stream/create-upload` - Creates direct upload URL
+- **Access**: TEACHER and SUPER_ADMIN roles only
+- **Required Secrets**: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_TOKEN`
+
 ### Environment Requirements
 - `DATABASE_URL`: PostgreSQL connection string
 - `SESSION_SECRET`: Secret for session encryption
 - `REPL_ID`: Replit environment identifier (auto-provided in Replit)
 - `ISSUER_URL`: OIDC issuer URL (defaults to Replit OIDC)
+- `CLOUDFLARE_ACCOUNT_ID`: Cloudflare account ID for Stream API
+- `CLOUDFLARE_STREAM_TOKEN`: API token with Stream permissions

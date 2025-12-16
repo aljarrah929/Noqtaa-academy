@@ -873,6 +873,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Cloudflare Stream - Direct Creator Upload
+  // Creates a direct upload URL for teachers to upload videos directly to Cloudflare
+  app.post("/api/stream/create-upload", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only teachers and super admins can upload videos" });
+      }
+      
+      const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+      const apiToken = process.env.CLOUDFLARE_STREAM_TOKEN;
+      
+      if (!accountId || !apiToken) {
+        console.error("Missing Cloudflare Stream configuration: CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_STREAM_TOKEN not set");
+        return res.status(500).json({ message: "Video upload service is not configured" });
+      }
+      
+      const cloudflareUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/direct_upload`;
+      
+      const cfResponse = await fetch(cloudflareUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          maxDurationSeconds: 3600,
+          creator: user.email || userId,
+          meta: {
+            uploadedBy: userId,
+            uploadedByEmail: user.email,
+            uploadedAt: new Date().toISOString(),
+          },
+        }),
+      });
+      
+      if (!cfResponse.ok) {
+        const errorData = await cfResponse.json().catch(() => ({}));
+        console.error("Cloudflare Stream API error:", cfResponse.status, errorData);
+        return res.status(502).json({ 
+          message: "Failed to create upload URL from video service",
+          details: errorData.errors?.[0]?.message || "Unknown error"
+        });
+      }
+      
+      const data = await cfResponse.json();
+      
+      if (!data.success || !data.result) {
+        console.error("Cloudflare Stream API returned unexpected response:", data);
+        return res.status(502).json({ message: "Video service returned an unexpected response" });
+      }
+      
+      res.json({
+        uploadURL: data.result.uploadURL,
+        uid: data.result.uid,
+      });
+    } catch (error) {
+      console.error("Error creating Cloudflare Stream upload:", error);
+      res.status(500).json({ message: "Failed to create video upload" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
