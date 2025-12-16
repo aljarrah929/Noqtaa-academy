@@ -19,6 +19,10 @@ import {
 } from "lucide-react";
 import type { Lesson, CourseWithRelations } from "@shared/schema";
 
+interface LessonWithAccess extends Lesson {
+  locked?: boolean;
+}
+
 export default function LessonDetail() {
   const [match, params] = useRoute("/courses/:courseId/lessons/:lessonId");
   const courseId = params?.courseId;
@@ -30,7 +34,7 @@ export default function LessonDetail() {
     enabled: !!courseId,
   });
 
-  const { data: lesson, isLoading: lessonLoading } = useQuery<Lesson>({
+  const { data: lesson, isLoading: lessonLoading } = useQuery<LessonWithAccess>({
     queryKey: ["/api/lessons", lessonId],
     enabled: !!lessonId,
   });
@@ -41,6 +45,7 @@ export default function LessonDetail() {
   });
 
   const isEnrolled = enrollmentCheck?.enrolled ?? false;
+  const isContentLocked = lesson?.locked === true;
   const isLoading = courseLoading || lessonLoading || enrollmentLoading;
 
   const sortedLessons = course?.lessons?.sort((a, b) => a.orderIndex - b.orderIndex) || [];
@@ -74,10 +79,26 @@ export default function LessonDetail() {
 
     switch (lesson.contentType) {
       case "video":
+        // Check if it's a Cloudflare Stream UID (32-character hex string)
+        const isCloudflareStreamUid = /^[a-f0-9]{32}$/i.test(lesson.content);
+        if (isCloudflareStreamUid) {
+          return (
+            <div className="aspect-video rounded-lg overflow-hidden bg-black" data-testid="video-player-cloudflare">
+              <iframe
+                src={`https://iframe.videodelivery.net/${lesson.content}`}
+                className="w-full h-full"
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+                title={lesson.title}
+              />
+            </div>
+          );
+        }
+        
         if (lesson.content.includes("youtube.com") || lesson.content.includes("youtu.be")) {
           const videoId = lesson.content.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1];
           return (
-            <div className="aspect-video rounded-lg overflow-hidden bg-black">
+            <div className="aspect-video rounded-lg overflow-hidden bg-black" data-testid="video-player-youtube">
               <iframe
                 src={`https://www.youtube.com/embed/${videoId}`}
                 className="w-full h-full"
@@ -88,7 +109,7 @@ export default function LessonDetail() {
           );
         }
         return (
-          <div className="aspect-video rounded-lg overflow-hidden bg-black">
+          <div className="aspect-video rounded-lg overflow-hidden bg-black" data-testid="video-player-native">
             <video controls className="w-full h-full" src={lesson.content}>
               Your browser does not support the video tag.
             </video>
@@ -181,7 +202,7 @@ export default function LessonDetail() {
     );
   }
 
-  if (!isEnrolled) {
+  if (!isEnrolled || isContentLocked) {
     return (
       <div className="min-h-screen bg-background">
         <Header />

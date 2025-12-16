@@ -13,7 +13,7 @@ interface VideoUploaderProps {
   onUploadError?: (error: string) => void;
 }
 
-type UploadState = "idle" | "uploading" | "success" | "error";
+type UploadState = "idle" | "requesting" | "uploading" | "success" | "error";
 
 export function VideoUploader({
   value,
@@ -46,20 +46,43 @@ export function VideoUploader({
       return;
     }
 
+    // Check file size (200MB limit for basic uploads)
+    const maxSize = 200 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setErrorMessage("File too large. Maximum size is 200MB.");
+      setUploadState("error");
+      return;
+    }
+
     setFileName(file.name);
     setFileSize(formatFileSize(file.size));
-    setUploadState("uploading");
+    setUploadState("requesting");
     setProgress(0);
     setErrorMessage("");
     onUploadStart?.();
 
     try {
       const response = await apiRequest("POST", "/api/stream/create-upload");
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          throw new Error("Please log in to upload videos");
+        } else if (response.status === 403) {
+          throw new Error(errorData.message || "You don't have permission to upload videos");
+        } else if (response.status === 500) {
+          throw new Error(errorData.message || "Server error - video service may be unavailable");
+        }
+        throw new Error(errorData.message || `Request failed (${response.status})`);
+      }
+      
       const data = await response.json();
 
       if (!data.uploadURL || !data.uid) {
-        throw new Error("Invalid response from server");
+        throw new Error("Invalid response from video service");
       }
+      
+      setUploadState("uploading");
 
       abortControllerRef.current = new AbortController();
 
@@ -199,6 +222,22 @@ export function VideoUploader({
     );
   }
 
+  if (uploadState === "requesting") {
+    return (
+      <Card className="p-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-full bg-primary/10">
+            <RefreshCw className="w-5 h-5 text-primary animate-spin" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm">Requesting upload URL...</p>
+            <p className="text-xs text-muted-foreground">{fileName} ({fileSize})</p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
   if (uploadState === "uploading") {
     return (
       <Card className="p-4">
@@ -208,8 +247,8 @@ export function VideoUploader({
               <Video className="w-5 h-5 text-primary animate-pulse" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{fileName}</p>
-              <p className="text-xs text-muted-foreground">{fileSize}</p>
+              <p className="font-medium text-sm">Uploading...</p>
+              <p className="text-xs text-muted-foreground truncate">{fileName} ({fileSize})</p>
             </div>
             <Button
               type="button"

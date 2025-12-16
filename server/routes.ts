@@ -358,13 +358,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/lessons/:id", async (req, res) => {
+  app.get("/api/lessons/:id", isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
+      const userId = req.user.id;
+      
       const lesson = await storage.getLessonById(id);
       if (!lesson) {
         return res.status(404).json({ message: "Lesson not found" });
       }
+      
+      // Get course to check access
+      const course = await storage.getCourseById(lesson.courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      // Check if user has access to content
+      const user = await storage.getUser(userId);
+      let hasAccess = false;
+      
+      if (user) {
+        if (user.role === "SUPER_ADMIN") {
+          // Super admins have access to all content
+          hasAccess = true;
+        } else if (user.role === "ADMIN") {
+          // Admins have access to content in their college
+          hasAccess = user.collegeId === course.collegeId;
+        } else if (user.role === "TEACHER") {
+          // Teachers have access to their own courses
+          hasAccess = course.teacherId === userId;
+        } else {
+          // Students need to be enrolled
+          hasAccess = await storage.isEnrolled(userId, lesson.courseId);
+        }
+      }
+      
+      // If no access, return lesson without content (for metadata/navigation)
+      if (!hasAccess) {
+        const { content, ...lessonWithoutContent } = lesson;
+        return res.json({ ...lessonWithoutContent, content: null, locked: true });
+      }
+      
       res.json(lesson);
     } catch (error) {
       console.error("Error fetching lesson:", error);

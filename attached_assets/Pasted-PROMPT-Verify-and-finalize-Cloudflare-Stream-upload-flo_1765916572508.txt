@@ -1,0 +1,135 @@
+PROMPT:
+
+Verify and finalize Cloudflare Stream upload flow using the new token.
+
+Goal
+
+Confirm the backend reads the updated Replit Secrets token and the teacher video uploader works end-to-end.
+
+Tasks
+
+Ensure these env vars are used (do not hardcode):
+
+CLOUDFLARE_ACCOUNT_ID
+
+CLOUDFLARE_STREAM_TOKEN
+
+Add/verify a small “smoke test” path:
+
+When a TEACHER selects lesson content type = Video, the uploader calls:
+
+POST /api/stream/create-upload
+
+Then uploads the selected file to returned uploadURL
+
+Then stores the returned uid into the lesson content field.
+
+Add clear UI states:
+
+“Requesting upload URL…”
+
+“Uploading… (progress)”
+
+“Upload successful”
+
+Show the saved Stream UID after success (for verification).
+
+Add robust error messages:
+
+Invalid token / unauthorized → show readable message
+
+Cloudflare API error → show readable message
+
+Upload failure → show readable message
+
+Acceptance Criteria
+
+Teacher can upload a small test video successfully.
+
+Lesson is saved with a non-empty Cloudflare Stream UID.
+
+No token appears in client-side code or logs.
+
+Deliverables
+
+File paths changed
+
+Manual steps to test as Teacher
+
+✅ PROMPT 2: Show Cloudflare Video Player for Students (Locked if not enrolled)
+
+وهذا المهم للطالب—انسخه وحطّه:
+
+PROMPT:
+
+Implement student lesson video playback using Cloudflare Stream embed, with locked content rules.
+
+Goal
+
+When a lesson is contentType="video" and has a Cloudflare Stream UID stored, enrolled students must see the video player inside the lesson page. Non-enrolled students can open the lesson page but must see a locked screen (no content leakage).
+
+Requirements
+
+Data usage
+
+Lessons store:
+
+contentType = "video"
+
+content = <cloudflare_stream_uid>
+
+Use that UID to render the player.
+
+Enrollment gating (must be enforced backend + frontend)
+
+If user is not enrolled:
+
+show locked UI
+
+do NOT render the player or reveal the UID
+
+If user is enrolled:
+
+render Cloudflare Stream player inline on the page.
+
+Player rendering
+
+Use Cloudflare Stream iframe embed format:
+
+https://customer-<ACCOUNT_HASH>.cloudflarestream.com/<UID>/iframe
+
+If the codebase already uses a helper, use it.
+
+Keep styling responsive (16:9, full width).
+
+RBAC rules
+
+Student must be logged in to access lesson page.
+
+Only enrolled students see content.
+
+Teacher/Admin/Super Admin behavior should remain correct per existing rules.
+
+UI
+
+For locked view: show lock icon + message + “Contact Teacher” mailto button
+
+For unlocked view: show title + embedded player + lesson navigation if exists
+
+Acceptance Criteria
+
+Enrolled student plays the video inside the platform page.
+
+Non-enrolled student sees locked page (no player, no UID).
+
+No sensitive tokens are exposed.
+
+Deliverables
+
+File paths changed
+
+Manual test steps for:
+
+enrolled student
+
+not-enrolled student
