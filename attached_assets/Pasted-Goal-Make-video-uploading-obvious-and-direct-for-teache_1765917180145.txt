@@ -1,0 +1,104 @@
+Goal
+
+Make video uploading obvious and direct for teachers. Add a clear “Upload Video” action visible from the Teacher area (My Courses page and/or Course card) that leads to a dedicated upload screen.
+
+Requirements
+1) Visible UI entry points (must do)
+
+Add at least ONE of these (preferred: both):
+
+On My Courses page: a prominent button near “Create Course”:
+
+“Upload Video” (or “Add Lesson Video”)
+
+On each course card: add a new button next to Edit / Enrollments:
+
+“Upload Video”
+
+This button must be visible without needing to discover hidden editors.
+
+2) Dedicated Upload Screen (recommended)
+
+Create a page (or modal) for uploading a lesson video:
+
+Route example: /teacher/courses/:courseId/upload-video
+
+UI elements:
+
+Course selector (if entering from global button) OR pre-selected course (if from card)
+
+Lesson title input (required)
+
+Optional lesson description
+
+Drag & drop area + “Choose file”
+
+Upload progress bar
+
+Success message
+
+“Save Lesson” button
+
+3) Upload flow (Cloudflare Direct Upload)
+
+When teacher selects a file:
+
+Call backend POST /api/stream/create-upload
+
+Upload video file directly to returned uploadURL
+
+Store returned uid in the form state
+
+On “Save Lesson”:
+
+Create a lesson record linked to the course:
+
+contentType = "video"
+
+content = <uid>
+
+title = <lesson title>
+
+set proper orderIndex (append at end)
+
+4) RBAC & Permissions
+
+Only TEACHER and SUPER_ADMIN can access:
+
+the upload button
+
+the upload page
+
+the create lesson endpoint
+
+ADMIN must not see this or be able to upload.
+
+5) UX polish (must)
+
+Disable “Save Lesson” until upload completed successfully
+
+Clear error messages (token invalid, upload failed, etc.)
+
+After saving:
+
+Redirect to course editor/lessons list
+
+Show the new lesson appears in lessons list
+
+Acceptance Criteria
+
+Teacher can click a clearly visible “Upload Video” button from My Courses (no hunting).
+
+Teacher uploads a video and saves it as a new lesson.
+
+Lesson is stored with Cloudflare Stream UID.
+
+Admin cannot upload.
+
+Deliverables
+
+File paths changed
+
+New route/page path
+
+Manual test steps (teacher upload → lesson created)

@@ -18,6 +18,7 @@ import TeacherDashboard from "@/pages/teacher/TeacherDashboard";
 import TeacherCourses from "@/pages/teacher/TeacherCourses";
 import CourseEditor from "@/pages/teacher/CourseEditor";
 import CourseEnrollments from "@/pages/teacher/CourseEnrollments";
+import UploadVideo from "@/pages/teacher/UploadVideo";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import CourseApprovals from "@/pages/admin/CourseApprovals";
 import TeachersList from "@/pages/admin/TeachersList";
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/teacher/courses/new" component={CourseEditor} />
       <Route path="/teacher/courses/:id/edit" component={CourseEditor} />
       <Route path="/teacher/courses/:id/enrollments" component={CourseEnrollments} />
+      <Route path="/teacher/courses/:courseId/upload-video" component={UploadVideo} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/approvals" component={CourseApprovals} />
       <Route path="/admin/teachers" component={TeachersList} />

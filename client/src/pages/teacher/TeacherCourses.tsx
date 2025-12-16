@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   BookOpen, 
@@ -22,15 +23,20 @@ import {
   Edit, 
   Send, 
   UserPlus,
-  FileText
+  FileText,
+  Video
 } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations } from "@shared/schema";
 
 export default function TeacherCourses() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<CourseWithRelations | null>(null);
+
+  // Only TEACHER and SUPER_ADMIN can upload videos
+  const canUploadVideo = user?.role === "TEACHER" || user?.role === "SUPER_ADMIN";
 
   const { data: courses, isLoading } = useQuery<CourseWithRelations[]>({
     queryKey: ["/api/teacher/courses"],
@@ -162,6 +168,14 @@ export default function TeacherCourses() {
                       Edit
                     </Link>
                   </Button>
+                  {canUploadVideo && (
+                    <Button variant="outline" size="sm" asChild data-testid={`button-upload-video-${course.id}`}>
+                      <Link href={`/teacher/courses/${course.id}/upload-video`}>
+                        <Video className="w-4 h-4 mr-1" />
+                        Upload Video
+                      </Link>
+                    </Button>
+                  )}
                   {course.status === "DRAFT" && (
                     <Button 
                       size="sm" 
