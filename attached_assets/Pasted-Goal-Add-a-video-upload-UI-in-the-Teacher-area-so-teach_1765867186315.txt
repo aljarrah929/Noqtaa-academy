@@ -1,0 +1,93 @@
+Goal
+
+Add a video upload UI in the Teacher area so teachers can upload videos to Cloudflare Stream directly from the platform, then attach the uploaded video to a lesson.
+
+Context
+
+Backend endpoint already exists (or must exist) at:
+
+POST /api/stream/create-upload
+It returns { uploadURL, uid } and is restricted to TEACHER and SUPER_ADMIN.
+
+Requirements
+1) Where to add the UI
+
+In Teacher dashboard, inside the Lesson Create/Edit screen (preferred).
+
+If there is no lesson editor yet, add a minimal “Create Lesson” form with:
+
+Lesson title
+
+Content type selector: video | text | file | link
+
+When video is selected: show the upload UI.
+
+2) Upload UI behavior (Video)
+
+Provide:
+
+Drag & Drop zone
+
+“Choose file” button
+
+Show file name, size
+
+Upload progress bar
+
+Success state + ability to replace video before saving
+
+Upload flow:
+
+On file select, call POST /api/stream/create-upload
+
+Take returned uploadURL and upload the file with PUT directly to that URL
+
+On success, store returned uid in the lesson form as streamUID
+
+When teacher clicks “Save lesson”, persist:
+
+contentType = "video"
+
+content = streamUID (or videoUID)
+
+Ensure the Cloudflare API token is never exposed to the client.
+
+3) Permissions
+
+Only TEACHER (and SUPER_ADMIN) can see and use the upload UI.
+
+ADMIN must not be able to upload videos.
+
+4) Data persistence
+
+Update Lesson model/record to support:
+
+contentType
+
+content (store the Stream UID string)
+
+Update DB migration/ORM schema if needed.
+
+5) Teacher preview (optional but preferred)
+
+After upload success, show an embedded preview using Cloudflare Stream player with the uid OR show a “Video uploaded successfully” confirmation if preview is hard.
+
+6) Acceptance Criteria
+
+Teacher can upload a video from the Teacher dashboard without leaving the platform.
+
+Video uploads directly to Cloudflare using the returned uploadURL.
+
+Saving the lesson stores the Stream UID in DB.
+
+Student side is not required in this task.
+
+Deliverables
+
+File paths for the teacher lesson editor component/page.
+
+Any new API calls added.
+
+Manual test steps:
+
+Teacher uploads video → saves lesson → DB record contains Stream UID.

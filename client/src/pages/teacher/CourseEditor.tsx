@@ -38,6 +38,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Plus, Trash2, GripVertical, Save, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations, College, Lesson } from "@shared/schema";
+import { VideoUploader } from "@/components/VideoUploader";
 
 const courseFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
@@ -425,19 +426,27 @@ export default function CourseEditor() {
                 name="content"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Content</FormLabel>
+                    <FormLabel>
+                      {lessonForm.watch("contentType") === "video" ? "Video" : "Content"}
+                    </FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder={
-                          lessonForm.watch("contentType") === "video" ? "Video URL" :
-                          lessonForm.watch("contentType") === "link" ? "External URL" :
-                          lessonForm.watch("contentType") === "file" ? "File URL" :
-                          "Lesson content"
-                        }
-                        className="min-h-32"
-                        {...field} 
-                        data-testid="input-lesson-content"
-                      />
+                      {lessonForm.watch("contentType") === "video" ? (
+                        <VideoUploader
+                          value={field.value}
+                          onChange={(uid) => field.onChange(uid || "")}
+                        />
+                      ) : (
+                        <Textarea 
+                          placeholder={
+                            lessonForm.watch("contentType") === "link" ? "External URL" :
+                            lessonForm.watch("contentType") === "file" ? "File URL" :
+                            "Lesson content"
+                          }
+                          className="min-h-32"
+                          {...field} 
+                          data-testid="input-lesson-content"
+                        />
+                      )}
                     </FormControl>
                     <FormMessage />
                   </FormItem>

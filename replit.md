@@ -60,9 +60,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Role-Based Access Control
 - **STUDENT**: Browse courses, view enrolled content, access student dashboard
-- **TEACHER**: Create/edit own courses, submit for approval, manage lesson content
+- **TEACHER**: Create/edit own courses, submit for approval, manage lesson content, upload videos to Cloudflare Stream
 - **ADMIN**: Approve/reject courses, manage teachers within assigned college
-- **SUPER_ADMIN**: Full system access, manage all users/roles, manage colleges
+- **SUPER_ADMIN**: Full system access, manage all users/roles, manage colleges, upload videos
 
 ### Client-Server Communication
 - **Data Fetching**: TanStack Query with automatic caching and refetching
