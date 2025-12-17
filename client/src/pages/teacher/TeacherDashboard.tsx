@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Users, Clock, Plus, ArrowRight } from "lucide-react";
+import { BookOpen, Users, Plus, ArrowRight, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations } from "@shared/schema";
 
@@ -15,15 +15,13 @@ export default function TeacherDashboard() {
   const stats = {
     total: courses?.length || 0,
     published: courses?.filter(c => c.status === "PUBLISHED").length || 0,
-    pending: courses?.filter(c => c.status === "PENDING_APPROVAL").length || 0,
-    draft: courses?.filter(c => c.status === "DRAFT").length || 0,
     totalStudents: courses?.reduce((sum, c) => sum + (c._count?.enrollments || 0), 0) || 0,
   };
 
   return (
     <DashboardLayout title="Teacher Dashboard">
       <div className="max-w-6xl mx-auto space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -54,25 +52,7 @@ export default function TeacherDashboard() {
                   )}
                 </div>
                 <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-full">
-                  <BookOpen className="w-6 h-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Pending Approval</p>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-12 mt-1" />
-                  ) : (
-                    <p className="text-3xl font-bold text-yellow-600" data-testid="stat-pending">{stats.pending}</p>
-                  )}
-                </div>
-                <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-full">
-                  <Clock className="w-6 h-6 text-yellow-600" />
+                  <CheckCircle className="w-6 h-6 text-green-600" />
                 </div>
               </div>
             </CardContent>

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -20,11 +21,12 @@ import {
   BookOpen, 
   Users, 
   Plus, 
-  Edit, 
   Send, 
   UserPlus,
   FileText,
-  Video
+  Video,
+  Settings,
+  GraduationCap
 } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations } from "@shared/schema";
@@ -109,94 +111,120 @@ export default function TeacherCourses() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map((i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-6 w-3/4" />
-                </CardHeader>
-                <CardContent>
+              <Card key={i} className="overflow-hidden">
+                <Skeleton className="h-32 w-full rounded-none" />
+                <CardContent className="pt-8 pb-3">
+                  <Skeleton className="h-6 w-3/4 mb-2" />
                   <Skeleton className="h-4 w-full mb-2" />
                   <Skeleton className="h-4 w-2/3" />
                 </CardContent>
-                <CardFooter>
-                  <Skeleton className="h-9 w-24" />
+                <CardFooter className="pt-3 border-t border-border">
+                  <Skeleton className="h-9 w-28 mr-2" />
+                  <Skeleton className="h-9 w-28" />
                 </CardFooter>
               </Card>
             ))}
           </div>
         ) : courses && courses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {courses.map((course) => (
-              <Card key={course.id} data-testid={`card-course-${course.id}`}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <Badge variant={getStatusVariant(course.status)}>
-                          {getStatusLabel(course.status)}
-                        </Badge>
-                        {course.college && (
-                          <Badge variant="outline">{course.college.name}</Badge>
-                        )}
+            {courses.map((course) => {
+              const teacherInitials = user?.firstName && user?.lastName
+                ? `${user.firstName[0]}${user.lastName[0]}`
+                : user?.email?.[0]?.toUpperCase() || "T";
+              
+              return (
+                <Card key={course.id} data-testid={`card-course-${course.id}`} className="overflow-hidden">
+                  {/* Cover Image Section */}
+                  <div className="relative h-32 bg-gradient-to-br from-primary/20 to-primary/5">
+                    {course.coverImageUrl ? (
+                      <img 
+                        src={course.coverImageUrl} 
+                        alt={course.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <GraduationCap className="w-12 h-12 text-primary/30" />
                       </div>
-                      <CardTitle className="text-lg line-clamp-1">
-                        {course.title}
-                      </CardTitle>
+                    )}
+                    {/* Status Badge on Cover */}
+                    <div className="absolute top-3 left-3">
+                      <Badge variant={getStatusVariant(course.status)}>
+                        {getStatusLabel(course.status)}
+                      </Badge>
+                    </div>
+                    {/* Teacher Avatar Overlay */}
+                    <div className="absolute -bottom-6 left-4">
+                      <Avatar className="w-12 h-12 border-2 border-background">
+                        <AvatarImage src={user?.profileImageUrl || undefined} />
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {teacherInitials}
+                        </AvatarFallback>
+                      </Avatar>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="pb-3">
-                  {course.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                      {course.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <FileText className="w-4 h-4" />
-                      <span>{course._count?.lessons || 0} lessons</span>
+
+                  <CardContent className="pt-8 pb-3">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <h3 className="font-semibold text-lg line-clamp-1">{course.title}</h3>
+                      {course.college && (
+                        <Badge variant="outline" className="shrink-0">{course.college.name}</Badge>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      <span>{course._count?.enrollments || 0} students</span>
+                    {course.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                        {course.description}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <FileText className="w-4 h-4" />
+                        <span>{course._count?.lessons || 0} lessons</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        <span>{course._count?.enrollments || 0} students</span>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-3 border-t border-border flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" asChild data-testid={`button-edit-${course.id}`}>
-                    <Link href={`/teacher/courses/${course.id}/edit`}>
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Link>
-                  </Button>
-                  {canUploadVideo && (
-                    <Button variant="outline" size="sm" asChild data-testid={`button-upload-video-${course.id}`}>
-                      <Link href={`/teacher/courses/${course.id}/upload-video`}>
-                        <Video className="w-4 h-4 mr-1" />
-                        Upload Video
+                  </CardContent>
+
+                  <CardFooter className="pt-3 border-t border-border flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" asChild data-testid={`button-manage-${course.id}`}>
+                      <Link href={`/teacher/courses/${course.id}/edit`}>
+                        <Settings className="w-4 h-4 mr-1" />
+                        Manage Content
                       </Link>
                     </Button>
-                  )}
-                  {course.status === "DRAFT" && (
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleSubmitClick(course)}
-                      data-testid={`button-submit-${course.id}`}
-                    >
-                      <Send className="w-4 h-4 mr-1" />
-                      Submit
-                    </Button>
-                  )}
-                  {course.status === "PUBLISHED" && (
-                    <Button variant="outline" size="sm" asChild data-testid={`button-enrollments-${course.id}`}>
-                      <Link href={`/teacher/courses/${course.id}/enrollments`}>
-                        <UserPlus className="w-4 h-4 mr-1" />
-                        Enrollments
-                      </Link>
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-            ))}
+                    {canUploadVideo && (
+                      <Button variant="outline" size="sm" asChild data-testid={`button-upload-video-${course.id}`}>
+                        <Link href={`/teacher/courses/${course.id}/upload-video`}>
+                          <Video className="w-4 h-4 mr-1" />
+                          Upload Video
+                        </Link>
+                      </Button>
+                    )}
+                    {course.status === "DRAFT" && (
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleSubmitClick(course)}
+                        data-testid={`button-submit-${course.id}`}
+                      >
+                        <Send className="w-4 h-4 mr-1" />
+                        Submit
+                      </Button>
+                    )}
+                    {course.status === "PUBLISHED" && (
+                      <Button variant="outline" size="sm" asChild data-testid={`button-enrollments-${course.id}`}>
+                        <Link href={`/teacher/courses/${course.id}/enrollments`}>
+                          <UserPlus className="w-4 h-4 mr-1" />
+                          Enrollments
+                        </Link>
+                      </Button>
+                    )}
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <Card className="py-16">

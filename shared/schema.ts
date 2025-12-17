@@ -64,6 +64,7 @@ export const courses = pgTable("courses", {
   teacherId: varchar("teacher_id").notNull().references(() => users.id),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
+  coverImageUrl: varchar("cover_image_url", { length: 500 }),
   status: courseStatusEnum("status").notNull().default("DRAFT"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
