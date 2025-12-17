@@ -92,6 +92,16 @@ Preferred communication style: Simple, everyday language.
 - **Access**: TEACHER and SUPER_ADMIN roles only
 - **Required Secrets**: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_TOKEN`
 
+### File Storage
+- **Cloudflare R2**: S3-compatible object storage for lesson files
+- **Endpoints**:
+  - `POST /api/r2/presign` - Creates presigned PUT URL for direct upload
+  - `GET /api/r2/download?key=...` - Secure file download with access control
+- **Access**: TEACHER and SUPER_ADMIN can upload; download requires course ownership, enrollment, or admin role
+- **File Types**: pdf, doc, docx, ppt, pptx, zip, png, jpg, jpeg (max 100MB)
+- **Required Secrets**: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`
+- **Object Key Format**: `courses/<courseId>/<timestamp>-<safeFileName>`
+
 ### Environment Requirements
 - `DATABASE_URL`: PostgreSQL connection string
 - `SESSION_SECRET`: Secret for session encryption
