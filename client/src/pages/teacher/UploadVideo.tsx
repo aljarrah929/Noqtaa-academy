@@ -12,7 +12,7 @@ import { VideoUploader } from "@/components/VideoUploader";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Video, CheckCircle, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Video, CheckCircle, ShieldAlert, BookOpen } from "lucide-react";
 import type { CourseWithRelations } from "@shared/schema";
 
 export default function UploadVideo() {
@@ -35,6 +35,11 @@ export default function UploadVideo() {
     enabled: !!courseId,
   });
 
+  const { data: teacherCourses, isLoading: coursesLoading } = useQuery<CourseWithRelations[]>({
+    queryKey: ["/api/teacher/courses"],
+    enabled: !courseId && canUpload,
+  });
+
   const createLessonMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", `/api/courses/${courseId}/lessons`, {
@@ -52,7 +57,7 @@ export default function UploadVideo() {
         title: "Lesson Created",
         description: "Your video lesson has been saved successfully.",
       });
-      navigate(`/teacher/courses/${courseId}/edit`);
+      navigate(`/teacher/courses/${courseId}/content`);
     },
     onError: (error: Error) => {
       toast({
@@ -77,7 +82,7 @@ export default function UploadVideo() {
 
   const canSave = lessonTitle.trim().length > 0 && uploadComplete && videoUid;
 
-  if (authLoading || courseLoading) {
+  if (authLoading || (courseId && courseLoading)) {
     return (
       <DashboardLayout title="Upload Video">
         <div className="max-w-2xl mx-auto">
@@ -105,6 +110,71 @@ export default function UploadVideo() {
                   Back to Dashboard
                 </Link>
               </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!courseId) {
+    return (
+      <DashboardLayout title="Upload Video">
+        <div className="max-w-2xl mx-auto">
+          <Button variant="ghost" asChild className="mb-6" data-testid="button-back">
+            <Link href="/teacher">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Link>
+          </Button>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Video className="w-5 h-5" />
+                Upload Video Lesson
+              </CardTitle>
+              <CardDescription>
+                Select a course to add a video lesson
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {coursesLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-16 rounded-lg" />
+                  <Skeleton className="h-16 rounded-lg" />
+                  <Skeleton className="h-16 rounded-lg" />
+                </div>
+              ) : teacherCourses && teacherCourses.length > 0 ? (
+                <div className="space-y-3">
+                  {teacherCourses.map((c) => (
+                    <Link
+                      key={c.id}
+                      href={`/teacher/courses/${c.id}/upload-video`}
+                      className="w-full p-4 text-left rounded-lg border hover-elevate active-elevate-2 flex items-center gap-3"
+                      data-testid={`button-select-course-${c.id}`}
+                    >
+                      <BookOpen className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-medium truncate">{c.title}</h3>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {c.lessons?.length || 0} lessons
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground mb-4">
+                    No courses available. Ask an admin to create a course for you.
+                  </p>
+                  <Button variant="outline" asChild>
+                    <Link href="/teacher">Back to Dashboard</Link>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
