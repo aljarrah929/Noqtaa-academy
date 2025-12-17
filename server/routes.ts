@@ -4,6 +4,46 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated, seedSuperAdmin } from "./auth";
 import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema, updateAdminDashboardStatsConfigSchema } from "@shared/schema";
 import { z } from "zod";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+// Cloudflare R2 configuration
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
+
+function getR2Client(): S3Client | null {
+  if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+    return null;
+  }
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: R2_ACCESS_KEY_ID,
+      secretAccessKey: R2_SECRET_ACCESS_KEY,
+    },
+  });
+}
+
+// Allowed file types for upload
+const ALLOWED_FILE_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/zip",
+  "application/x-zip-compressed",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+];
+
+const ALLOWED_EXTENSIONS = ["pdf", "doc", "docx", "ppt", "pptx", "zip", "png", "jpg", "jpeg"];
+
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
@@ -967,6 +1007,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating Cloudflare Stream upload:", error);
       res.status(500).json({ message: "Failed to create video upload" });
+    }
+  });
+
+  // Cloudflare R2 - Presigned URL for file upload
+  app.post("/api/r2/presign", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only teachers and super admins can upload files" });
+      }
+      
+      const { fileName, contentType, courseId, fileSize } = req.body;
+      
+      if (!fileName || !contentType || !courseId) {
+        return res.status(400).json({ message: "fileName, contentType, and courseId are required" });
+      }
+      
+      // Validate file extension
+      const ext = fileName.split(".").pop()?.toLowerCase();
+      if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
+        return res.status(400).json({ 
+          message: `File type not allowed. Allowed: ${ALLOWED_EXTENSIONS.join(", ")}` 
+        });
+      }
+      
+      // Validate content type
+      if (!ALLOWED_FILE_TYPES.includes(contentType)) {
+        return res.status(400).json({ message: "Content type not allowed" });
+      }
+      
+      // Validate file size
+      if (fileSize && fileSize > MAX_FILE_SIZE) {
+        return res.status(400).json({ message: "File size exceeds 100MB limit" });
+      }
+      
+      // Verify course exists and user has access to upload
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      // Teachers can only upload to their own courses
+      // Super admins can upload to any course (by design - full system access)
+      if (user.role === "TEACHER" && course.teacherId !== userId) {
+        console.warn(`[R2 UPLOAD DENIED] Teacher ${userId} attempted to upload to course ${courseId} owned by ${course.teacherId}`);
+        return res.status(403).json({ message: "You can only upload files to your own courses" });
+      }
+      
+      // Audit log for uploads
+      console.log(`[R2 UPLOAD] User ${userId} (${user.role}) uploading file "${fileName}" to course ${courseId}`);
+      
+      const r2Client = getR2Client();
+      if (!r2Client || !R2_BUCKET_NAME) {
+        console.error("R2 configuration missing");
+        return res.status(500).json({ message: "File storage service is not configured" });
+      }
+      
+      // Create safe object key: courses/<courseId>/<timestamp>-<safeFileName>
+      const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const timestamp = Date.now();
+      const objectKey = `courses/${courseId}/${timestamp}-${safeFileName}`;
+      
+      // Generate presigned PUT URL (10 minute expiry)
+      const command = new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: objectKey,
+        ContentType: contentType,
+      });
+      
+      const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 600 });
+      
+      // Use secure download endpoint instead of direct public URL
+      const fileUrl = `/api/r2/download?key=${encodeURIComponent(objectKey)}`;
+      
+      res.json({
+        uploadUrl,
+        objectKey,
+        fileUrl,
+        fileName: safeFileName,
+      });
+    } catch (error) {
+      console.error("Error creating R2 presigned URL:", error);
+      res.status(500).json({ message: "Failed to create upload URL" });
+    }
+  });
+
+  // Cloudflare R2 - Secure file download
+  app.get("/api/r2/download", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const key = req.query.key as string;
+      if (!key) {
+        return res.status(400).json({ message: "File key is required" });
+      }
+      
+      // Validate key format strictly: courses/<courseId>/<timestamp>-<fileName>
+      // Key must match the exact pattern we generate in presign
+      const keyPattern = /^courses\/(\d+)\/\d+-[a-zA-Z0-9._-]+$/;
+      const keyMatch = key.match(keyPattern);
+      
+      if (!keyMatch) {
+        return res.status(400).json({ message: "Invalid file key format" });
+      }
+      
+      const courseId = parseInt(keyMatch[1]);
+      if (isNaN(courseId) || courseId <= 0) {
+        return res.status(400).json({ message: "Invalid course ID in file key" });
+      }
+      
+      // Check access: must be teacher of the course, enrolled student, admin, or super admin
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      const isTeacher = user.role === "TEACHER" && course.teacherId === userId;
+      const isSuperAdmin = user.role === "SUPER_ADMIN";
+      const isAdmin = user.role === "ADMIN";
+      
+      let isEnrolledStudent = false;
+      if (user.role === "STUDENT") {
+        const enrollments = await storage.getEnrollmentsByStudent(userId);
+        isEnrolledStudent = enrollments.some(e => e.courseId === courseId);
+      }
+      
+      if (!isTeacher && !isSuperAdmin && !isAdmin && !isEnrolledStudent) {
+        return res.status(403).json({ message: "You don't have access to this file" });
+      }
+      
+      const r2Client = getR2Client();
+      if (!r2Client || !R2_BUCKET_NAME) {
+        return res.status(500).json({ message: "File storage service is not configured" });
+      }
+      
+      const command = new GetObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: key,
+      });
+      
+      const response = await r2Client.send(command);
+      
+      if (!response.Body) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      
+      // Extract filename from key (format: courses/<courseId>/<timestamp>-<fileName>)
+      const keyParts = key.split("/");
+      const fileName = keyParts[keyParts.length - 1].replace(/^\d+-/, "");
+      
+      res.setHeader("Content-Type", response.ContentType || "application/octet-stream");
+      res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+      if (response.ContentLength) {
+        res.setHeader("Content-Length", response.ContentLength);
+      }
+      
+      // Stream the file to response
+      const stream = response.Body as NodeJS.ReadableStream;
+      stream.pipe(res);
+    } catch (error: any) {
+      if (error.name === "NoSuchKey") {
+        return res.status(404).json({ message: "File not found" });
+      }
+      console.error("Error downloading R2 file:", error);
+      res.status(500).json({ message: "Failed to download file" });
     }
   });
 

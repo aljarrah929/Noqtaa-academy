@@ -1,0 +1,57 @@
+Implement Cloudflare R2 file upload (drag & drop) for Teacher "Add File Lesson".
+
+Context:
+We already created an R2 bucket named "cpeacademy-files" and added these Replit Secrets:
+- R2_ACCOUNT_ID
+- R2_ACCESS_KEY_ID
+- R2_SECRET_ACCESS_KEY
+- R2_BUCKET_NAME
+
+Goal:
+On /teacher/add-file (Add File Lesson page), replace the current "File URL" textbox with a true drag-and-drop uploader. Teacher drags a file from their computer, it uploads to Cloudflare R2, then the lesson is saved with contentType="file" and content=<fileUrl>.
+
+Backend requirements:
+1) Install and use AWS SDK S3 client configured for Cloudflare R2 (S3-compatible).
+2) Compute endpoint from env:
+   endpoint = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+3) Add API route: POST /api/r2/presign
+   - Auth: only TEACHER and SUPER_ADMIN
+   - Body: { fileName, contentType, courseId }
+   - Return: { uploadUrl, objectKey, fileUrl }
+   - objectKey should include courseId + timestamp to avoid collisions, e.g. `courses/<courseId>/<timestamp>-<safeFileName>`
+4) Generate a pre-signed PUT URL (short expiry like 10 minutes) for uploading directly to R2.
+5) fileUrl strategy:
+   - If Public Development URL is enabled, use it to build a direct URL.
+   - Otherwise, implement GET /api/r2/download?key=... that streams the file (teacher & enrolled students only).
+   - Prefer secure download endpoint if direct public URL is not reliable.
+6) Validate file size/type server-side (basic allowlist: pdf, doc, docx, ppt, pptx, zip, png, jpg, jpeg) and reject unsafe types.
+7) Never expose secrets to the client.
+
+Frontend requirements:
+1) Update Add File Lesson page UI:
+   - Add a Dropzone (drag & drop area) + “Choose file” button.
+   - When file selected:
+     a) call POST /api/r2/presign to get uploadUrl/objectKey/fileUrl
+     b) PUT file to uploadUrl with correct Content-Type
+     c) show upload progress
+     d) on success, store fileUrl/objectKey in state and show success UI
+2) Disable “Save Lesson” until upload succeeds.
+3) On Save Lesson:
+   - Create a lesson with:
+     - title = Lesson Title field
+     - contentType = "file"
+     - content = fileUrl (or objectKey if using secure download endpoint)
+     - courseId = selected course
+4) Ensure refresh/back never causes blank page. Add route fallback NotFound if needed.
+
+Acceptance tests:
+- Teacher can drag & drop a local file and upload completes.
+- Lesson saves successfully and appears in course lessons list.
+- Student enrolled can download/view the file (via secure endpoint or working URL).
+- Non-teacher cannot access upload endpoints.
+- No 404, no white screen.
+
+Deliverables:
+- List files changed
+- The final working upload route paths
+- Manual test steps
