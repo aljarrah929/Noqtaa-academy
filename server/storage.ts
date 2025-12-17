@@ -32,12 +32,56 @@ import {
   type PasswordResetToken,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, count, sql } from "drizzle-orm";
+import { eq, and, desc, count, sql, or, ilike, isNull } from "drizzle-orm";
+
+// College code mapping for public IDs
+const COLLEGE_CODES: Record<string, string> = {
+  pharmacy: "PH",
+  engineering: "EN",
+  it: "IT",
+};
+
+// Generate a public ID in the format XXNNNNNN (e.g., PH123456)
+export async function generatePublicId(collegeId: number | null): Promise<string> {
+  // Get college code
+  let collegeCode = "XX"; // Default for unknown/null college
+  if (collegeId) {
+    const college = await db.select().from(colleges).where(eq(colleges.id, collegeId)).limit(1);
+    if (college[0]?.slug) {
+      collegeCode = COLLEGE_CODES[college[0].slug] || "XX";
+    }
+  }
+  
+  // Generate unique 6-digit number
+  let attempts = 0;
+  const maxAttempts = 100;
+  
+  while (attempts < maxAttempts) {
+    const randomNum = Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
+    const publicId = `${collegeCode}${randomNum}`;
+    
+    // Check for uniqueness
+    const existing = await db.select({ id: users.id })
+      .from(users)
+      .where(eq(users.publicId, publicId))
+      .limit(1);
+    
+    if (existing.length === 0) {
+      return publicId;
+    }
+    attempts++;
+  }
+  
+  throw new Error("Failed to generate unique public ID after maximum attempts");
+}
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByPublicId(publicId: string): Promise<User | undefined>;
+  searchUsers(query: string, searcherRole: User["role"], limit?: number): Promise<UserWithCollege[]>;
   createUserWithPassword(data: { email: string; passwordHash: string; firstName: string; lastName: string; collegeId: number; role?: User["role"] }): Promise<User>;
+  migrateUsersWithoutPublicId(): Promise<number>;
   upsertUser(user: UpsertUser): Promise<User>;
   getUserWithCollege(id: string): Promise<UserWithCollege | undefined>;
   updateUserRole(id: string, role: User["role"], collegeId?: number | null): Promise<User | undefined>;
@@ -101,6 +145,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUserWithPassword(data: { email: string; passwordHash: string; firstName: string; lastName: string; collegeId: number; role?: User["role"] }): Promise<User> {
+    // Generate public ID for the new user
+    const publicId = await generatePublicId(data.collegeId);
+    
     const [user] = await db.insert(users).values({
       email: data.email,
       passwordHash: data.passwordHash,
@@ -108,8 +155,80 @@ export class DatabaseStorage implements IStorage {
       lastName: data.lastName,
       collegeId: data.collegeId,
       role: data.role || "STUDENT",
+      publicId,
     }).returning();
     return user;
+  }
+
+  async getUserByPublicId(publicId: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.publicId, publicId)).limit(1);
+    return result[0];
+  }
+
+  async searchUsers(query: string, searcherRole: User["role"], limit: number = 5): Promise<UserWithCollege[]> {
+    // Check if query is a public ID format (e.g., PH123456)
+    const publicIdPattern = /^[A-Z]{2}\d{6}$/;
+    const isPublicIdSearch = publicIdPattern.test(query.toUpperCase());
+    
+    // Teachers can only search for students
+    const roleFilter = searcherRole === "TEACHER" 
+      ? eq(users.role, "STUDENT")
+      : undefined;
+    
+    let results;
+    
+    if (isPublicIdSearch) {
+      // Search by exact public ID
+      const conditions = roleFilter 
+        ? and(eq(users.publicId, query.toUpperCase()), roleFilter)
+        : eq(users.publicId, query.toUpperCase());
+      
+      results = await db.select().from(users)
+        .leftJoin(colleges, eq(users.collegeId, colleges.id))
+        .where(conditions)
+        .limit(limit);
+    } else {
+      // Search by email or name (case-insensitive)
+      const searchPattern = `%${query}%`;
+      const searchCondition = or(
+        ilike(users.email, searchPattern),
+        ilike(users.firstName, searchPattern),
+        ilike(users.lastName, searchPattern)
+      );
+      
+      const conditions = roleFilter 
+        ? and(searchCondition, roleFilter)
+        : searchCondition;
+      
+      results = await db.select().from(users)
+        .leftJoin(colleges, eq(users.collegeId, colleges.id))
+        .where(conditions)
+        .limit(limit);
+    }
+    
+    return results.map(row => ({
+      ...row.users,
+      college: row.colleges || undefined,
+    }));
+  }
+
+  async migrateUsersWithoutPublicId(): Promise<number> {
+    // Get all users without a public ID
+    const usersWithoutId = await db.select()
+      .from(users)
+      .where(isNull(users.publicId));
+    
+    let migrated = 0;
+    
+    for (const user of usersWithoutId) {
+      const publicId = await generatePublicId(user.collegeId);
+      await db.update(users)
+        .set({ publicId })
+        .where(eq(users.id, user.id));
+      migrated++;
+    }
+    
+    return migrated;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {

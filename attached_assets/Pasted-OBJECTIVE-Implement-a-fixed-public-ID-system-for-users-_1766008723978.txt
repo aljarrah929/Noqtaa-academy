@@ -1,0 +1,116 @@
+OBJECTIVE:
+Implement a fixed public ID system for users and replace long student lists with a search-based enrollment system for teachers.
+
+========================================
+1. USER PUBLIC ID (FIXED FOR LIFE)
+========================================
+Add a new field to the User model:
+
+publicId: string (unique, indexed)
+
+ID FORMAT (NO SPACES):
+XXNNNNNN
+
+- XX = College code:
+  - Pharmacy -> PH
+  - Engineering -> EN
+  - IT -> IT
+
+- NNNNNN = 6-digit numeric sequence (0–9)
+
+RULES:
+- Generated ONCE at first registration
+- NEVER changes even if role changes
+- Backend-only generation
+- Must be unique
+- If duplicate detected → regenerate
+
+========================================
+2. PUBLIC ID GENERATION LOGIC
+========================================
+On user creation:
+1. Determine college code (XX)
+2. Generate random 6-digit number
+3. Combine: XX + NNNNNN
+4. Check database for uniqueness
+5. If exists → regenerate
+6. Save to user.publicId
+
+========================================
+3. DISPLAYING THE ID
+========================================
+Student Dashboard:
+- Display text:
+  My ID: PH123456
+- Add "Copy ID" button
+
+This ID is the PRIMARY identifier in the system.
+
+========================================
+4. SEARCH API FOR STUDENTS
+========================================
+Create endpoint:
+
+GET /api/users/search?query=
+
+SEARCH LOGIC:
+- If query matches regex:
+  ^[A-Z]{2}\d{6}$
+  → Search by publicId
+- Else:
+  → Search by email OR name
+- Limit results to 5 users max
+
+PERMISSIONS:
+- Teacher:
+  - Can search ONLY users with role = STUDENT
+- Admin / Super Admin:
+  - Can search ALL users
+
+========================================
+5. TEACHER COURSE ENROLLMENT (UI CHANGE)
+========================================
+REMOVE:
+- Any long student lists
+
+ADD:
+- Search input field:
+  Placeholder: "Search by Student ID (PH123456)"
+
+ON RESULT FOUND:
+- Show card with:
+  - Student name
+  - publicId
+  - Email
+  - Button: "Add to Course"
+
+RULES:
+- Prevent adding same student twice
+- Prevent adding non-student roles
+
+========================================
+6. PERMISSION RULES
+========================================
+- Only STUDENT role can be enrolled
+- Teacher:
+  - Can add students
+  - Cannot remove students
+- Admin / Super Admin:
+  - Full control
+
+========================================
+7. MIGRATION FOR EXISTING USERS
+========================================
+For users without publicId:
+- Auto-generate publicId based on college
+- Ensure uniqueness
+- Save permanently
+
+========================================
+ACCEPTANCE CRITERIA
+========================================
+- Every user has a permanent publicId
+- Format is XXNNNNNN
+- ID never changes
+- Teachers enroll students via search only
+- No long student lists anywhere

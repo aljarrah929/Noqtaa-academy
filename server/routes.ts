@@ -48,6 +48,16 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
   await seedSuperAdmin();
+  
+  // Migrate existing users without public IDs
+  try {
+    const migratedCount = await storage.migrateUsersWithoutPublicId();
+    if (migratedCount > 0) {
+      console.log(`Migrated ${migratedCount} users with public IDs`);
+    }
+  } catch (error) {
+    console.error("Error migrating users with public IDs:", error);
+  }
 
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
@@ -745,6 +755,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching students:", error);
       res.status(500).json({ message: "Failed to fetch students" });
+    }
+  });
+
+  // User search endpoint for enrollment
+  app.get("/api/users/search", isAuthenticated, async (req: any, res) => {
+    try {
+      const query = req.query.query as string;
+      const user = req.user;
+      
+      if (!query || query.trim().length === 0) {
+        return res.json([]);
+      }
+      
+      // Only teachers, admins, and super admins can search
+      if (!["TEACHER", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      
+      const results = await storage.searchUsers(query.trim(), user.role, 5);
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching users:", error);
+      res.status(500).json({ message: "Failed to search users" });
     }
   });
 

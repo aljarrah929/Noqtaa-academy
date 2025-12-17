@@ -53,6 +53,7 @@ export const users = pgTable("users", {
   role: userRoleEnum("role").notNull().default("STUDENT"),
   collegeId: integer("college_id").references(() => colleges.id),
   isActive: boolean("is_active").notNull().default(true),
+  publicId: varchar("public_id", { length: 8 }).unique(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

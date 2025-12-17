@@ -1,9 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRoute } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,14 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -27,24 +16,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Users, UserPlus, ArrowLeft, Mail } from "lucide-react";
+import { Users, UserPlus, ArrowLeft, Mail, Search, UserCheck } from "lucide-react";
 import { Link } from "wouter";
-import type { CourseWithRelations, User, Enrollment } from "@shared/schema";
-
-const enrollFormSchema = z.object({
-  studentId: z.string().min(1, "Please select a student"),
-});
-
-type EnrollFormValues = z.infer<typeof enrollFormSchema>;
+import type { CourseWithRelations, User, Enrollment, UserWithCollege } from "@shared/schema";
 
 interface EnrollmentWithStudent extends Enrollment {
   student?: User;
@@ -55,6 +31,17 @@ export default function CourseEnrollments() {
   const courseId = params?.id;
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState<UserWithCollege | null>(null);
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const { data: course, isLoading: courseLoading } = useQuery<CourseWithRelations>({
     queryKey: ["/api/courses", courseId],
@@ -66,19 +53,18 @@ export default function CourseEnrollments() {
     enabled: !!courseId,
   });
 
-  const { data: students } = useQuery<User[]>({
-    queryKey: ["/api/students"],
+  const { data: searchResults, isLoading: searching } = useQuery<UserWithCollege[]>({
+    queryKey: ["/api/users/search", debouncedQuery],
+    enabled: debouncedQuery.length >= 2,
   });
 
-  const form = useForm<EnrollFormValues>({
-    resolver: zodResolver(enrollFormSchema),
-    defaultValues: { studentId: "" },
-  });
+  const enrolledStudentIds = new Set(enrollments?.map(e => e.studentId) || []);
+  const availableResults = searchResults?.filter(s => !enrolledStudentIds.has(s.id)) || [];
 
   const enrollMutation = useMutation({
-    mutationFn: async (data: EnrollFormValues) => {
+    mutationFn: async (studentId: string) => {
       await apiRequest("POST", `/api/courses/${courseId}/enrollments`, {
-        studentId: data.studentId,
+        studentId,
       });
     },
     onSuccess: () => {
@@ -86,19 +72,27 @@ export default function CourseEnrollments() {
       queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId] });
       toast({ title: "Student Enrolled", description: "The student has been enrolled in this course." });
       setDialogOpen(false);
-      form.reset();
+      setSearchQuery("");
+      setSelectedStudent(null);
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
-  const onSubmit = (data: EnrollFormValues) => {
-    enrollMutation.mutate(data);
+  const handleEnroll = () => {
+    if (selectedStudent) {
+      enrollMutation.mutate(selectedStudent.id);
+    }
   };
 
-  const enrolledStudentIds = new Set(enrollments?.map(e => e.studentId) || []);
-  const availableStudents = students?.filter(s => !enrolledStudentIds.has(s.id)) || [];
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      setSearchQuery("");
+      setSelectedStudent(null);
+    }
+  };
 
   if (courseLoading) {
     return (
@@ -165,9 +159,16 @@ export default function CourseEnrollments() {
                         <AvatarFallback>{initials}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">
-                          {student?.firstName} {student?.lastName}
-                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium truncate">
+                            {student?.firstName} {student?.lastName}
+                          </p>
+                          {student?.publicId && (
+                            <Badge variant="secondary" className="text-xs">
+                              {student.publicId}
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground truncate">
                           {student?.email}
                         </p>
@@ -196,60 +197,111 @@ export default function CourseEnrollments() {
         </Card>
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+      <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Enroll Student</DialogTitle>
             <DialogDescription>
-              Select a student to enroll in this course.
+              Search for a student by their ID (e.g., PH123456), name, or email.
             </DialogDescription>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="studentId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Student</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-student">
-                          <SelectValue placeholder="Select a student" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {availableStudents.length > 0 ? (
-                          availableStudents.map((student) => (
-                            <SelectItem key={student.id} value={student.id}>
-                              {student.firstName} {student.lastName} ({student.email})
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <div className="p-2 text-sm text-muted-foreground text-center">
-                            No available students
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by Student ID (PH123456)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+                data-testid="input-search-student"
               />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={enrollMutation.isPending || availableStudents.length === 0}
-                  data-testid="button-confirm-enroll"
-                >
-                  {enrollMutation.isPending ? "Enrolling..." : "Enroll Student"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+            </div>
+
+            {/* Search Results */}
+            {debouncedQuery.length >= 2 && (
+              <div className="border rounded-md max-h-60 overflow-y-auto">
+                {searching ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    Searching...
+                  </div>
+                ) : availableResults.length > 0 ? (
+                  <div className="divide-y">
+                    {availableResults.map((student) => {
+                      const initials = `${student.firstName?.[0] || ""}${student.lastName?.[0] || ""}`.toUpperCase() || "S";
+                      const isSelected = selectedStudent?.id === student.id;
+                      
+                      return (
+                        <div
+                          key={student.id}
+                          className={`flex items-center gap-3 p-3 cursor-pointer hover-elevate ${isSelected ? "bg-accent" : ""}`}
+                          onClick={() => setSelectedStudent(student)}
+                          data-testid={`result-student-${student.id}`}
+                        >
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={student.profileImageUrl || undefined} className="object-cover" />
+                            <AvatarFallback>{initials}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium truncate">
+                                {student.firstName} {student.lastName}
+                              </p>
+                              {student.publicId && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {student.publicId}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {student.email}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <UserCheck className="w-5 h-5 text-primary flex-shrink-0" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : searchResults && searchResults.length > 0 ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    All matching students are already enrolled
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-muted-foreground">
+                    No students found
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Selected Student Preview */}
+            {selectedStudent && (
+              <div className="border rounded-md p-3 bg-accent/30">
+                <p className="text-sm font-medium mb-1">Selected Student:</p>
+                <div className="flex items-center gap-2">
+                  <span>{selectedStudent.firstName} {selectedStudent.lastName}</span>
+                  {selectedStudent.publicId && (
+                    <Badge variant="outline">{selectedStudent.publicId}</Badge>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => handleDialogClose(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleEnroll}
+              disabled={!selectedStudent || enrollMutation.isPending}
+              data-testid="button-confirm-enroll"
+            >
+              {enrollMutation.isPending ? "Enrolling..." : "Enroll Student"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardLayout>
