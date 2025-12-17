@@ -34,8 +34,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Plus, Trash2, GripVertical, Save, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, ShieldAlert } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations, College, Lesson } from "@shared/schema";
 import { VideoUploader } from "@/components/VideoUploader";
@@ -62,9 +63,12 @@ export default function CourseEditor() {
   const isNew = matchNew;
   const courseId = editParams?.id;
   const { toast } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
   
   const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+  
+  const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
 
   const { data: course, isLoading: courseLoading } = useQuery<CourseWithRelations>({
     queryKey: ["/api/courses", courseId],
@@ -215,6 +219,33 @@ export default function CourseEditor() {
     }
     setLessonDialogOpen(true);
   };
+
+  if (authLoading) {
+    return (
+      <DashboardLayout title="Loading...">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <Skeleton className="h-64 rounded-lg" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <DashboardLayout title="Access Denied">
+        <div className="max-w-4xl mx-auto text-center py-16">
+          <ShieldAlert className="w-16 h-16 mx-auto text-destructive mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+          <p className="text-muted-foreground mb-6">
+            Only administrators can create or edit courses.
+          </p>
+          <Button asChild>
+            <Link href="/">Go Home</Link>
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (courseLoading && !isNew) {
     return (
