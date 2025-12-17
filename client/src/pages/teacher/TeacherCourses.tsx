@@ -128,9 +128,11 @@ export default function TeacherCourses() {
         ) : courses && courses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {courses.map((course) => {
-              const teacherInitials = user?.firstName && user?.lastName
-                ? `${user.firstName[0]}${user.lastName[0]}`
-                : user?.email?.[0]?.toUpperCase() || "T";
+              // Use course.teacher if available, fallback to logged-in user for teacher's own courses
+              const teacher = course.teacher || user;
+              const teacherInitials = teacher?.firstName && teacher?.lastName
+                ? `${teacher.firstName[0]}${teacher.lastName[0]}`
+                : teacher?.email?.[0]?.toUpperCase() || "T";
               
               return (
                 <Card key={course.id} data-testid={`card-course-${course.id}`} className="overflow-hidden">
@@ -156,7 +158,7 @@ export default function TeacherCourses() {
                     {/* Teacher Avatar Overlay */}
                     <div className="absolute -bottom-6 left-4">
                       <Avatar className="w-12 h-12 border-2 border-background">
-                        <AvatarImage src={user?.profileImageUrl || undefined} />
+                        <AvatarImage src={teacher?.profileImageUrl || undefined} />
                         <AvatarFallback className="bg-primary text-primary-foreground">
                           {teacherInitials}
                         </AvatarFallback>
