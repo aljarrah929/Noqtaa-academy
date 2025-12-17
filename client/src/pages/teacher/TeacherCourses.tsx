@@ -20,7 +20,6 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   BookOpen, 
   Users, 
-  Plus, 
   Send, 
   UserPlus,
   FileText,
@@ -98,14 +97,8 @@ export default function TeacherCourses() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <p className="text-muted-foreground">
-            {isLoading ? "Loading..." : `${courses?.length || 0} courses`}
+            {isLoading ? "Loading..." : `${courses?.length || 0} courses assigned to you`}
           </p>
-          <Button asChild data-testid="button-create-course">
-            <Link href="/teacher/courses/new">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Course
-            </Link>
-          </Button>
         </div>
 
         {isLoading ? (
@@ -192,7 +185,7 @@ export default function TeacherCourses() {
 
                   <CardFooter className="pt-3 border-t border-border flex flex-wrap gap-2">
                     <Button variant="outline" size="sm" asChild data-testid={`button-manage-${course.id}`}>
-                      <Link href={`/teacher/courses/${course.id}/edit`}>
+                      <Link href={`/teacher/courses/${course.id}/content`}>
                         <Settings className="w-4 h-4 mr-1" />
                         Manage Content
                       </Link>
@@ -232,16 +225,10 @@ export default function TeacherCourses() {
           <Card className="py-16">
             <CardContent className="text-center">
               <BookOpen className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="font-semibold text-xl mb-2">No Courses Yet</h3>
+              <h3 className="font-semibold text-xl mb-2">No Courses Assigned</h3>
               <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                You haven't created any courses yet. Start by creating your first course.
+                You don't have any courses assigned yet. An admin will assign courses to you for content management.
               </p>
-              <Button asChild>
-                <Link href="/teacher/courses/new">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Course
-                </Link>
-              </Button>
             </CardContent>
           </Card>
         )}

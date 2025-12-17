@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Users, Plus, ArrowRight, CheckCircle } from "lucide-react";
+import { BookOpen, Users, ArrowRight, CheckCircle, Video } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations } from "@shared/schema";
 
@@ -83,14 +83,14 @@ export default function TeacherDashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card className="hover-elevate">
-            <Link href="/teacher/courses/new">
+            <Link href="/teacher/courses">
               <CardContent className="pt-6 flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-full">
-                  <Plus className="w-6 h-6 text-primary" />
+                  <BookOpen className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Create Course</h3>
-                  <p className="text-sm text-muted-foreground">Start a new course</p>
+                  <h3 className="font-semibold">Manage Content</h3>
+                  <p className="text-sm text-muted-foreground">Manage lessons and videos</p>
                 </div>
                 <ArrowRight className="w-5 h-5 ml-auto text-muted-foreground" />
               </CardContent>
@@ -98,14 +98,14 @@ export default function TeacherDashboard() {
           </Card>
 
           <Card className="hover-elevate">
-            <Link href="/teacher/courses">
+            <Link href="/teacher/upload-video">
               <CardContent className="pt-6 flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-full">
-                  <BookOpen className="w-6 h-6 text-primary" />
+                  <Video className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Manage Courses</h3>
-                  <p className="text-sm text-muted-foreground">Edit and update courses</p>
+                  <h3 className="font-semibold">Upload Video</h3>
+                  <p className="text-sm text-muted-foreground">Add video content</p>
                 </div>
                 <ArrowRight className="w-5 h-5 ml-auto text-muted-foreground" />
               </CardContent>
