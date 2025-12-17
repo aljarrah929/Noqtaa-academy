@@ -55,6 +55,13 @@ export default function CourseEnrollments() {
 
   const { data: searchResults, isLoading: searching } = useQuery<UserWithCollege[]>({
     queryKey: ["/api/users/search", debouncedQuery],
+    queryFn: async () => {
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(debouncedQuery)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to search users");
+      return res.json();
+    },
     enabled: debouncedQuery.length >= 2,
   });
 

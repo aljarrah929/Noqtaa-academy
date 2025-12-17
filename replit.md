@@ -51,6 +51,8 @@ Preferred communication style: Simple, everyday language.
 
 **Core Entities**:
 - `users` - Extended Replit Auth users with roles and college associations
+  - Has `publicId` field: Unique identifier format `XXNNNNNN` (2-letter college code + 6 random digits)
+  - College codes: PH (Pharmacy), EN (Engineering), IT (IT), XX (no college/admins)
 - `colleges` - College definitions with theme colors
 - `courses` - Courses with status workflow (DRAFT → PENDING_APPROVAL → PUBLISHED/REJECTED)
 - `lessons` - Course content with ordering and content types (video, text, link, file)
