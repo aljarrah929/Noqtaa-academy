@@ -1,0 +1,88 @@
+Goal
+
+In the Teacher sidebar navigation, remove “Create Course” and replace it with two teacher tools:
+
+“Upload Videos”
+
+“Add File”
+Stacked vertically under “My Courses”.
+
+Requirements
+
+Sidebar UI
+
+Remove the “Create Course” nav item from Teacher sidebar completely.
+
+Add two nav items in its place, in this order:
+
+Upload Videos
+
+Add File
+
+Keep consistent icons and styling with existing sidebar items.
+
+Routing
+
+Ensure both links navigate to valid teacher routes (no 404):
+
+Upload Videos → /teacher/upload-video (or whatever existing working route is used)
+
+Add File → /teacher/upload-file (create this route/page if missing)
+
+Both pages must be accessible only to TEACHER and SUPER_ADMIN.
+
+Upload Videos page behavior
+
+If the current upload page requires a courseId, then:
+
+Make this page a “global teacher tool” where teacher can select:
+
+Course (from assigned courses)
+
+Lesson (optional)
+
+Then upload and attach to a new lesson or existing lesson.
+
+Keep it simple: allow creating a new video lesson by choosing course + lesson title + upload.
+
+Add File page behavior
+
+Add a simple teacher UI to upload/attach a file to a course lesson:
+
+Select course (assigned courses only)
+
+Lesson title (or choose existing lesson if supported)
+
+File upload (pdf/docx/zip/etc. as allowed)
+
+Save as lesson with contentType="file" and store file URL/reference
+
+If file storage is not implemented yet:
+
+Add a minimal placeholder with clear TODO OR implement basic storage using the existing storage approach in the codebase.
+
+Do NOT break the app.
+
+RBAC
+
+Teacher cannot create courses anywhere (UI + API).
+
+Upload Videos + Add File must remain available for teachers.
+
+Acceptance Criteria
+
+Teacher sidebar no longer shows “Create Course”.
+
+Sidebar shows “Upload Videos” then “Add File”.
+
+Clicking both works and does not crash / no blank page.
+
+Refresh works on both pages.
+
+Non-teacher cannot access these routes.
+
+Deliverables
+
+File path where sidebar nav is defined/modified
+
+Final routes used for upload video and add file pages

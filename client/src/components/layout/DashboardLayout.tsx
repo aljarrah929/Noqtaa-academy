@@ -34,9 +34,10 @@ import {
   FileCheck,
   Building2,
   UserCog,
-  Plus,
   BarChart3,
   Star,
+  Video,
+  FileUp,
 } from "lucide-react";
 import { getRoleDisplayName, canAccessAdminDashboard, canAccessTeacherDashboard, canManageColleges, canManageRoles } from "@/lib/authUtils";
 import { BRAND_NAME } from "@/lib/branding";
@@ -83,7 +84,8 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const teacherMenuItems = [
     { href: "/teacher", label: "Dashboard", icon: LayoutDashboard },
     { href: "/teacher/courses", label: "My Courses", icon: BookOpen },
-    { href: "/teacher/courses/new", label: "Create Course", icon: Plus },
+    { href: "/teacher/upload-video", label: "Upload Videos", icon: Video },
+    { href: "/teacher/upload-file", label: "Add File", icon: FileUp },
   ];
 
   const adminMenuItems = [
