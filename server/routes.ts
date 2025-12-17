@@ -165,10 +165,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      if (!user || (user.role !== "TEACHER" && user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
-        return res.status(403).json({ message: "Only teachers can create courses" });
+      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only admins can create courses" });
       }
-      const data = insertCourseSchema.parse({ ...req.body, teacherId: userId });
+      const data = insertCourseSchema.parse({ ...req.body, teacherId: req.body.teacherId || userId });
       const course = await storage.createCourse(data);
       res.status(201).json(course);
     } catch (error) {
@@ -188,11 +188,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Course not found" });
       }
       
-      const isOwner = course.teacherId === userId;
       const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
       
-      if (!isOwner && !isAdmin) {
-        return res.status(403).json({ message: "Not authorized to update this course" });
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Only admins can update course details" });
       }
       
       const data = insertCourseSchema.partial().parse(req.body);
@@ -215,11 +214,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Course not found" });
       }
       
-      const isOwner = course.teacherId === userId;
       const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
       
-      if (!isOwner && !isAdmin) {
-        return res.status(403).json({ message: "Not authorized to delete this course" });
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Only admins can delete courses" });
       }
       
       await storage.deleteCourse(id);
