@@ -87,6 +87,7 @@ export default function Profile() {
       const presignRes = await apiRequest("POST", "/api/profile/avatar/presign", {
         fileName: file.name,
         contentType: file.type,
+        fileSize: file.size,
       });
       const { uploadUrl, fileUrl } = await presignRes.json();
 

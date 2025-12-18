@@ -6,6 +6,7 @@ import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertC
 import { z } from "zod";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import bcrypt from "bcryptjs";
 
 // Cloudflare R2 configuration
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -1216,10 +1217,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Profile - Avatar presign endpoint
+  const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
   app.post("/api/profile/avatar/presign", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const { fileName, contentType } = req.body;
+      const { fileName, contentType, fileSize } = req.body;
       
       if (!fileName || !contentType) {
         return res.status(400).json({ message: "fileName and contentType are required" });
@@ -1229,6 +1231,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
       if (!allowedTypes.includes(contentType)) {
         return res.status(400).json({ message: "Only PNG, JPG, JPEG, and WebP files are allowed" });
+      }
+      
+      // Validate file size on server
+      if (fileSize && fileSize > MAX_AVATAR_SIZE) {
+        return res.status(400).json({ message: "Avatar must be under 2MB" });
       }
       
       const r2Client = getR2Client();
