@@ -83,34 +83,65 @@ export default function Profile() {
 
     setUploading(true);
     try {
-      // Get presigned URL
-      const presignRes = await apiRequest("POST", "/api/profile/avatar/presign", {
-        fileName: file.name,
-        contentType: file.type,
-        fileSize: file.size,
-      });
-      const { uploadUrl, fileUrl } = await presignRes.json();
-
-      // Upload to R2
-      const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type,
-        },
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error("Failed to upload file");
+      // Step 1: Get presigned URL
+      let presignData: { uploadUrl: string; fileUrl: string };
+      try {
+        const presignRes = await apiRequest("POST", "/api/profile/avatar/presign", {
+          fileName: file.name,
+          contentType: file.type,
+          fileSize: file.size,
+        });
+        if (!presignRes.ok) {
+          const errorData = await presignRes.json().catch(() => ({}));
+          console.error("Presign failed:", presignRes.status, errorData);
+          throw new Error(errorData.message || "Failed to get upload URL");
+        }
+        presignData = await presignRes.json();
+      } catch (err) {
+        console.error("Presign error:", err);
+        toast({ title: "Presign Failed", description: err instanceof Error ? err.message : "Could not prepare upload.", variant: "destructive" });
+        return;
       }
 
-      // Confirm upload
-      await apiRequest("POST", "/api/profile/avatar/confirm", { fileUrl });
+      // Step 2: Upload to R2
+      try {
+        const uploadRes = await fetch(presignData.uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: {
+            "Content-Type": file.type,
+          },
+        });
+
+        if (!uploadRes.ok) {
+          console.error("R2 upload failed:", uploadRes.status, await uploadRes.text().catch(() => ""));
+          throw new Error(`Upload failed with status ${uploadRes.status}`);
+        }
+      } catch (err) {
+        console.error("R2 upload error:", err);
+        toast({ title: "Upload to R2 Failed", description: err instanceof Error ? err.message : "Could not upload file.", variant: "destructive" });
+        return;
+      }
+
+      // Step 3: Confirm upload
+      try {
+        const confirmRes = await apiRequest("POST", "/api/profile/avatar/confirm", { fileUrl: presignData.fileUrl });
+        if (!confirmRes.ok) {
+          const errorData = await confirmRes.json().catch(() => ({}));
+          console.error("Confirm failed:", confirmRes.status, errorData);
+          throw new Error(errorData.message || "Failed to save avatar");
+        }
+      } catch (err) {
+        console.error("Confirm error:", err);
+        toast({ title: "Confirm Failed", description: err instanceof Error ? err.message : "Could not save avatar.", variant: "destructive" });
+        return;
+      }
       
       // Refresh user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({ title: "Avatar Updated", description: "Your profile picture has been updated." });
     } catch (error) {
+      console.error("Avatar upload error:", error);
       toast({ title: "Error", description: "Failed to upload avatar.", variant: "destructive" });
     } finally {
       setUploading(false);

@@ -1283,16 +1283,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { fileUrl } = req.body;
       
       if (!fileUrl) {
+        console.log("[Avatar Confirm] Missing fileUrl in request body");
         return res.status(400).json({ message: "fileUrl is required" });
       }
       
-      // Update user's profile image URL
-      await storage.updateUserProfileImage(userId, fileUrl);
+      console.log(`[Avatar Confirm] Updating profile image for user ${userId}, URL length: ${fileUrl.length}`);
       
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error confirming avatar upload:", error);
-      res.status(500).json({ message: "Failed to update profile image" });
+      // Update user's profile image URL
+      const updatedUser = await storage.updateUserProfileImage(userId, fileUrl);
+      
+      if (!updatedUser) {
+        console.error(`[Avatar Confirm] User ${userId} not found`);
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      console.log(`[Avatar Confirm] Successfully updated profile image for user ${userId}`);
+      res.json({ success: true, user: updatedUser });
+    } catch (error: any) {
+      console.error("[Avatar Confirm] Error:", error?.message || error);
+      console.error("[Avatar Confirm] Full error:", error);
+      res.status(500).json({ message: error?.message || "Failed to update profile image" });
     }
   });
 

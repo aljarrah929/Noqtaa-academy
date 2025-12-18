@@ -49,7 +49,7 @@ export const users = pgTable("users", {
   passwordHash: varchar("password_hash", { length: 255 }),
   firstName: varchar("first_name", { length: 100 }),
   lastName: varchar("last_name", { length: 100 }),
-  profileImageUrl: varchar("profile_image_url", { length: 500 }),
+  profileImageUrl: text("profile_image_url"),
   role: userRoleEnum("role").notNull().default("STUDENT"),
   collegeId: integer("college_id").references(() => colleges.id),
   isActive: boolean("is_active").notNull().default(true),
