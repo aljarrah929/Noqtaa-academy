@@ -30,6 +30,7 @@ import CollegeManagement from "@/pages/admin/CollegeManagement";
 import FeaturedProfilesManagement from "@/pages/admin/FeaturedProfilesManagement";
 import HomeStatsManagement from "@/pages/admin/HomeStatsManagement";
 import CollegeOnboarding from "@/pages/CollegeOnboarding";
+import Profile from "@/pages/Profile";
 
 function Router() {
   return (
@@ -61,6 +62,7 @@ function Router() {
       <Route path="/admin/featured-profiles" component={FeaturedProfilesManagement} />
       <Route path="/admin/home-stats" component={HomeStatsManagement} />
       <Route path="/onboarding" component={CollegeOnboarding} />
+      <Route path="/profile" component={Profile} />
       <Route path="*" component={NotFound} />
     </Switch>
   );

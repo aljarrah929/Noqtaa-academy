@@ -38,6 +38,7 @@ import {
   Star,
   Video,
   FileUp,
+  User,
 } from "lucide-react";
 import { getRoleDisplayName, canAccessAdminDashboard, canAccessTeacherDashboard, canManageColleges, canManageRoles } from "@/lib/authUtils";
 import { BRAND_NAME } from "@/lib/branding";
@@ -205,6 +206,11 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               </div>
             </div>
             <div className="flex gap-2">
+              <Button variant="ghost" size="icon" asChild data-testid="sidebar-profile">
+                <Link href="/profile">
+                  <User className="w-4 h-4" />
+                </Link>
+              </Button>
               <Button variant="ghost" size="icon" onClick={toggleDark} data-testid="sidebar-theme-toggle">
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </Button>

@@ -1215,6 +1215,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Profile - Avatar presign endpoint
+  app.post("/api/profile/avatar/presign", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { fileName, contentType } = req.body;
+      
+      if (!fileName || !contentType) {
+        return res.status(400).json({ message: "fileName and contentType are required" });
+      }
+      
+      // Validate image type
+      const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+      if (!allowedTypes.includes(contentType)) {
+        return res.status(400).json({ message: "Only PNG, JPG, JPEG, and WebP files are allowed" });
+      }
+      
+      const r2Client = getR2Client();
+      if (!r2Client || !R2_BUCKET_NAME) {
+        console.error("R2 configuration missing for avatar upload");
+        return res.status(500).json({ message: "File storage service is not configured" });
+      }
+      
+      // Create safe object key: avatars/<userId>/<timestamp>-<safeFileName>
+      const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const timestamp = Date.now();
+      const objectKey = `avatars/${userId}/${timestamp}-${safeFileName}`;
+      
+      // Generate presigned PUT URL (10 minute expiry)
+      const command = new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: objectKey,
+        ContentType: contentType,
+      });
+      
+      const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 600 });
+      
+      // For avatars, we'll generate a presigned GET URL that lasts longer
+      const getCommand = new GetObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: objectKey,
+      });
+      const fileUrl = await getSignedUrl(r2Client, getCommand, { expiresIn: 86400 * 7 }); // 7 days
+      
+      res.json({
+        uploadUrl,
+        objectKey,
+        fileUrl,
+      });
+    } catch (error) {
+      console.error("Error creating avatar presigned URL:", error);
+      res.status(500).json({ message: "Failed to create upload URL" });
+    }
+  });
+
+  // Profile - Avatar confirm endpoint
+  app.post("/api/profile/avatar/confirm", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { fileUrl } = req.body;
+      
+      if (!fileUrl) {
+        return res.status(400).json({ message: "fileUrl is required" });
+      }
+      
+      // Update user's profile image URL
+      await storage.updateUserProfileImage(userId, fileUrl);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error confirming avatar upload:", error);
+      res.status(500).json({ message: "Failed to update profile image" });
+    }
+  });
+
+  // Profile - Change password endpoint
+  app.post("/api/profile/change-password", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { newPassword, confirmPassword } = req.body;
+      
+      if (!newPassword || !confirmPassword) {
+        return res.status(400).json({ message: "New password and confirmation are required" });
+      }
+      
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({ message: "Passwords do not match" });
+      }
+      
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      }
+      
+      // Hash the new password
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      
+      // Update user's password
+      await storage.updateUserPassword(userId, passwordHash);
+      
+      res.json({ success: true, message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

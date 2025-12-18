@@ -1,0 +1,134 @@
+PROMPT: Add a universal Profile page (all roles) with Avatar upload, Public ID display + Copy button, and Change Password (New + Confirm). Also fix missing publicId visibility.
+
+GOAL
+Create a clearly accessible "Profile" entry for every logged-in user (Student/Teacher/Admin/Super Admin). The Profile page must show:
+1) Personal avatar (upload + preview)
+2) Public ID (XXNNNNNN) visibly + Copy ID button
+3) Change password section (new password + confirm)
+
+Also: Fix the current issue where publicId is not visible (ensure it is returned from APIs and backfilled for existing users).
+
+========================================
+A) NAVIGATION / ACCESS
+========================================
+1) Add a "Profile" menu item in the main navigation/sidebars for all logged-in roles.
+2) Route: /profile (or /account/profile) with proper auth guard (must be logged in).
+3) The page must be accessible from Teacher/Student/Admin/Super Admin dashboards.
+
+========================================
+B) USER DATA REQUIREMENTS
+========================================
+User model must include:
+- publicId (string, unique)            // already planned/implemented
+- profileImageUrl (string, nullable)   // new
+- college (for XX code)                // already exists or must exist
+- passwordHash (backend-only)
+
+Ensure the API that returns the current user (e.g., /api/me or session user payload) includes:
+- publicId
+- profileImageUrl
+- name, email, role, college
+
+If publicId is currently missing from UI, fix by:
+- ensuring backend includes it in the response
+- ensuring frontend renders it on Profile page
+
+========================================
+C) PROFILE PAGE UI
+========================================
+SECTION 1: Avatar
+- Show current avatar (circle)
+- Button: "Upload Photo"
+- Support drag & drop OR file picker
+- Accept: png/jpg/jpeg/webp
+- Max size: 2MB (configurable)
+- On success: update profileImageUrl and refresh UI
+
+SECTION 2: Public ID
+- Show label: "My ID"
+- Show value: e.g., PH123456 (always visible)
+- Add button: "Copy"
+  - Copies publicId to clipboard
+  - Show toast "Copied!"
+
+SECTION 3: Change Password
+- Fields:
+  - New Password
+  - Confirm New Password
+- Validation:
+  - must match
+  - min length 8 (or existing policy)
+- Button: "Update Password"
+- Show success/error toast
+
+No requirement to enter current password (per product decision), unless already implemented.
+
+========================================
+D) BACKEND ENDPOINTS
+========================================
+1) GET current user:
+- Ensure existing endpoint includes publicId + profileImageUrl
+
+2) Avatar upload:
+Preferred storage: Cloudflare R2 (since already used for files)
+- POST /api/profile/avatar/presign
+  - Auth: any logged-in user
+  - Input: { fileName, contentType }
+  - Output: { uploadUrl, objectKey, fileUrl }
+- Client uploads directly to R2 via PUT uploadUrl
+- Then call:
+  - POST /api/profile/avatar/confirm
+    - Input: { fileUrl } or { objectKey }
+    - Save user.profileImageUrl = fileUrl
+
+(If the app already has an upload pattern, reuse it. Do NOT expose R2 secrets to client.)
+
+3) Change password:
+- POST /api/profile/change-password
+  - Auth: any logged-in user
+  - Input: { newPassword, confirmPassword }
+  - Backend:
+    - validate match + length
+    - hash password
+    - store passwordHash
+  - Return success
+
+========================================
+E) R2 CONFIG (REUSE EXISTING)
+========================================
+Reuse existing R2 env vars if present:
+- R2_ACCOUNT_ID
+- R2_ACCESS_KEY_ID
+- R2_SECRET_ACCESS_KEY
+- R2_BUCKET_NAME
+
+Store avatars under a separate prefix:
+- avatars/<userId>/<timestamp>-<safeFileName>
+
+========================================
+F) BACKFILL / FIX MISSING publicId
+========================================
+If some existing users have no publicId:
+- Run a migration or startup backfill:
+  - for each user with null publicId:
+    - generate XXNNNNNN based on their college code
+    - ensure uniqueness
+    - save
+
+========================================
+ACCEPTANCE CRITERIA
+========================================
+- "Profile" link is visible for all logged-in users.
+- Profile page shows avatar + publicId + copy button.
+- Uploading avatar works (updates profile image everywhere it is used).
+- Changing password works (new+confirm) and persists.
+- publicId is visible for all users (new and existing).
+- No secrets leaked to frontend.
+- No 404/blank pages on refresh.
+
+DELIVERABLES
+- List changed file paths (router/nav + profile page + backend endpoints)
+- Manual test steps:
+  1) Login as student -> open /profile -> copy ID -> upload avatar -> change password
+  2) Login as teacher -> same
+  3) Verify publicId exists for existing users (backfill)
