@@ -191,7 +191,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
           </SidebarContent>
 
           <SidebarFooter className="border-t border-sidebar-border p-4">
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} className="object-cover" />
                 <AvatarFallback>{getInitials()}</AvatarFallback>
@@ -204,19 +204,19 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                   {getRoleDisplayName(user?.role || "")}
                 </Badge>
               </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="icon" asChild data-testid="sidebar-profile">
-                <Link href="/profile">
-                  <User className="w-4 h-4" />
-                </Link>
-              </Button>
-              <Button variant="ghost" size="icon" onClick={toggleDark} data-testid="sidebar-theme-toggle">
-                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleLogout} data-testid="sidebar-logout">
-                <LogOut className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" asChild data-testid="sidebar-profile">
+                  <Link href="/profile">
+                    <User className="w-4 h-4" />
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="icon" onClick={toggleDark} data-testid="sidebar-theme-toggle">
+                  {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handleLogout} data-testid="sidebar-logout">
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </SidebarFooter>
         </Sidebar>
