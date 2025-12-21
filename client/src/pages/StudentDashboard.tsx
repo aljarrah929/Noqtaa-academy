@@ -3,73 +3,18 @@ import { DashboardLayout, DashboardSkeleton } from "@/components/layout/Dashboar
 import { CourseCard, CourseCardSkeleton } from "@/components/courses/CourseCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { BookOpen, ArrowRight, Copy, Check } from "lucide-react";
+import { BookOpen, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
-import type { CourseWithRelations, UserWithCollege } from "@shared/schema";
+import type { CourseWithRelations } from "@shared/schema";
 
 export default function StudentDashboard() {
-  const { toast } = useToast();
-  const [copied, setCopied] = useState(false);
-  
   const { data: enrolledCourses, isLoading } = useQuery<CourseWithRelations[]>({
     queryKey: ["/api/enrollments/my-courses"],
   });
 
-  const { data: user } = useQuery<UserWithCollege>({
-    queryKey: ["/api/auth/user"],
-  });
-
-  const copyPublicId = async () => {
-    if (user?.publicId) {
-      try {
-        await navigator.clipboard.writeText(user.publicId);
-        setCopied(true);
-        toast({ title: "Copied!", description: "Your ID has been copied to clipboard." });
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        toast({ title: "Failed to copy", variant: "destructive" });
-      }
-    }
-  };
-
   return (
     <DashboardLayout title="My Courses">
       <div className="max-w-6xl mx-auto">
-        {/* Student ID Card */}
-        {user?.publicId && (
-          <Card className="mb-6">
-            <CardContent className="flex items-center justify-between gap-4 py-4">
-              <div className="flex items-center gap-3">
-                <span className="text-muted-foreground">My ID:</span>
-                <Badge variant="outline" className="text-base font-mono px-3 py-1">
-                  {user.publicId}
-                </Badge>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={copyPublicId}
-                data-testid="button-copy-id"
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy ID
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
         <div className="flex items-center justify-between mb-6">
           <div>
             <p className="text-muted-foreground">

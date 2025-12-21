@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { GraduationCap, Moon, Sun, LogOut, LayoutDashboard, Menu, X } from "lucide-react";
+import { GraduationCap, Moon, Sun, LogOut, LayoutDashboard, Menu, X, User } from "lucide-react";
 import { getRoleDisplayName } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -186,6 +186,12 @@ export function Header() {
                     <Link href={getDashboardLink()} className="flex items-center gap-2 cursor-pointer">
                       <LayoutDashboard className="w-4 h-4" />
                       Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center gap-2 cursor-pointer" data-testid="link-dropdown-profile">
+                      <User className="w-4 h-4" />
+                      Profile
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
