@@ -1,0 +1,123 @@
+TASK: Add "Resend reset email" option + switch email sending provider to a faster transactional service (Resend recommended) for CPE Academy.
+
+GOAL:
+1) Users who request "Forgot Password" should be able to resend the reset email (with a cooldown).
+2) Change the email delivery method/company from current SMTP approach to a faster provider (Resend API), to reduce delays.
+
+CONTEXT:
+- Current "Forgot Password" works but email delivery is slow/unreliable sometimes.
+- We want a user-facing "Resend" button + backend support.
+- We want to replace email provider so reset emails arrive in seconds.
+
+========================
+A) RESEND RESET EMAIL FEATURE
+========================
+
+1) UI/UX (Forgot Password page)
+- After user submits email in "Forgot Password", show a success screen:
+  - Message: "If the email doesn't arrive within a minute, check Spam or resend."
+  - Show a "Resend email" button.
+  - Add cooldown timer (60 seconds) before the button becomes enabled.
+  - While cooldown active: show "Resend available in XXs".
+  - Allow resending unlimited times BUT enforce cooldown each time.
+  - If email does not exist in system: still show the same generic message (avoid user enumeration).
+
+2) Backend behavior (Token strategy)
+Implement safe behavior:
+- When resending:
+  OPTION (preferred): generate a NEW token and invalidate previous tokens for that user.
+  - This prevents old links from working if user keeps resending.
+- Token expiration: keep short (e.g., 15–30 minutes).
+- Rate-limit resends per email/IP:
+  - Example: max 5 requests per 15 minutes per IP + per email.
+  - Return generic success responses even when rate-limited (do not leak details).
+
+3) API endpoints
+- POST /api/auth/forgot-password
+  - Input: { email }
+  - Behavior:
+    - Always respond 200 with generic message.
+    - If user exists:
+      - Create reset token (store hashed token) + expiry.
+      - Send email via provider (see section B).
+      - Store lastResetEmailSentAt timestamp for cooldown.
+- POST /api/auth/resend-forgot-password
+  - Input: { email }
+  - Behavior:
+    - Validate cooldown:
+      - If lastResetEmailSentAt < 60 seconds ago, respond 200 with message like "Wait before resending" and remaining seconds.
+    - Apply rate limits.
+    - If user exists:
+      - Invalidate old tokens.
+      - Create new token + expiry.
+      - Send email.
+      - Update lastResetEmailSentAt.
+
+4) Database changes
+- Add fields to users table OR a separate table:
+  - passwordResetLastSentAt (timestamp)  // for cooldown UI
+- Ensure reset tokens are stored hashed:
+  - passwordResetTokenHash
+  - passwordResetExpiresAt
+- Optional: store resetRequestCount window for rate limiting, or use in-memory store if available.
+
+========================
+B) SWITCH EMAIL SENDING PROVIDER (FASTER DELIVERY)
+========================
+
+1) Replace SMTP sending with Resend (preferred)
+- Use Resend Email API for transactional emails:
+  - Forgot password
+  - (and optionally teacher contact emails later)
+
+2) Secrets / Environment variables (Replit Secrets)
+Add these secrets:
+- RESEND_API_KEY = <your Resend API key>
+- EMAIL_FROM = "CPE Academy <no-reply@yourdomain.com>"  (or verified sender)
+- APP_BASE_URL = "https://<your-replit-domain>" (used to build reset link)
+
+3) Implementation requirements
+- Create a single email service module, e.g. server/services/email.ts:
+  - sendPasswordResetEmail(to, resetLink)
+  - (future) sendTeacherContactEmail(...)
+- The module should:
+  - Call Resend API using RESEND_API_KEY
+  - Use EMAIL_FROM
+  - Handle errors gracefully:
+    - Log details server-side
+    - Still return generic success to client (don’t leak delivery errors)
+- Ensure HTML template is clean and includes:
+  - Reset button link
+  - Token expiry note
+  - Fallback raw link
+
+4) Verification / DNS (if needed)
+- If the project already uses an email domain:
+  - Verify the sender domain in Resend dashboard.
+- If not ready to verify domain yet:
+  - Use the provider's verified sandbox sender (if available) until domain is ready.
+
+========================
+C) TESTING CHECKLIST
+========================
+1) Forgot Password:
+- Enter valid email -> success message shown, resend disabled for 60s.
+- Resend after 60s -> email arrives quickly.
+- Multiple rapid clicks -> cooldown and rate limit prevent spam.
+2) Invalid email:
+- Same generic response, no leakage.
+3) Old reset links:
+- After resending, old link should fail (if using "invalidate previous tokens").
+4) Logs:
+- Confirm Resend API responses and error handling.
+5) UI:
+- Countdown timer works and updates properly.
+
+========================
+D) DELIVERABLES
+========================
+- UI changes: Forgot Password page with resend + timer
+- New API endpoint: /api/auth/resend-forgot-password
+- Updated email sending: Resend integration
+- DB migration: add lastSentAt + token hash/expiry (if not present)
+- Short summary: files changed + how to test locally and on Replit
