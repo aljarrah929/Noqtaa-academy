@@ -7,6 +7,7 @@ import { z } from "zod";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import bcrypt from "bcryptjs";
+import multer from "multer";
 
 // Cloudflare R2 configuration
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -1449,6 +1450,288 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error changing password:", error);
       res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
+  // ============ JOIN REQUESTS ============
+  
+  // Multer config for receipt uploads (memory storage, 2MB max)
+  const receiptUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+    fileFilter: (_req, file, cb) => {
+      const allowedReceipt = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+      if (allowedReceipt.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only PNG, JPG, JPEG, and WebP images are allowed"));
+      }
+    },
+  });
+
+  // Student - Check join request status for a course
+  app.get("/api/courses/:courseId/join-request/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const courseId = parseInt(req.params.courseId);
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "STUDENT") {
+        return res.status(403).json({ message: "Only students can check join request status" });
+      }
+      
+      const hasPending = await storage.hasPendingJoinRequest(userId, courseId);
+      const hasApproved = await storage.hasApprovedJoinRequest(userId, courseId);
+      const isEnrolled = await storage.isEnrolled(userId, courseId);
+      
+      res.json({ hasPending, hasApproved, isEnrolled });
+    } catch (error) {
+      console.error("Error checking join request status:", error);
+      res.status(500).json({ message: "Failed to check join request status" });
+    }
+  });
+
+  // Student - Submit join request with receipt
+  app.post("/api/courses/:courseId/join-request", isAuthenticated, receiptUpload.single("receipt"), async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const courseId = parseInt(req.params.courseId);
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "STUDENT") {
+        return res.status(403).json({ message: "Only students can submit join requests" });
+      }
+      
+      // Check if course exists and is published
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      if (course.status !== "PUBLISHED") {
+        return res.status(400).json({ message: "Course is not available for enrollment" });
+      }
+      
+      // Check if already enrolled
+      const isEnrolled = await storage.isEnrolled(userId, courseId);
+      if (isEnrolled) {
+        return res.status(400).json({ message: "You are already enrolled in this course" });
+      }
+      
+      // Check for pending request
+      const hasPending = await storage.hasPendingJoinRequest(userId, courseId);
+      if (hasPending) {
+        return res.status(400).json({ message: "Your request is already pending" });
+      }
+      
+      // Check for approved request (shouldn't happen but just in case)
+      const hasApproved = await storage.hasApprovedJoinRequest(userId, courseId);
+      if (hasApproved) {
+        return res.status(400).json({ message: "Your request was already approved" });
+      }
+      
+      // Validate receipt file
+      if (!req.file) {
+        return res.status(400).json({ message: "Payment receipt is required" });
+      }
+      
+      // Upload receipt to R2 (private)
+      const r2Client = getR2Client();
+      if (!r2Client || !R2_BUCKET_NAME) {
+        return res.status(500).json({ message: "File storage service is not configured" });
+      }
+      
+      const timestamp = Date.now();
+      const safeFileName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const receiptKey = `receipts/${courseId}/${userId}/${timestamp}-${safeFileName}`;
+      
+      const uploadCommand = new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: receiptKey,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      });
+      
+      await r2Client.send(uploadCommand);
+      
+      // Create join request record
+      const joinRequest = await storage.createJoinRequest({
+        courseId,
+        studentId: userId,
+        message: req.body.message || null,
+        receiptKey,
+        receiptMime: req.file.mimetype,
+        receiptSize: req.file.size,
+        status: "PENDING",
+      });
+      
+      res.status(201).json({ 
+        success: true, 
+        message: "Request submitted. Wait for teacher approval.",
+        requestId: joinRequest.id,
+      });
+    } catch (error: any) {
+      console.error("Error submitting join request:", error);
+      if (error.message?.includes("Only PNG")) {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to submit join request" });
+    }
+  });
+
+  // Teacher - Get all join requests for their courses
+  app.get("/api/teacher/join-requests", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only teachers can view join requests" });
+      }
+      
+      const requests = await storage.getJoinRequestsByTeacher(userId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching join requests:", error);
+      res.status(500).json({ message: "Failed to fetch join requests" });
+    }
+  });
+
+  // Teacher - Approve join request
+  app.post("/api/teacher/join-requests/:id/approve", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const requestId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      
+      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only teachers can approve join requests" });
+      }
+      
+      // Get join request with course info
+      const joinRequest = await storage.getJoinRequestById(requestId);
+      if (!joinRequest) {
+        return res.status(404).json({ message: "Join request not found" });
+      }
+      
+      // Verify teacher owns the course
+      const course = await storage.getCourseById(joinRequest.courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      if (course.teacherId !== userId && user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "You can only approve requests for your own courses" });
+      }
+      
+      // Check if request is still pending
+      if (joinRequest.status !== "PENDING") {
+        return res.status(400).json({ message: "This request has already been processed" });
+      }
+      
+      // Create enrollment
+      await storage.createEnrollment({
+        courseId: joinRequest.courseId,
+        studentId: joinRequest.studentId,
+        createdByUserId: userId,
+      });
+      
+      // Update join request status
+      await storage.updateJoinRequestStatus(requestId, "APPROVED");
+      
+      res.json({ success: true, message: "Request approved and student enrolled" });
+    } catch (error) {
+      console.error("Error approving join request:", error);
+      res.status(500).json({ message: "Failed to approve join request" });
+    }
+  });
+
+  // Teacher - Reject join request
+  app.post("/api/teacher/join-requests/:id/reject", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const requestId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      
+      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only teachers can reject join requests" });
+      }
+      
+      // Get join request with course info
+      const joinRequest = await storage.getJoinRequestById(requestId);
+      if (!joinRequest) {
+        return res.status(404).json({ message: "Join request not found" });
+      }
+      
+      // Verify teacher owns the course
+      const course = await storage.getCourseById(joinRequest.courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      if (course.teacherId !== userId && user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "You can only reject requests for your own courses" });
+      }
+      
+      // Check if request is still pending
+      if (joinRequest.status !== "PENDING") {
+        return res.status(400).json({ message: "This request has already been processed" });
+      }
+      
+      // Update join request status
+      await storage.updateJoinRequestStatus(requestId, "REJECTED");
+      
+      res.json({ success: true, message: "Request rejected" });
+    } catch (error) {
+      console.error("Error rejecting join request:", error);
+      res.status(500).json({ message: "Failed to reject join request" });
+    }
+  });
+
+  // Teacher - Get receipt signed URL
+  app.get("/api/teacher/join-requests/:id/receipt", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const requestId = parseInt(req.params.id);
+      const user = await storage.getUser(userId);
+      
+      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only teachers can view receipts" });
+      }
+      
+      // Get join request with course info
+      const joinRequest = await storage.getJoinRequestById(requestId);
+      if (!joinRequest) {
+        return res.status(404).json({ message: "Join request not found" });
+      }
+      
+      // Verify teacher owns the course
+      const course = await storage.getCourseById(joinRequest.courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      if (course.teacherId !== userId && user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "You can only view receipts for your own courses" });
+      }
+      
+      // Generate signed URL (60 seconds)
+      const r2Client = getR2Client();
+      if (!r2Client || !R2_BUCKET_NAME) {
+        return res.status(500).json({ message: "File storage service is not configured" });
+      }
+      
+      const getCommand = new GetObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: joinRequest.receiptKey,
+      });
+      
+      const signedUrl = await getSignedUrl(r2Client, getCommand, { expiresIn: 60 });
+      
+      res.json({ 
+        url: signedUrl, 
+        mimeType: joinRequest.receiptMime,
+        expiresIn: 60,
+      });
+    } catch (error) {
+      console.error("Error getting receipt URL:", error);
+      res.status(500).json({ message: "Failed to get receipt URL" });
     }
   });
 
