@@ -91,6 +91,7 @@ export interface IStorage {
   updateUserRole(id: string, role: User["role"], collegeId?: number | null): Promise<User | undefined>;
   updateUserCollege(id: string, collegeId: number): Promise<User | undefined>;
   updateUserPassword(id: string, passwordHash: string): Promise<User | undefined>;
+  updatePasswordResetLastSentAt(id: string): Promise<User | undefined>;
   updateUserProfileImage(id: string, profileImageUrl: string): Promise<User | undefined>;
   getAllUsers(): Promise<UserWithCollege[]>;
   getColleges(): Promise<College[]>;
@@ -135,6 +136,7 @@ export interface IStorage {
   getPasswordResetTokenByHash(tokenHash: string): Promise<PasswordResetToken | undefined>;
   markPasswordResetTokenUsed(id: number): Promise<void>;
   deleteExpiredPasswordResetTokens(): Promise<void>;
+  invalidateUserPasswordResetTokens(userId: string): Promise<void>;
   getAdminDashboardStatsConfig(): Promise<AdminDashboardStatsConfig | undefined>;
   getOrCreateAdminDashboardStatsConfig(): Promise<AdminDashboardStatsConfig>;
   updateAdminDashboardStatsConfig(data: UpdateAdminDashboardStatsConfig, userId: string): Promise<AdminDashboardStatsConfig>;
@@ -301,6 +303,15 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updatePasswordResetLastSentAt(id: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ passwordResetLastSentAt: new Date() })
       .where(eq(users.id, id))
       .returning();
     return user;
@@ -741,6 +752,10 @@ export class DatabaseStorage implements IStorage {
 
   async deleteExpiredPasswordResetTokens(): Promise<void> {
     await db.delete(passwordResetTokens).where(sql`${passwordResetTokens.expiresAt} < NOW()`);
+  }
+
+  async invalidateUserPasswordResetTokens(userId: string): Promise<void> {
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
   }
 
   async getAdminDashboardStatsConfig(): Promise<AdminDashboardStatsConfig | undefined> {

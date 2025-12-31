@@ -1,12 +1,38 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-interface EmailConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  auth: {
-    user: string;
-    pass: string;
+let connectionSettings: any = null;
+
+async function getResendCredentials(): Promise<{ apiKey: string; fromEmail: string }> {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY
+    ? "repl " + process.env.REPL_IDENTITY
+    : process.env.WEB_REPL_RENEWAL
+    ? "depl " + process.env.WEB_REPL_RENEWAL
+    : null;
+
+  if (!xReplitToken) {
+    throw new Error("X_REPLIT_TOKEN not found for repl/depl");
+  }
+
+  connectionSettings = await fetch(
+    "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
+    {
+      headers: {
+        Accept: "application/json",
+        X_REPLIT_TOKEN: xReplitToken,
+      },
+    }
+  )
+    .then((res) => res.json())
+    .then((data) => data.items?.[0]);
+
+  if (!connectionSettings || !connectionSettings.settings.api_key) {
+    throw new Error("Resend not connected");
+  }
+
+  return {
+    apiKey: connectionSettings.settings.api_key,
+    fromEmail: connectionSettings.settings.from_email || process.env.EMAIL_FROM || "noreply@example.com",
   };
 }
 
@@ -15,28 +41,6 @@ interface SendEmailOptions {
   subject: string;
   text: string;
   html: string;
-}
-
-function getEmailConfig(): EmailConfig | null {
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || "587", 10);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (!host || !user || !pass) {
-    return null;
-  }
-
-  return {
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  };
-}
-
-function getFromAddress(): string {
-  return process.env.EMAIL_FROM || process.env.SMTP_USER || "noreply@example.com";
 }
 
 export function getAppUrl(): string {
@@ -52,77 +56,49 @@ export function getAppUrl(): string {
   return "http://localhost:5000";
 }
 
-export async function verifySmtpConnection(): Promise<boolean> {
-  const config = getEmailConfig();
-  
-  if (!config) {
-    console.log("[SMTP] Not configured - missing SMTP_HOST, SMTP_USER, or SMTP_PASS");
-    return false;
-  }
-
+export async function verifyEmailConnection(): Promise<boolean> {
   try {
-    const transporter = nodemailer.createTransport(config);
-    await transporter.verify();
-    console.log("[SMTP] Connection verified successfully");
-    console.log(`[SMTP] Host: ${config.host}:${config.port}, Secure: ${config.secure}`);
-    return true;
-  } catch (error: any) {
-    console.error("[SMTP] Connection verification failed:");
-    console.error(`[SMTP] Error: ${error.message}`);
-    if (error.code) {
-      console.error(`[SMTP] Error code: ${error.code}`);
+    const { apiKey } = await getResendCredentials();
+    if (apiKey) {
+      console.log("[Resend] Connection verified - API key configured");
+      return true;
     }
+    return false;
+  } catch (error: any) {
+    console.log("[Resend] Not configured:", error.message);
     return false;
   }
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
-  const config = getEmailConfig();
-
-  if (!config) {
-    console.log("=== Email Preview (SMTP not configured) ===");
-    console.log(`To: ${options.to}`);
-    console.log(`Subject: ${options.subject}`);
-    console.log(`Text: ${options.text}`);
-    console.log("============================================");
-    console.log("[SMTP] Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS to enable email sending");
-    return true;
-  }
-
-  const fromAddress = getFromAddress();
-
   try {
-    const transporter = nodemailer.createTransport(config);
-    
-    const info = await transporter.sendMail({
-      from: fromAddress,
+    const { apiKey, fromEmail } = await getResendCredentials();
+    const resend = new Resend(apiKey);
+
+    const { data, error } = await resend.emails.send({
+      from: fromEmail,
       to: options.to,
       subject: options.subject,
       text: options.text,
       html: options.html,
     });
 
-    console.log(`[SMTP] Email sent successfully to ${options.to}`);
-    console.log(`[SMTP] Message ID: ${info.messageId}`);
+    if (error) {
+      console.error("[Resend] Failed to send email:", error);
+      return false;
+    }
+
+    console.log(`[Resend] Email sent successfully to ${options.to}, ID: ${data?.id}`);
     return true;
   } catch (error: any) {
-    console.error("[SMTP] Failed to send email:");
-    console.error(`[SMTP] To: ${options.to}`);
-    console.error(`[SMTP] From: ${fromAddress}`);
-    console.error(`[SMTP] Error: ${error.message}`);
-    if (error.code) {
-      console.error(`[SMTP] Error code: ${error.code}`);
-    }
-    if (error.responseCode) {
-      console.error(`[SMTP] Response code: ${error.responseCode}`);
-    }
+    console.error("[Resend] Error sending email:", error.message);
     return false;
   }
 }
 
 export function getPasswordResetEmailContent(resetUrl: string): { subject: string; text: string; html: string } {
   const subject = "Reset Your Password";
-  
+
   const text = `
 You requested to reset your password.
 
@@ -153,6 +129,9 @@ If you didn't request this, please ignore this email.
     </div>
     <p style="color: #666; font-size: 14px;">This link will expire in 30 minutes.</p>
     <p style="color: #666; font-size: 14px;">If you didn't request this, please ignore this email.</p>
+    <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+    <p style="color: #999; font-size: 12px;">If the button doesn't work, copy and paste this link into your browser:</p>
+    <p style="color: #999; font-size: 12px; word-break: break-all;">${resetUrl}</p>
   </div>
 </body>
 </html>

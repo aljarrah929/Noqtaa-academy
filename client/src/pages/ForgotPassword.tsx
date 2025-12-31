@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,11 +17,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { GraduationCap, Loader2, ArrowLeft, Mail, CheckCircle } from "lucide-react";
+import { GraduationCap, Loader2, ArrowLeft, Mail, CheckCircle, RefreshCw } from "lucide-react";
 import { BRAND_NAME } from "@/lib/branding";
 
 export default function ForgotPassword() {
   const [submitted, setSubmitted] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState("");
+  const [cooldownSeconds, setCooldownSeconds] = useState(60);
+  const [isResending, setIsResending] = useState(false);
 
   const form = useForm<ForgotPasswordInput>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -30,18 +33,59 @@ export default function ForgotPassword() {
     },
   });
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (submitted && cooldownSeconds > 0) {
+      interval = setInterval(() => {
+        setCooldownSeconds((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [submitted, cooldownSeconds]);
+
   const forgotPasswordMutation = useMutation({
     mutationFn: async (data: ForgotPasswordInput) => {
       const response = await apiRequest("POST", "/api/auth/forgot-password", data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      setSubmittedEmail(variables.email);
       setSubmitted(true);
+      setCooldownSeconds(60);
+    },
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: async () => {
+      setIsResending(true);
+      const response = await apiRequest("POST", "/api/auth/resend-forgot-password", { email: submittedEmail });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setIsResending(false);
+      if (data.cooldownRemaining) {
+        setCooldownSeconds(data.cooldownRemaining);
+      } else {
+        setCooldownSeconds(60);
+      }
+    },
+    onError: () => {
+      setIsResending(false);
     },
   });
 
   const onSubmit = (data: ForgotPasswordInput) => {
     forgotPasswordMutation.mutate(data);
+  };
+
+  const handleResend = () => {
+    resendMutation.mutate();
   };
 
   return (
@@ -74,11 +118,45 @@ export default function ForgotPassword() {
                 <p className="text-sm text-muted-foreground text-center">
                   The link will expire in 30 minutes. If you don't see the email, check your spam folder.
                 </p>
+                
+                <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleResend}
+                    disabled={cooldownSeconds > 0 || isResending}
+                    data-testid="button-resend-email"
+                  >
+                    {isResending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : cooldownSeconds > 0 ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Resend available in {cooldownSeconds}s
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Resend email
+                      </>
+                    )}
+                  </Button>
+                  
+                  <p className="text-xs text-muted-foreground text-center">
+                    Didn't receive the email? Wait for the countdown and try resending.
+                  </p>
+                </div>
+
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   className="w-full"
                   onClick={() => {
                     setSubmitted(false);
+                    setSubmittedEmail("");
+                    setCooldownSeconds(60);
                     form.reset();
                   }}
                   data-testid="button-try-another"

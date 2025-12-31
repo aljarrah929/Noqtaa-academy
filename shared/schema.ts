@@ -55,6 +55,7 @@ export const users = pgTable("users", {
   collegeId: integer("college_id").references(() => colleges.id),
   isActive: boolean("is_active").notNull().default(true),
   publicId: varchar("public_id", { length: 8 }).unique(),
+  passwordResetLastSentAt: timestamp("password_reset_last_sent_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

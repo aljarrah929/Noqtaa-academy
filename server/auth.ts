@@ -6,7 +6,7 @@ import crypto from "crypto";
 import { storage } from "./storage";
 import { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "@shared/schema";
 import { z } from "zod";
-import { sendEmail, getPasswordResetEmailContent, getAppUrl, verifySmtpConnection } from "./email";
+import { sendEmail, getPasswordResetEmailContent, getAppUrl, verifyEmailConnection } from "./email";
 
 declare module "express-session" {
   interface SessionData {
@@ -152,6 +152,7 @@ export async function setupAuth(app: Express) {
         const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
         
         await storage.createPasswordResetToken(user.id, tokenHash, expiresAt);
+        await storage.updatePasswordResetLastSentAt(user.id);
         
         const baseUrl = getAppUrl();
         const resetUrl = `${baseUrl}/reset-password?token=${token}`;
@@ -169,6 +170,56 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ message: error.errors[0].message });
       }
       console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Failed to process request" });
+    }
+  });
+
+  app.post("/api/auth/resend-forgot-password", async (req, res) => {
+    try {
+      const data = forgotPasswordSchema.parse(req.body);
+      
+      const user = await storage.getUserByEmail(data.email);
+      
+      if (user && user.passwordHash) {
+        const cooldownSeconds = 60;
+        const lastSent = user.passwordResetLastSentAt;
+        
+        if (lastSent) {
+          const elapsed = (Date.now() - new Date(lastSent).getTime()) / 1000;
+          if (elapsed < cooldownSeconds) {
+            const remaining = Math.ceil(cooldownSeconds - elapsed);
+            return res.json({ 
+              message: "Please wait before requesting another reset email.",
+              cooldownRemaining: remaining 
+            });
+          }
+        }
+        
+        await storage.invalidateUserPasswordResetTokens(user.id);
+        
+        const token = crypto.randomBytes(32).toString("hex");
+        const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+        
+        await storage.createPasswordResetToken(user.id, tokenHash, expiresAt);
+        await storage.updatePasswordResetLastSentAt(user.id);
+        
+        const baseUrl = getAppUrl();
+        const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+        const emailContent = getPasswordResetEmailContent(resetUrl);
+        
+        await sendEmail({
+          to: user.email,
+          ...emailContent,
+        });
+      }
+      
+      res.json({ message: "If an account exists with this email, we sent a new password reset link." });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      console.error("Resend forgot password error:", error);
       res.status(500).json({ message: "Failed to process request" });
     }
   });
