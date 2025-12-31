@@ -33,11 +33,17 @@ export default function LessonDetail() {
   const { data: course, isLoading: courseLoading } = useQuery<CourseWithRelations>({
     queryKey: ["/api/courses", courseId],
     enabled: !!courseId,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const { data: lesson, isLoading: lessonLoading } = useQuery<LessonWithAccess>({
     queryKey: ["/api/lessons", lessonId],
     enabled: !!lessonId,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const { data: enrollmentCheck, isLoading: enrollmentLoading } = useQuery<{ enrolled: boolean }>({

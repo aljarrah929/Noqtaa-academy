@@ -426,6 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if user has access to content
       const user = await storage.getUser(userId);
       let hasAccess = false;
+      let isCourseLocked = false;
       
       if (user) {
         if (user.role === "SUPER_ADMIN") {
@@ -438,9 +439,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Teachers have access to their own courses
           hasAccess = course.teacherId === userId;
         } else {
-          // Students need to be enrolled
-          hasAccess = await storage.isEnrolled(userId, lesson.courseId);
+          // Students need to be enrolled AND course not locked
+          const enrolled = await storage.isEnrolled(userId, lesson.courseId);
+          if (enrolled && course.isLocked) {
+            // Enrolled but course is locked by teacher
+            isCourseLocked = true;
+            hasAccess = false;
+          } else {
+            hasAccess = enrolled;
+          }
         }
+      }
+      
+      // If course is locked for this enrolled student
+      if (isCourseLocked) {
+        const { content, ...lessonWithoutContent } = lesson;
+        return res.json({ ...lessonWithoutContent, content: null, locked: true, courseLocked: true });
       }
       
       // If no access, return lesson without content (for metadata/navigation)
@@ -1272,6 +1286,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!isTeacher && !isSuperAdmin && !isAdmin && !isEnrolledStudent) {
         return res.status(403).json({ message: "You don't have access to this file" });
+      }
+      
+      // Check if course is locked for enrolled students
+      if (isEnrolledStudent && course.isLocked) {
+        return res.status(403).json({ message: "Course is currently locked by the instructor" });
       }
       
       const r2Client = getR2Client();

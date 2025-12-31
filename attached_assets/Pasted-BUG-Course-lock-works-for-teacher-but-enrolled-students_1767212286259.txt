@@ -1,0 +1,45 @@
+BUG: Course lock works for teacher, but enrolled students still see content unlocked.
+
+LIKELY CAUSE:
+Student course page does not fetch/refresh the latest course.isLocked, or the UI does not enforce the lock rule for enrolled users.
+
+TASK:
+1) Verify backend returns course.isLocked in ALL relevant endpoints used by student pages:
+   - GET /api/courses
+   - GET /api/courses/:id
+   - Any "my enrolled courses" endpoint
+   Ensure isLocked is included in the JSON response.
+
+2) Fix frontend data fetching:
+   - On student course page (and lesson/video access components), ensure we read `course.isLocked`.
+   - Disable caching issues:
+     - If using React Query / TanStack Query, set:
+       - staleTime: 0 for course details
+       - refetchOnWindowFocus: true
+       - refetchOnMount: "always"
+     - Or manually refetch after navigation.
+   - After teacher toggles lock, student should get updated status on refresh and preferably on focus.
+
+3) Enforce lock on content access:
+   - If user is enrolled AND course.isLocked === true:
+       - Show lock banner: "Course is currently locked by the instructor."
+       - Disable lesson open buttons, video playback, file download.
+       - Any API call to fetch lesson/video should be blocked or return 403.
+
+4) Backend guard (important):
+   - In lesson/video/file content endpoints (the ones that return actual content URLs):
+     - If course.isLocked === true AND user is enrolled student:
+         return 403 with message "Course locked"
+     - If user not enrolled: keep preview rules as before.
+   This ensures security even if UI fails.
+
+5) Tests:
+   - Lock course as teacher
+   - Log in as enrolled student
+   - Student must see locked banner + cannot open lessons/videos/files
+   - Unlock course -> student regains access after refresh/focus.
+
+DELIVERABLE:
+- Identify which endpoint was missing isLocked (if any)
+- Show updated fetch settings or refetch logic
+- Confirm server-side guard prevents access while locked.
