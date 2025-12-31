@@ -575,6 +575,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Teacher can remove students from their own courses
+  app.delete("/api/courses/:courseId/enrollments/:studentId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      const courseId = parseInt(req.params.courseId);
+      const studentId = req.params.studentId;
+      
+      // Check course exists
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      // Check authorization: teacher owns course OR is admin
+      const isOwner = course.teacherId === userId;
+      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+      
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      // Check student exists and is a student
+      const studentUser = await storage.getUser(studentId);
+      if (!studentUser) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      if (studentUser.role !== "STUDENT") {
+        return res.status(400).json({ message: "User is not a student" });
+      }
+      
+      // Check enrollment exists
+      const isEnrolled = await storage.isEnrolled(studentId, courseId);
+      if (!isEnrolled) {
+        return res.status(404).json({ message: "Student not enrolled" });
+      }
+      
+      // Delete enrollment by student and course
+      await storage.deleteEnrollmentByStudentAndCourse(studentId, courseId);
+      res.status(200).json({ message: "Student removed successfully" });
+    } catch (error) {
+      console.error("Error removing student from course:", error);
+      res.status(500).json({ message: "Failed to remove student" });
+    }
+  });
+
   app.delete("/api/enrollments/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;

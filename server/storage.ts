@@ -111,6 +111,7 @@ export interface IStorage {
   isEnrolled(studentId: string, courseId: number): Promise<boolean>;
   createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment>;
   deleteEnrollment(id: number): Promise<void>;
+  deleteEnrollmentByStudentAndCourse(studentId: string, courseId: number): Promise<void>;
   getCourseApprovalLogs(courseId: number): Promise<(CourseApprovalLog & { actor: User })[]>;
   createCourseApprovalLog(log: InsertCourseApprovalLog): Promise<CourseApprovalLog>;
   getPendingCourses(collegeId?: number): Promise<CourseWithRelations[]>;
@@ -544,6 +545,12 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEnrollment(id: number): Promise<void> {
     await db.delete(enrollments).where(eq(enrollments.id, id));
+  }
+
+  async deleteEnrollmentByStudentAndCourse(studentId: string, courseId: number): Promise<void> {
+    await db.delete(enrollments).where(
+      and(eq(enrollments.studentId, studentId), eq(enrollments.courseId, courseId))
+    );
   }
 
   async getCourseApprovalLogs(courseId: number): Promise<(CourseApprovalLog & { actor: User })[]> {

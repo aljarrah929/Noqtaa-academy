@@ -18,7 +18,17 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Users, UserPlus, ArrowLeft, Mail, Search, UserCheck } from "lucide-react";
+import { Users, UserPlus, ArrowLeft, Mail, Search, UserCheck, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Link } from "wouter";
 import type { CourseWithRelations, User, Enrollment, UserWithCollege } from "@shared/schema";
 
@@ -34,6 +44,8 @@ export default function CourseEnrollments() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<UserWithCollege | null>(null);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [studentToRemove, setStudentToRemove] = useState<{ id: string; name: string } | null>(null);
 
   // Debounce search query
   useEffect(() => {
@@ -90,6 +102,33 @@ export default function CourseEnrollments() {
   const handleEnroll = () => {
     if (selectedStudent) {
       enrollMutation.mutate(selectedStudent.id);
+    }
+  };
+
+  const removeMutation = useMutation({
+    mutationFn: async (studentId: string) => {
+      await apiRequest("DELETE", `/api/courses/${courseId}/enrollments/${studentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId, "enrollments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId] });
+      toast({ title: "Student Removed", description: "Student removed successfully" });
+      setRemoveDialogOpen(false);
+      setStudentToRemove(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleRemoveClick = (studentId: string, studentName: string) => {
+    setStudentToRemove({ id: studentId, name: studentName });
+    setRemoveDialogOpen(true);
+  };
+
+  const handleConfirmRemove = () => {
+    if (studentToRemove) {
+      removeMutation.mutate(studentToRemove.id);
     }
   };
 
@@ -180,13 +219,26 @@ export default function CourseEnrollments() {
                           {student?.email}
                         </p>
                       </div>
-                      {student?.email && (
-                        <Button variant="ghost" size="sm" asChild>
-                          <a href={`mailto:${student.email}`}>
-                            <Mail className="w-4 h-4" />
-                          </a>
+                      <div className="flex items-center gap-1">
+                        {student?.email && (
+                          <Button variant="ghost" size="icon" asChild data-testid={`button-email-${enrollment.id}`}>
+                            <a href={`mailto:${student.email}`}>
+                              <Mail className="w-4 h-4" />
+                            </a>
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveClick(
+                            enrollment.studentId,
+                            `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || "this student"
+                          )}
+                          data-testid={`button-remove-${enrollment.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
@@ -324,6 +376,29 @@ export default function CourseEnrollments() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Student</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {studentToRemove?.name} from this course?
+              They will lose access to all course content.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-remove">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRemove}
+              disabled={removeMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-remove"
+            >
+              {removeMutation.isPending ? "Removing..." : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
