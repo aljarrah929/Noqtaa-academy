@@ -1,0 +1,141 @@
+FEATURE: Student "Join Request" with mandatory payment receipt upload + Teacher approval page.
+
+CONTEXT:
+We want two enrollment paths:
+A) Student submits a Join Request with a mandatory receipt image (proof of payment).
+B) Teacher can still enroll students manually (existing feature stays).
+
+REQUIREMENTS (MUST):
+
+1) STUDENT JOIN REQUEST FLOW
+- On course details page (public course page), add a button:
+  "Request to Join" (visible to logged-in students who are NOT enrolled).
+- When clicked, open a modal/form:
+  - Optional message textarea (e.g., "Note to teacher")
+  - Mandatory receipt upload (image only: PNG/JPG/JPEG/WebP, max 2MB)
+- When submitted:
+  - Upload receipt image to Cloudflare R2 (PRIVATE, not public).
+  - Save a JoinRequest record in DB with status "PENDING".
+  - Return success immediately and show UI message:
+    "Request submitted. Wait for teacher approval."
+
+2) RECEIPTS MUST NEVER BE DELETED
+- DO NOT delete receipt from R2 on approve or reject.
+- Keep all receipts for future auditing.
+- Store receipt metadata and key in DB to retrieve later.
+- Add createdAt/reviewedAt fields.
+
+3) MULTIPLE ATTEMPTS RULE
+- Student can submit UNLIMITED requests for the same course ONLY AFTER the previous request was REJECTED.
+- If there is an existing PENDING request for the same course+student:
+  - Block new submission and show: "Your request is already pending."
+- If there is an APPROVED request:
+  - Do not show “approved” status. Instead:
+    - The student should simply see the course in "My Courses" as enrolled.
+    - Hide the join request button.
+
+4) TEACHER PAGE: JOIN REQUESTS
+- Add sidebar link for Teacher role:
+  "Join Requests"
+- Page shows list/table of requests for courses owned/assigned to this teacher only.
+- Each row/card shows:
+  - Student name
+  - Student ID
+  - Student email
+  - Student college
+  - Course title
+  - Submitted date/time
+  - Status badge (PENDING/REJECTED/APPROVED)
+  - Buttons:
+    [Approve] [Reject]
+  - A "View Receipt" action that opens a preview of the image.
+
+5) RECEIPT VIEW SECURITY (IMPORTANT)
+- Receipts are stored in PRIVATE R2.
+- Do NOT expose raw public URLs.
+- Implement a backend endpoint that returns a short-lived signed URL for receipt viewing:
+  GET /api/teacher/join-requests/:id/receipt
+  - Validate teacher owns the course of this request.
+  - Generate a signed URL (or proxied stream) valid for ~60 seconds.
+  - Return it to frontend for preview.
+
+6) APPROVE / REJECT BEHAVIOR
+- Approve:
+  - Create enrollment (same as teacher manual enroll) for that student+course.
+  - Update JoinRequest status -> APPROVED, set reviewedAt.
+  - Course should appear in student "My Courses" immediately (or on refresh).
+  - Student should NOT see a special "approved" message; just sees the course as normal.
+- Reject:
+  - Update JoinRequest status -> REJECTED, set reviewedAt.
+  - Allow student to submit a new request again (unlimited attempts after rejection).
+
+7) DATABASE
+Create a table/model JoinRequest:
+- id (pk)
+- courseId (fk)
+- teacherId (fk) (or derived via course owner)
+- studentId (fk)
+- message (nullable)
+- receiptKey (string)  <-- R2 object key/path
+- receiptMime (string)
+- receiptSize (int)
+- status (enum: PENDING, APPROVED, REJECTED)
+- createdAt
+- reviewedAt (nullable)
+
+Add indexes:
+- (courseId, studentId, status)
+- (teacherId, status)
+
+8) API ENDPOINTS
+- POST /api/courses/:courseId/join-request
+  - Auth: student logged in
+  - Validate: not enrolled already
+  - Validate: if pending exists -> block
+  - Validate: if approved exists -> block/hide button
+  - Accept multipart/form-data: { message?, receipt(file) }
+  - Upload receipt to R2 (private)
+  - Create JoinRequest PENDING
+  - Return success
+
+- GET /api/teacher/join-requests
+  - Auth: teacher logged in
+  - Return teacher's requests (including student & course info)
+  - Include pagination or limit as needed
+
+- POST /api/teacher/join-requests/:id/approve
+  - Auth: teacher
+  - Validate ownership of course
+  - Create enrollment
+  - Update status to APPROVED
+
+- POST /api/teacher/join-requests/:id/reject
+  - Auth: teacher
+  - Validate ownership
+  - Update status to REJECTED
+
+- GET /api/teacher/join-requests/:id/receipt
+  - Auth: teacher
+  - Validate ownership
+  - Return signed URL for receipt viewing (60s)
+
+9) UI DETAILS
+- Student course page:
+  - If not enrolled -> show "Request to Join"
+  - If pending request exists -> disable button + show pending hint
+  - If enrolled -> no button
+- Teacher join requests page:
+  - Approve/Reject buttons
+  - Receipt view modal with signed URL image preview
+  - Show status changes instantly (optimistic update or refetch)
+
+10) DO NOT BREAK EXISTING MANUAL ENROLLMENT
+- Keep existing "Enroll Student by ID" feature working as-is.
+- This join request feature is an additional path.
+
+DELIVERABLE:
+- Implement DB migration + models
+- Implement API routes + R2 upload + signed URL view
+- Implement student request UI
+- Implement teacher "Join Requests" page in sidebar
+- Provide a quick summary of files changed and how to test.

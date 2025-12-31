@@ -9,6 +9,7 @@ import {
   homeStats,
   adminDashboardStatsConfig,
   passwordResetTokens,
+  joinRequests,
   type User,
   type UpsertUser,
   type College,
@@ -30,6 +31,9 @@ import {
   type AdminDashboardStatsConfig,
   type UpdateAdminDashboardStatsConfig,
   type PasswordResetToken,
+  type JoinRequest,
+  type InsertJoinRequest,
+  type JoinRequestWithRelations,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql, or, ilike, isNull } from "drizzle-orm";
@@ -134,6 +138,14 @@ export interface IStorage {
   getAdminDashboardStatsConfig(): Promise<AdminDashboardStatsConfig | undefined>;
   getOrCreateAdminDashboardStatsConfig(): Promise<AdminDashboardStatsConfig>;
   updateAdminDashboardStatsConfig(data: UpdateAdminDashboardStatsConfig, userId: string): Promise<AdminDashboardStatsConfig>;
+  createJoinRequest(data: InsertJoinRequest): Promise<JoinRequest>;
+  getJoinRequestById(id: number): Promise<JoinRequestWithRelations | undefined>;
+  getJoinRequestsByCourse(courseId: number): Promise<JoinRequestWithRelations[]>;
+  getJoinRequestsByTeacher(teacherId: string): Promise<JoinRequestWithRelations[]>;
+  getStudentJoinRequestForCourse(studentId: string, courseId: number): Promise<JoinRequest | undefined>;
+  hasPendingJoinRequest(studentId: string, courseId: number): Promise<boolean>;
+  hasApprovedJoinRequest(studentId: string, courseId: number): Promise<boolean>;
+  updateJoinRequestStatus(id: number, status: JoinRequest["status"]): Promise<JoinRequest | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -749,6 +761,109 @@ export class DatabaseStorage implements IStorage {
       .update(adminDashboardStatsConfig)
       .set({ ...data, updatedAt: new Date(), updatedByUserId: userId })
       .where(eq(adminDashboardStatsConfig.id, existing.id))
+      .returning();
+    return updated;
+  }
+
+  async createJoinRequest(data: InsertJoinRequest): Promise<JoinRequest> {
+    const [joinRequest] = await db.insert(joinRequests).values(data).returning();
+    return joinRequest;
+  }
+
+  async getJoinRequestById(id: number): Promise<JoinRequestWithRelations | undefined> {
+    const result = await db
+      .select()
+      .from(joinRequests)
+      .leftJoin(users, eq(joinRequests.studentId, users.id))
+      .leftJoin(colleges, eq(users.collegeId, colleges.id))
+      .leftJoin(courses, eq(joinRequests.courseId, courses.id))
+      .where(eq(joinRequests.id, id))
+      .limit(1);
+    
+    if (!result[0]) return undefined;
+    
+    return {
+      ...result[0].join_requests,
+      student: result[0].users ? { ...result[0].users, college: result[0].colleges || undefined } : undefined,
+      course: result[0].courses || undefined,
+    };
+  }
+
+  async getJoinRequestsByCourse(courseId: number): Promise<JoinRequestWithRelations[]> {
+    const result = await db
+      .select()
+      .from(joinRequests)
+      .leftJoin(users, eq(joinRequests.studentId, users.id))
+      .leftJoin(colleges, eq(users.collegeId, colleges.id))
+      .leftJoin(courses, eq(joinRequests.courseId, courses.id))
+      .where(eq(joinRequests.courseId, courseId))
+      .orderBy(desc(joinRequests.createdAt));
+    
+    return result.map(row => ({
+      ...row.join_requests,
+      student: row.users ? { ...row.users, college: row.colleges || undefined } : undefined,
+      course: row.courses || undefined,
+    }));
+  }
+
+  async getJoinRequestsByTeacher(teacherId: string): Promise<JoinRequestWithRelations[]> {
+    const result = await db
+      .select()
+      .from(joinRequests)
+      .innerJoin(courses, eq(joinRequests.courseId, courses.id))
+      .leftJoin(users, eq(joinRequests.studentId, users.id))
+      .leftJoin(colleges, eq(users.collegeId, colleges.id))
+      .where(eq(courses.teacherId, teacherId))
+      .orderBy(desc(joinRequests.createdAt));
+    
+    return result.map(row => ({
+      ...row.join_requests,
+      student: row.users ? { ...row.users, college: row.colleges || undefined } : undefined,
+      course: row.courses || undefined,
+    }));
+  }
+
+  async getStudentJoinRequestForCourse(studentId: string, courseId: number): Promise<JoinRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(joinRequests)
+      .where(and(eq(joinRequests.studentId, studentId), eq(joinRequests.courseId, courseId)))
+      .orderBy(desc(joinRequests.createdAt))
+      .limit(1);
+    return request;
+  }
+
+  async hasPendingJoinRequest(studentId: string, courseId: number): Promise<boolean> {
+    const [request] = await db
+      .select({ id: joinRequests.id })
+      .from(joinRequests)
+      .where(and(
+        eq(joinRequests.studentId, studentId),
+        eq(joinRequests.courseId, courseId),
+        eq(joinRequests.status, "PENDING")
+      ))
+      .limit(1);
+    return !!request;
+  }
+
+  async hasApprovedJoinRequest(studentId: string, courseId: number): Promise<boolean> {
+    const [request] = await db
+      .select({ id: joinRequests.id })
+      .from(joinRequests)
+      .where(and(
+        eq(joinRequests.studentId, studentId),
+        eq(joinRequests.courseId, courseId),
+        eq(joinRequests.status, "APPROVED")
+      ))
+      .limit(1);
+    return !!request;
+  }
+
+  async updateJoinRequestStatus(id: number, status: JoinRequest["status"]): Promise<JoinRequest | undefined> {
+    const [updated] = await db
+      .update(joinRequests)
+      .set({ status, reviewedAt: new Date() })
+      .where(eq(joinRequests.id, id))
       .returning();
     return updated;
   }

@@ -18,6 +18,7 @@ export const userRoleEnum = pgEnum("user_role", ["STUDENT", "TEACHER", "ADMIN", 
 export const courseStatusEnum = pgEnum("course_status", ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "REJECTED"]);
 export const contentTypeEnum = pgEnum("content_type", ["video", "text", "link", "file"]);
 export const approvalActionEnum = pgEnum("approval_action", ["APPROVE", "REJECT"]);
+export const joinRequestStatusEnum = pgEnum("join_request_status", ["PENDING", "APPROVED", "REJECTED"]);
 
 // Session storage table for Replit Auth
 export const sessions = pgTable(
@@ -111,6 +112,27 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   usedAt: timestamp("used_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Join Requests table (student requests to join a course with payment receipt)
+export const joinRequests = pgTable(
+  "join_requests",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+    studentId: varchar("student_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    message: text("message"),
+    receiptKey: varchar("receipt_key", { length: 500 }).notNull(),
+    receiptMime: varchar("receipt_mime", { length: 100 }).notNull(),
+    receiptSize: integer("receipt_size").notNull(),
+    status: joinRequestStatusEnum("status").notNull().default("PENDING"),
+    createdAt: timestamp("created_at").defaultNow(),
+    reviewedAt: timestamp("reviewed_at"),
+  },
+  (table) => [
+    index("idx_join_request_course_student_status").on(table.courseId, table.studentId, table.status),
+    index("idx_join_request_status").on(table.status),
+  ]
+);
 
 // Featured Profiles table (for home page display)
 export const featuredProfiles = pgTable("featured_profiles", {
@@ -221,6 +243,17 @@ export const courseApprovalLogsRelations = relations(courseApprovalLogs, ({ one 
   }),
 }));
 
+export const joinRequestsRelations = relations(joinRequests, ({ one }) => ({
+  course: one(courses, {
+    fields: [joinRequests.courseId],
+    references: [courses.id],
+  }),
+  student: one(users, {
+    fields: [joinRequests.studentId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertCollegeSchema = createInsertSchema(colleges).omit({
   id: true,
@@ -281,6 +314,12 @@ export const insertCourseApprovalLogSchema = createInsertSchema(courseApprovalLo
   createdAt: true,
 });
 
+export const insertJoinRequestSchema = createInsertSchema(joinRequests).omit({
+  id: true,
+  createdAt: true,
+  reviewedAt: true,
+});
+
 export const insertFeaturedProfileSchema = createInsertSchema(featuredProfiles).omit({
   id: true,
   createdAt: true,
@@ -335,8 +374,14 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertJoinRequest = z.infer<typeof insertJoinRequestSchema>;
+export type JoinRequest = typeof joinRequests.$inferSelect;
 
 // Extended types for frontend
+export type JoinRequestWithRelations = JoinRequest & {
+  course?: CourseWithRelations;
+  student?: UserWithCollege;
+};
 export type CourseWithRelations = Course & {
   college?: College;
   teacher?: User;
