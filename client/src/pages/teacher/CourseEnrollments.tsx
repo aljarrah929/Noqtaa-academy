@@ -56,7 +56,7 @@ export default function CourseEnrollments() {
   const { data: searchResults, isLoading: searching } = useQuery<UserWithCollege[]>({
     queryKey: ["/api/users/search", debouncedQuery],
     queryFn: async () => {
-      const res = await fetch(`/api/users/search?q=${encodeURIComponent(debouncedQuery)}`, {
+      const res = await fetch(`/api/users/search?query=${encodeURIComponent(debouncedQuery)}`, {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to search users");
@@ -250,7 +250,7 @@ export default function CourseEnrollments() {
                             <AvatarFallback>{initials}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-medium truncate">
                                 {student.firstName} {student.lastName}
                               </p>
@@ -260,9 +260,16 @@ export default function CourseEnrollments() {
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground truncate">
-                              {student.email}
-                            </p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm text-muted-foreground truncate">
+                                {student.email}
+                              </p>
+                              {student.college && (
+                                <Badge variant="outline" className="text-xs">
+                                  {student.college.name}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                           {isSelected && (
                             <UserCheck className="w-5 h-5 text-primary flex-shrink-0" />
@@ -287,12 +294,18 @@ export default function CourseEnrollments() {
             {selectedStudent && (
               <div className="border rounded-md p-3 bg-accent/30">
                 <p className="text-sm font-medium mb-1">Selected Student:</p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span>{selectedStudent.firstName} {selectedStudent.lastName}</span>
                   {selectedStudent.publicId && (
                     <Badge variant="outline">{selectedStudent.publicId}</Badge>
                   )}
+                  {selectedStudent.college && (
+                    <Badge variant="secondary" className="text-xs">
+                      {selectedStudent.college.name}
+                    </Badge>
+                  )}
                 </div>
+                <p className="text-sm text-muted-foreground mt-1">{selectedStudent.email}</p>
               </div>
             )}
           </div>

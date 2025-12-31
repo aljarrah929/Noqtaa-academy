@@ -548,6 +548,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const { studentId } = req.body;
+      
+      // Validate studentId exists and is a student
+      const studentUser = await storage.getUser(studentId);
+      if (!studentUser) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      if (studentUser.role !== "STUDENT") {
+        return res.status(400).json({ message: "This user is not a student account" });
+      }
+      
       const alreadyEnrolled = await storage.isEnrolled(studentId, courseId);
       if (alreadyEnrolled) {
         return res.status(400).json({ message: "Student is already enrolled" });

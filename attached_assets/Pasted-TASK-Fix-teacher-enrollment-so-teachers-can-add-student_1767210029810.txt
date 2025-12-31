@@ -1,0 +1,49 @@
+TASK: Fix teacher enrollment so teachers can add students from ANY college (not restricted by college/major filters). Search must work globally by Student ID.
+
+CURRENT BUG:
+Teacher cannot add a student by ID unless the student is from the same college/specialization. The search results are filtered, so valid IDs do not appear.
+
+EXPECTED:
+Teacher can add any Student account (any college) to the teacher’s course by entering the student publicId (XXNNNNNN), regardless of college.
+
+REQUIREMENTS:
+
+1) SEARCH BY ID MUST BE GLOBAL
+- Update the "search student" query to NOT filter by teacher college or course college.
+- Query should be:
+  - find user where publicId == inputId
+  - ensure user.role == "student"
+- Return student basic info: name, email, publicId, college.
+
+2) ENROLLMENT PERMISSIONS / VALIDATIONS
+- Teacher can enroll students ONLY into courses assigned to that teacher.
+- Validate:
+  - teacher owns the course (or is assigned to it)
+  - user exists
+  - user role is Student
+  - user not already enrolled
+- If any fails, return a clear error message.
+
+3) UI BEHAVIOR
+- In the teacher enrollment page/modal:
+  - Provide a single input: "Student ID"
+  - On search success, show a student card with:
+    name, email, college, ID + "Add to course" button
+  - If not found: show "No student found with this ID"
+  - If found but not student role: show "This ID is not a student account"
+  - If already enrolled: show "Student already enrolled"
+
+4) REMOVE/IGNORE COLLEGE FILTERS
+- Remove any frontend filter that hides results based on college.
+- Remove any backend filters that restrict search to same college.
+
+5) TEST CASES
+- Teacher adds student from same college -> works
+- Teacher adds student from different college -> works
+- Teacher enters invalid ID -> not found
+- Teacher tries to enroll non-student role -> blocked
+- Teacher tries to enroll student already enrolled -> blocked
+
+DELIVERABLE:
+- List changed files (backend search/enroll endpoint + frontend enrollment UI)
+- Confirm no college-based restriction remains.
