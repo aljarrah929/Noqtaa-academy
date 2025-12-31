@@ -24,6 +24,9 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const nextUrl = searchParams.get("next");
+
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -43,6 +46,11 @@ export default function Login() {
         title: "Welcome back!",
         description: `Logged in as ${user.firstName} ${user.lastName}`,
       });
+      
+      if (nextUrl) {
+        setLocation(nextUrl);
+        return;
+      }
       
       switch (user.role) {
         case "SUPER_ADMIN":

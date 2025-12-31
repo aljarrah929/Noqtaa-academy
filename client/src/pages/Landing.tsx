@@ -134,9 +134,9 @@ export default function Landing() {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20" asChild data-testid="button-login-hero">
-                <a href="/api/login">
+                <Link href="/login">
                   Get Started
-                </a>
+                </Link>
               </Button>
             </div>
             <div className="flex justify-center gap-2 mt-8">

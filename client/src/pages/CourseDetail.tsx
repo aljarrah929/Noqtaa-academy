@@ -1,4 +1,4 @@
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,7 +23,10 @@ import type { CourseWithRelations } from "@shared/schema";
 export default function CourseDetail() {
   const [match, params] = useRoute("/courses/:id");
   const courseId = params?.id;
+  const [location] = useLocation();
   const { user, isAuthenticated } = useAuth();
+
+  const loginUrl = `/login?next=${encodeURIComponent(location)}`;
 
   const { data: course, isLoading: courseLoading } = useQuery<CourseWithRelations>({
     queryKey: ["/api/courses", courseId],
@@ -236,7 +239,7 @@ export default function CourseDetail() {
                     Log in to request enrollment and access course content.
                   </p>
                   <Button asChild className="w-full" data-testid="button-login-enroll">
-                    <a href="/api/login">Log in to Continue</a>
+                    <Link href={loginUrl}>Log in to Continue</Link>
                   </Button>
                 </CardContent>
               </Card>
