@@ -15,7 +15,8 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Lock
 } from "lucide-react";
 import type { Lesson, CourseWithRelations } from "@shared/schema";
 
@@ -46,6 +47,7 @@ export default function LessonDetail() {
 
   const isEnrolled = enrollmentCheck?.enrolled ?? false;
   const isContentLocked = lesson?.locked === true;
+  const isCourseLocked = course?.isLocked === true;
   const isLoading = courseLoading || lessonLoading || enrollmentLoading;
 
   const sortedLessons = course?.lessons?.sort((a, b) => a.orderIndex - b.orderIndex) || [];
@@ -217,6 +219,40 @@ export default function LessonDetail() {
             teacherEmail={course.teacher?.email || undefined}
             teacherName={course.teacher ? `${course.teacher.firstName} ${course.teacher.lastName}` : undefined}
           />
+        </div>
+      </div>
+    );
+  }
+
+  if (isEnrolled && isCourseLocked) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <Link href={`/courses/${courseId}`}>
+            <Button variant="ghost" className="mb-6" data-testid="button-back">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Course
+            </Button>
+          </Link>
+          <Card className="border-dashed bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
+            <CardContent className="py-12 text-center">
+              <div className="w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-6">
+                <Lock className="w-10 h-10 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="font-semibold text-xl mb-2 text-amber-800 dark:text-amber-300">Course Locked by Instructor</h3>
+              <p className="text-amber-700 dark:text-amber-400 mb-6 max-w-md mx-auto">
+                The instructor has temporarily locked access to this course's content. Please check back later or contact the instructor for more information.
+              </p>
+              {course.teacher?.email && (
+                <Button asChild data-testid="button-contact-teacher">
+                  <a href={`mailto:${course.teacher.email}?subject=Question about ${course.title}`}>
+                    Contact Instructor
+                  </a>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     );

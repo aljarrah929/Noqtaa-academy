@@ -167,11 +167,25 @@ export default function CourseDetail() {
 
             <div>
               <h2 className="text-xl font-semibold mb-4">Course Content</h2>
+              {isEnrolled && course.isLocked && (
+                <Card className="mb-4 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
+                  <CardContent className="py-4 flex items-center gap-3">
+                    <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-amber-800 dark:text-amber-300">Course is currently locked</p>
+                      <p className="text-sm text-amber-700 dark:text-amber-400">
+                        The instructor has temporarily locked access to course content.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               {course.lessons && course.lessons.length > 0 ? (
                 <LessonList
                   lessons={course.lessons}
                   courseId={course.id}
                   isEnrolled={isEnrolled}
+                  isCourseLocked={course.isLocked}
                   teacherEmail={course.teacher?.email || undefined}
                 />
               ) : (
@@ -263,13 +277,25 @@ export default function CourseDetail() {
               </Card>
             )}
 
-            {isEnrolled && (
+            {isEnrolled && !course.isLocked && (
               <Card className="bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800">
                 <CardContent className="py-6 text-center">
                   <CheckCircle className="w-10 h-10 mx-auto text-green-600 mb-3" />
                   <h3 className="font-semibold mb-2 text-green-800 dark:text-green-400">You're Enrolled!</h3>
                   <p className="text-sm text-green-700 dark:text-green-500">
                     You have full access to all course content.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {isEnrolled && course.isLocked && (
+              <Card className="bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
+                <CardContent className="py-6 text-center">
+                  <Lock className="w-10 h-10 mx-auto text-amber-600 mb-3" />
+                  <h3 className="font-semibold mb-2 text-amber-800 dark:text-amber-400">Course Locked</h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-500">
+                    Content is temporarily locked by the instructor.
                   </p>
                 </CardContent>
               </Card>

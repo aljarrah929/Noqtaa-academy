@@ -17,10 +17,11 @@ interface LessonListProps {
   lessons: Lesson[];
   courseId: number;
   isEnrolled: boolean;
+  isCourseLocked?: boolean;
   teacherEmail?: string;
 }
 
-export function LessonList({ lessons, courseId, isEnrolled, teacherEmail }: LessonListProps) {
+export function LessonList({ lessons, courseId, isEnrolled, isCourseLocked = false, teacherEmail }: LessonListProps) {
   const getContentTypeIcon = (contentType: string) => {
     switch (contentType) {
       case "video":
@@ -56,15 +57,18 @@ export function LessonList({ lessons, courseId, isEnrolled, teacherEmail }: Less
     );
   }
 
+  // Determine if content should be accessible
+  const canAccessContent = isEnrolled && !isCourseLocked;
+
   return (
     <div className="space-y-2">
       {sortedLessons.map((lesson, index) => (
         <Card 
           key={lesson.id} 
-          className={`group ${isEnrolled ? 'hover-elevate cursor-pointer' : ''}`}
+          className={`group ${canAccessContent ? 'hover-elevate cursor-pointer' : ''}`}
           data-testid={`card-lesson-${lesson.id}`}
         >
-          {isEnrolled ? (
+          {canAccessContent ? (
             <Link href={`/courses/${courseId}/lessons/${lesson.id}`}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">
@@ -107,7 +111,9 @@ export function LessonList({ lessons, courseId, isEnrolled, teacherEmail }: Less
                       <span className="ml-1 text-xs">{getContentTypeLabel(lesson.contentType)}</span>
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">Content locked</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isEnrolled && isCourseLocked ? "Course locked by instructor" : "Content locked"}
+                  </p>
                 </div>
 
                 <div className="flex-shrink-0">
