@@ -25,8 +25,11 @@ import {
   FileText,
   Video,
   Settings,
-  GraduationCap
+  GraduationCap,
+  Lock,
+  Unlock
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "wouter";
 import type { CourseWithRelations } from "@shared/schema";
 
@@ -60,6 +63,28 @@ export default function TeacherCourses() {
       toast({
         title: "Error",
         description: error.message || "Failed to submit course",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const lockMutation = useMutation({
+    mutationFn: async ({ courseId, isLocked }: { courseId: number; isLocked: boolean }) => {
+      await apiRequest("PATCH", `/api/teacher/courses/${courseId}/lock`, { isLocked });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teacher/courses"] });
+      toast({
+        title: variables.isLocked ? "Course Locked" : "Course Unlocked",
+        description: variables.isLocked 
+          ? "Enrolled students can no longer access course content."
+          : "Enrolled students can now access course content.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update course lock status",
         variant: "destructive",
       });
     },
@@ -209,12 +234,40 @@ export default function TeacherCourses() {
                       </Button>
                     )}
                     {course.status === "PUBLISHED" && (
-                      <Button variant="outline" size="sm" asChild data-testid={`button-enrollments-${course.id}`}>
-                        <Link href={`/teacher/courses/${course.id}/enrollments`}>
-                          <UserPlus className="w-4 h-4 mr-1" />
-                          Enrollments
-                        </Link>
-                      </Button>
+                      <>
+                        <Button variant="outline" size="sm" asChild data-testid={`button-enrollments-${course.id}`}>
+                          <Link href={`/teacher/courses/${course.id}/enrollments`}>
+                            <UserPlus className="w-4 h-4 mr-1" />
+                            Enrollments
+                          </Link>
+                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant={course.isLocked ? "destructive" : "outline"} 
+                              size="sm"
+                              onClick={() => lockMutation.mutate({ courseId: course.id, isLocked: !course.isLocked })}
+                              disabled={lockMutation.isPending}
+                              data-testid={`button-lock-${course.id}`}
+                            >
+                              {course.isLocked ? (
+                                <>
+                                  <Lock className="w-4 h-4 mr-1" />
+                                  Locked
+                                </>
+                              ) : (
+                                <>
+                                  <Unlock className="w-4 h-4 mr-1" />
+                                  Open
+                                </>
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{course.isLocked ? "Click to unlock for enrolled students" : "Click to lock content for enrolled students"}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </>
                     )}
                   </CardFooter>
                 </Card>
