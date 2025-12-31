@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/hooks/useAuth";
 import { LessonList, LockedContentMessage } from "@/components/courses/LessonList";
+import { JoinRequestModal } from "@/components/courses/JoinRequestModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,8 @@ import {
   CheckCircle, 
   Lock,
   ArrowLeft,
-  Building2
+  Building2,
+  UserPlus
 } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations } from "@shared/schema";
@@ -262,20 +264,24 @@ export default function CourseDetail() {
               </Card>
             )}
 
-            {isAuthenticated && !isEnrolled && course.teacher && (
+            {isAuthenticated && !isEnrolled && user?.role === "STUDENT" && (
               <Card className="border-primary/50">
                 <CardContent className="py-6 text-center">
-                  <Mail className="w-10 h-10 mx-auto text-primary mb-3" />
-                  <h3 className="font-semibold mb-2">Request Enrollment</h3>
+                  <UserPlus className="w-10 h-10 mx-auto text-primary mb-3" />
+                  <h3 className="font-semibold mb-2">Join This Course</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Contact the teacher to request enrollment in this course.
+                    Submit your payment receipt to request enrollment.
                   </p>
-                  <Button asChild className="w-full" data-testid="button-request-enrollment">
-                    <a href={`mailto:${course.teacher.email}?subject=Enrollment Request: ${course.title}&body=Hello ${course.teacher.firstName},%0D%0A%0D%0AI would like to request enrollment in your course "${course.title}".%0D%0A%0D%0AThank you.`}>
-                      <Mail className="w-4 h-4 mr-2" />
-                      Request Enrollment
-                    </a>
-                  </Button>
+                  <JoinRequestModal
+                    courseId={course.id}
+                    courseTitle={course.title}
+                    trigger={
+                      <Button className="w-full" data-testid="button-request-enrollment">
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Request to Join
+                      </Button>
+                    }
+                  />
                 </CardContent>
               </Card>
             )}
