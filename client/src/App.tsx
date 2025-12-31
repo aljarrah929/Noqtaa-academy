@@ -20,6 +20,7 @@ import TeacherCourses from "@/pages/teacher/TeacherCourses";
 import CourseEditor from "@/pages/teacher/CourseEditor";
 import TeacherContentManagement from "@/pages/teacher/TeacherContentManagement";
 import CourseEnrollments from "@/pages/teacher/CourseEnrollments";
+import TeacherJoinRequests from "@/pages/teacher/JoinRequests";
 import UploadVideo from "@/pages/teacher/UploadVideo";
 import UploadFile from "@/pages/teacher/UploadFile";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/teacher/courses" component={TeacherCourses} />
       <Route path="/teacher/courses/:id/content" component={TeacherContentManagement} />
       <Route path="/teacher/courses/:id/enrollments" component={CourseEnrollments} />
+      <Route path="/teacher/join-requests" component={TeacherJoinRequests} />
       <Route path="/teacher/upload-video" component={UploadVideo} />
       <Route path="/teacher/courses/:courseId/upload-video" component={UploadVideo} />
       <Route path="/teacher/upload-file" component={UploadFile} />
