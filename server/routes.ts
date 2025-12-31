@@ -716,12 +716,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Course not found" });
       }
       
-      // Check authorization: teacher owns course
+      // Only PUBLISHED courses can be locked
+      if (course.status !== "PUBLISHED") {
+        return res.status(400).json({ message: "Only published courses can be locked/unlocked" });
+      }
+      
+      // Check authorization: teacher owns course or is admin
       const isOwner = course.teacherId === userId;
       const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
       
       if (!isOwner && !isAdmin) {
-        return res.status(403).json({ message: "Unauthorized" });
+        return res.status(403).json({ message: "You can only lock/unlock your own courses" });
       }
       
       // Update course lock status
