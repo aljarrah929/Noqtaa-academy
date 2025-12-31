@@ -100,6 +100,7 @@ export interface IStorage {
   getCoursesByTeacher(teacherId: string): Promise<CourseWithRelations[]>;
   createCourse(course: InsertCourse): Promise<Course>;
   updateCourse(id: number, course: Partial<InsertCourse>): Promise<Course | undefined>;
+  updateCourseLockStatus(id: number, isLocked: boolean): Promise<Course | undefined>;
   deleteCourse(id: number): Promise<void>;
   getLessonsByCourse(courseId: number): Promise<Lesson[]>;
   getLessonById(id: number): Promise<Lesson | undefined>;
@@ -449,6 +450,11 @@ export class DatabaseStorage implements IStorage {
 
   async updateCourse(id: number, course: Partial<InsertCourse>): Promise<Course | undefined> {
     const [updated] = await db.update(courses).set({ ...course, updatedAt: new Date() }).where(eq(courses.id, id)).returning();
+    return updated;
+  }
+
+  async updateCourseLockStatus(id: number, isLocked: boolean): Promise<Course | undefined> {
+    const [updated] = await db.update(courses).set({ isLocked, updatedAt: new Date() }).where(eq(courses.id, id)).returning();
     return updated;
   }
 

@@ -698,6 +698,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Teacher toggle course lock
+  app.patch("/api/teacher/courses/:courseId/lock", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      const courseId = parseInt(req.params.courseId);
+      const { isLocked } = req.body;
+      
+      if (typeof isLocked !== "boolean") {
+        return res.status(400).json({ message: "isLocked must be a boolean" });
+      }
+      
+      // Check course exists
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      
+      // Check authorization: teacher owns course
+      const isOwner = course.teacherId === userId;
+      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+      
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      // Update course lock status
+      const updated = await storage.updateCourseLockStatus(courseId, isLocked);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error toggling course lock:", error);
+      res.status(500).json({ message: "Failed to update course lock status" });
+    }
+  });
+
   app.get("/api/admin/stats", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;

@@ -1,0 +1,70 @@
+TASK: Add course Lock/Unlock toggle for teachers (affects enrolled students only) and fix incorrect locked display for enrolled students.
+
+PROBLEM:
+Some enrolled students see the course as locked (padlock) even though they are enrolled and should have access. We also need a teacher-controlled Lock/Unlock feature.
+
+GOALS:
+1) Fix the logic so enrolled students are recognized correctly.
+2) Implement a per-course "locked" state that teachers can toggle.
+3) Lock affects ONLY enrolled students content access. Non-enrolled users still see the public course preview as usual.
+
+REQUIREMENTS:
+
+1) DATA MODEL
+- Add boolean field to Course table/model:
+  - isLocked (default false)
+- This is independent from published/approved status.
+
+2) TEACHER TOGGLE UI
+- In teacher course management area (course card or course page):
+  - Add a toggle or button:
+    - "Lock Course" / "Unlock Course"
+  - Show current status badge: Locked / Open
+  - Tooltip/subtext: "Affects enrolled students only"
+
+3) API ENDPOINTS
+- Add endpoint for teacher:
+  PATCH /api/teacher/courses/:courseId/lock
+  body: { isLocked: boolean }
+
+- Validate:
+  - requester is teacher
+  - teacher owns/assigned to the course
+- Update course.isLocked and return updated status.
+
+4) STUDENT ACCESS LOGIC (CRITICAL)
+- When loading course content page for a student:
+  - Determine:
+    - isEnrolled (true if enrollment exists for user+course)
+    - course.isLocked
+  - Rules:
+    - If NOT enrolled:
+        show preview only (same as current behavior), do NOT block or show confusing lock for content.
+    - If enrolled AND course.isLocked == true:
+        show the course page but LOCK the lessons/videos/files:
+          - show message: "Course is currently locked by the instructor."
+          - disable playback/download and lesson open actions.
+    - If enrolled AND course.isLocked == false:
+        full access to lessons/videos/files.
+
+5) FIX THE EXISTING BUG
+- Audit the enrollment check used by the UI/endpoint.
+- Ensure enrollment query is correct (userId + courseId).
+- Ensure there is no college filter or wrong join causing isEnrolled false.
+- Ensure caching/state updates after enroll/remove enroll refresh correctly.
+
+6) UI DETAILS
+- Locked state should be clear and consistent:
+  - Enrolled student sees lock banner + disabled lesson cards
+  - Non-enrolled users do NOT see locked banner (they just see preview)
+
+7) TEST CASES
+- Student enrolled + course unlocked => can access content
+- Student enrolled + course locked => cannot open lessons/videos/files
+- Student not enrolled => sees preview (same as before), no lock confusion
+- Teacher toggles lock => immediately affects enrolled students
+- After enroll/remove enroll => enrollment state updates correctly
+
+DELIVERABLE:
+- List files modified (schema/model + API + teacher UI + student course page)
+- Confirm the original “enrolled but locked” false-negative bug is fixed.
