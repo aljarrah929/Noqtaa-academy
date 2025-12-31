@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,9 +22,9 @@ import { BRAND_NAME } from "@/lib/branding";
 
 export default function ForgotPassword() {
   const [submitted, setSubmitted] = useState(false);
-  const [submittedEmail, setSubmittedEmail] = useState("");
-  const [cooldownSeconds, setCooldownSeconds] = useState(60);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [isResending, setIsResending] = useState(false);
+  const submittedEmailRef = useRef<string>("");
 
   const form = useForm<ForgotPasswordInput>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -35,7 +35,7 @@ export default function ForgotPassword() {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (submitted && cooldownSeconds > 0) {
+    if (cooldownSeconds > 0) {
       interval = setInterval(() => {
         setCooldownSeconds((prev) => {
           if (prev <= 1) {
@@ -47,24 +47,33 @@ export default function ForgotPassword() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [submitted, cooldownSeconds]);
+  }, [cooldownSeconds]);
 
   const forgotPasswordMutation = useMutation({
     mutationFn: async (data: ForgotPasswordInput) => {
       const response = await apiRequest("POST", "/api/auth/forgot-password", data);
       return response.json();
     },
-    onSuccess: (_, variables) => {
-      setSubmittedEmail(variables.email);
+    onSuccess: (data, variables) => {
+      submittedEmailRef.current = variables.email;
       setSubmitted(true);
-      setCooldownSeconds(60);
+      if (data.cooldownRemaining) {
+        setCooldownSeconds(data.cooldownRemaining);
+      } else {
+        setCooldownSeconds(60);
+      }
     },
   });
 
   const resendMutation = useMutation({
     mutationFn: async () => {
+      if (!submittedEmailRef.current) {
+        throw new Error("No email to resend to");
+      }
       setIsResending(true);
-      const response = await apiRequest("POST", "/api/auth/resend-forgot-password", { email: submittedEmail });
+      const response = await apiRequest("POST", "/api/auth/resend-forgot-password", { 
+        email: submittedEmailRef.current 
+      });
       return response.json();
     },
     onSuccess: (data) => {
@@ -85,7 +94,16 @@ export default function ForgotPassword() {
   };
 
   const handleResend = () => {
-    resendMutation.mutate();
+    if (submittedEmailRef.current) {
+      resendMutation.mutate();
+    }
+  };
+
+  const handleTryAnother = () => {
+    setSubmitted(false);
+    submittedEmailRef.current = "";
+    setCooldownSeconds(0);
+    form.reset();
   };
 
   return (
@@ -153,12 +171,7 @@ export default function ForgotPassword() {
                 <Button
                   variant="secondary"
                   className="w-full"
-                  onClick={() => {
-                    setSubmitted(false);
-                    setSubmittedEmail("");
-                    setCooldownSeconds(60);
-                    form.reset();
-                  }}
+                  onClick={handleTryAnother}
                   data-testid="button-try-another"
                 >
                   Try another email

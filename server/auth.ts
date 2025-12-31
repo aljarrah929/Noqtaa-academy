@@ -147,6 +147,20 @@ export async function setupAuth(app: Express) {
       const user = await storage.getUserByEmail(data.email);
       
       if (user && user.passwordHash) {
+        const cooldownSeconds = 60;
+        const lastSent = user.passwordResetLastSentAt;
+        
+        if (lastSent) {
+          const elapsed = (Date.now() - new Date(lastSent).getTime()) / 1000;
+          if (elapsed < cooldownSeconds) {
+            const remaining = Math.ceil(cooldownSeconds - elapsed);
+            return res.json({ 
+              message: "If an account exists with this email, we sent a password reset link.",
+              cooldownRemaining: remaining 
+            });
+          }
+        }
+        
         const token = crypto.randomBytes(32).toString("hex");
         const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
         const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
