@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { verifyEmailConnection } from "./email";
+import { ensureCollegesExist } from "./db-init";
 
 const app = express();
 
@@ -60,6 +61,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Ensure colleges exist before routes are registered (prevents FK constraint errors)
+  await ensureCollegesExist();
+  
   const httpServer = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

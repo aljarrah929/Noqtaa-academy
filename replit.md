@@ -48,6 +48,7 @@ Preferred communication style: Simple, everyday language.
 - **Database**: PostgreSQL with Drizzle ORM
 - **Schema Location**: `shared/schema.ts` (shared between client and server)
 - **Migrations**: Drizzle Kit with `drizzle-kit push` for schema synchronization
+- **Auto-Initialization**: `server/db-init.ts` ensures required colleges exist on startup (prevents FK constraint errors)
 
 **Core Entities**:
 - `users` - Extended Replit Auth users with roles and college associations
