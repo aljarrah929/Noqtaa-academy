@@ -4,14 +4,44 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { verifyEmailConnection } from "./email";
 import { ensureCollegesExist } from "./db-init";
+import session from "express-session"; // إضافة المكتبة
+import createMemoryStore from "memorystore"; // إضافة المكتبة
+import passport from "passport"; // إضافة باسبورت
 
 const app = express();
+const MemoryStore = createMemoryStore(session);
+const isProduction = process.env.NODE_ENV === "production";
 
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
   }
 }
+
+// 1. إعدادات الـ Session والـ Cookies
+app.set("trust proxy", 1); // ضروري جداً لـ Replit لكي يعمل الـ Secure Cookie
+
+app.use(
+  session({
+    store: new MemoryStore({
+      checkPeriod: 86400000, // مسح الجلسات القديمة كل 24 ساعة
+    }),
+    secret: process.env.SESSION_SECRET || "your-secret-key-change-this",
+    resave: false,
+    saveUninitialized: false,
+    proxy: isProduction,
+    cookie: {
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 يوم
+      httpOnly: true,
+      secure: isProduction, // يعمل فقط عبر HTTPS في الإنتاج
+      sameSite: isProduction ? "none" : "lax", // الإصلاح الذي يمنع مشاكل النشر
+    },
+  })
+);
+
+// 2. تفعيل Passport (لأن مشروعك الجديد يعتمد عليه)
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use(
   express.json({
@@ -30,7 +60,6 @@ export function log(message: string, source = "express") {
     second: "2-digit",
     hour12: true,
   });
-
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
@@ -52,42 +81,32 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
       log(logLine);
     }
   });
-
   next();
 });
 
 (async () => {
-  // Ensure colleges exist before routes are registered (prevents FK constraint errors)
   await ensureCollegesExist();
-  
+
+  // تسجيل المسارات (Routes)
   const httpServer = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
     res.status(status).json({ message });
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
     const { setupVite } = await import("./vite");
-    await setupVite(httpServer, app);
+    await setupVite(app, httpServer); // تأكد من ترتيب المتغيرات حسب تعريف دالة setupVite
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(
     {
