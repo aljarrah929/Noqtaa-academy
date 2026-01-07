@@ -104,7 +104,7 @@ app.use((req, res, next) => {
     serveStatic(app);
   } else {
     const { setupVite } = await import("./vite");
-    await setupVite(app, httpServer); // تأكد من ترتيب المتغيرات حسب تعريف دالة setupVite
+    await setupVite(httpServer, app);
   }
 
   const port = parseInt(process.env.PORT || "5000", 10);
