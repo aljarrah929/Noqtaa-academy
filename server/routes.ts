@@ -29,6 +29,35 @@ function getR2Client(): S3Client | null {
   });
 }
 
+// Backblaze B2 configuration (for video hosting via Cloudflare CDN)
+const B2_KEY_ID = process.env.B2_KEY_ID;
+const B2_APP_KEY = process.env.B2_APP_KEY;
+const B2_BUCKET_NAME = process.env.B2_BUCKET_NAME;
+const B2_ENDPOINT = process.env.B2_ENDPOINT;
+const B2_REGION = process.env.B2_REGION || "us-west-004";
+const CDN_BASE_URL = process.env.CDN_BASE_URL;
+
+function getB2Client(): S3Client | null {
+  if (!B2_KEY_ID || !B2_APP_KEY || !B2_ENDPOINT) {
+    return null;
+  }
+  return new S3Client({
+    region: B2_REGION,
+    endpoint: B2_ENDPOINT,
+    credentials: {
+      accessKeyId: B2_KEY_ID,
+      secretAccessKey: B2_APP_KEY,
+    },
+  });
+}
+
+function getVideoCdnUrl(objectKey: string): string {
+  if (CDN_BASE_URL) {
+    return `${CDN_BASE_URL}/${objectKey}`;
+  }
+  return `${B2_ENDPOINT}/${B2_BUCKET_NAME}/${objectKey}`;
+}
+
 // Allowed file types for upload
 const ALLOWED_FILE_TYPES = [
   "application/pdf",
@@ -1152,6 +1181,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating Cloudflare Stream upload:", error);
       res.status(500).json({ message: "Failed to create video upload" });
+    }
+  });
+
+  // Backblaze B2 - Presigned URL for video upload (served via Cloudflare CDN)
+  app.post("/api/b2/video/presign", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only teachers and super admins can upload videos" });
+      }
+      
+      const { fileName, contentType, courseId, fileSize } = req.body;
+      
+      if (!fileName || !contentType || !courseId) {
+        return res.status(400).json({ message: "fileName, contentType, and courseId are required" });
+      }
+      
+      // Validate video content type
+      const allowedVideoTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"];
+      if (!allowedVideoTypes.includes(contentType)) {
+        return res.status(400).json({ message: "Only video files (mp4, webm, mov, avi) are allowed" });
+      }
+      
+      // Validate file size (500MB max for videos)
+      const maxVideoSize = 500 * 1024 * 1024;
+      if (fileSize && fileSize > maxVideoSize) {
+        return res.status(400).json({ message: "Video size exceeds 500MB limit" });
+      }
+      
+      // Verify teacher owns this course or is super admin
+      if (user.role === "TEACHER") {
+        const course = await storage.getCourse(courseId);
+        if (!course || course.teacherId !== userId) {
+          return res.status(403).json({ message: "You can only upload videos to your own courses" });
+        }
+      }
+      
+      const b2Client = getB2Client();
+      if (!b2Client || !B2_BUCKET_NAME) {
+        return res.status(503).json({ message: "Video storage not configured" });
+      }
+      
+      // Generate object key: videos/<courseId>/<timestamp>-<safeFileName>
+      const timestamp = Date.now();
+      const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const objectKey = `videos/${courseId}/${timestamp}-${safeFileName}`;
+      
+      // Generate presigned PUT URL (30 minute expiry for large videos)
+      const command = new PutObjectCommand({
+        Bucket: B2_BUCKET_NAME,
+        Key: objectKey,
+        ContentType: contentType,
+      });
+      
+      const uploadUrl = await getSignedUrl(b2Client, command, { expiresIn: 1800 });
+      const cdnUrl = getVideoCdnUrl(objectKey);
+      
+      res.json({
+        uploadUrl,
+        objectKey,
+        cdnUrl,
+      });
+    } catch (error) {
+      console.error("Error creating B2 presigned URL:", error);
+      res.status(500).json({ message: "Failed to create video upload URL" });
     }
   });
 
