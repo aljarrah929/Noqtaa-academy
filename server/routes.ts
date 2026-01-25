@@ -1214,7 +1214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verify teacher owns this course or is super admin
       if (user.role === "TEACHER") {
-        const course = await storage.getCourse(courseId);
+        const course = await storage.getCourseById(courseId);
         if (!course || course.teacherId !== userId) {
           return res.status(403).json({ message: "You can only upload videos to your own courses" });
         }

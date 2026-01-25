@@ -90,10 +90,23 @@ Preferred communication style: Simple, everyday language.
 - **Tailwind CSS**: Utility-first CSS framework
 
 ### Video Hosting
-- **Cloudflare Stream**: Direct creator uploads for lesson videos
+**Option 1: Cloudflare Stream** (managed video encoding)
 - **Endpoint**: `POST /api/stream/create-upload` - Creates direct upload URL
 - **Access**: TEACHER and SUPER_ADMIN roles only
 - **Required Secrets**: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_TOKEN`
+
+**Option 2: Backblaze B2 + Cloudflare CDN** (cost-effective self-hosted)
+- **Endpoint**: `POST /api/b2/video/presign` - Creates presigned PUT URL for B2 upload
+- **Access**: TEACHER and SUPER_ADMIN roles only
+- **Max Size**: 500MB per video
+- **Object Key Format**: `videos/<courseId>/<timestamp>-<safeFileName>`
+- **Required Secrets**:
+  - `B2_KEY_ID`: Backblaze B2 application key ID
+  - `B2_APP_KEY`: Backblaze B2 application key secret
+  - `B2_BUCKET_NAME`: Name of the B2 bucket
+  - `B2_ENDPOINT`: S3-compatible endpoint (e.g., `https://s3.us-west-004.backblazeb2.com`)
+  - `B2_REGION`: Region for S3 compatibility (e.g., `us-west-004`)
+  - `CDN_BASE_URL`: Cloudflare CDN URL (e.g., `https://media.yourdomain.com`)
 
 ### File Storage
 - **Cloudflare R2**: S3-compatible object storage for lesson files
