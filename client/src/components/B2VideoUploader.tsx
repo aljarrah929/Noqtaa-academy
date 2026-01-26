@@ -212,32 +212,65 @@ export function B2VideoUploader({
       log("Presign response received", {
         hasUploadUrl: !!data.uploadUrl,
         hasCdnUrl: !!data.cdnUrl,
+        hasObjectKey: !!data.objectKey,
         cdnUrl: data.cdnUrl,
+        objectKey: data.objectKey,
       });
 
-      if (!data.uploadUrl || !data.cdnUrl) {
+      if (!data.uploadUrl || !data.cdnUrl || !data.objectKey) {
         throw new Error("Invalid response from video service");
       }
 
       setUploadState("uploading");
 
       let cdnUrl: string;
+      let useDirectUpload = true;
+      
       try {
         cdnUrl = await uploadDirect(file, data.uploadUrl, data.cdnUrl);
+        log("Direct upload completed, verifying...");
+        
+        // VERIFY the upload succeeded by checking if object exists in B2
+        const verifyResponse = await apiRequest("POST", "/api/b2/video/verify", {
+          objectKey: data.objectKey,
+          cdnUrl: data.cdnUrl,
+        });
+        
+        if (!verifyResponse.ok) {
+          const verifyError = await verifyResponse.json().catch(() => ({}));
+          log("Direct upload verification FAILED", { status: verifyResponse.status, error: verifyError });
+          throw new Error(verifyError.message || "Upload verification failed - file not found in storage");
+        }
+        
+        const verifyResult = await verifyResponse.json();
+        log("Direct upload verified successfully", verifyResult);
+        
+        if (!verifyResult.verified) {
+          throw new Error("Upload verification failed - file not stored correctly");
+        }
+        
       } catch (directError: any) {
         if (directError.message === "CORS_OR_NETWORK_ERROR" || directError.message.includes("CORS")) {
-          log("Direct upload failed, falling back to proxy upload");
+          log("Direct upload failed (CORS), falling back to proxy upload");
           setProgress(0);
+          useDirectUpload = false;
           cdnUrl = await uploadViaProxy(file);
         } else if (directError.message === "Upload cancelled") {
           setUploadState("idle");
           setProgress(0);
           return;
+        } else if (directError.message.includes("verification failed") || directError.message.includes("not found")) {
+          // Direct upload succeeded but verification failed - try proxy as fallback
+          log("Direct upload verification failed, falling back to proxy upload");
+          setProgress(0);
+          useDirectUpload = false;
+          cdnUrl = await uploadViaProxy(file);
         } else {
           throw directError;
         }
       }
 
+      log("Upload complete", { cdnUrl, method: useDirectUpload ? "direct" : "proxy" });
       setUploadState("success");
       setProgress(100);
       onChange(cdnUrl);

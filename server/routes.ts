@@ -1294,14 +1294,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(503).json({ message: "Video storage not configured", errorCode: "B2_NOT_CONFIGURED" });
       }
       
-      // Generate object key: videos/<courseId>/<timestamp>-<safeFileName>
+      // Use SINGLE SOURCE OF TRUTH for object key generation
       const timestamp = Date.now();
-      const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const objectKey = `videos/${courseId}/${timestamp}-${safeFileName}`;
+      const objectKey = buildVideoObjectKey(courseId, fileName, timestamp);
+      const cdnUrl = getVideoCdnUrl(objectKey);
       
       console.log("[B2 Presign] Generating URL for:", {
         bucket: B2_BUCKET_NAME,
         objectKey,
+        cdnUrl,
         endpoint: B2_ENDPOINT,
         region: B2_REGION,
         contentType,
@@ -1315,13 +1316,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const uploadUrl = await getSignedUrl(b2Client, command, { expiresIn: 1800 });
-      const cdnUrl = getVideoCdnUrl(objectKey);
       
-      console.log("[B2 Presign] Success - CDN URL:", cdnUrl);
+      console.log("[B2 Presign] Success - objectKey:", objectKey, "cdnUrl:", cdnUrl);
       
+      // Return objectKey so client can verify after upload
       res.json({
         uploadUrl,
         cdnUrl,
+        objectKey,
       });
     } catch (error: any) {
       console.error("[B2 Presign] Error:", error?.message || error);
@@ -1379,12 +1381,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(503).json({ message: "Video storage not configured" });
       }
 
+      // Use SINGLE SOURCE OF TRUTH for object key generation
       const timestamp = Date.now();
-      const safeFileName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const objectKey = `videos/${courseId}/${timestamp}-${safeFileName}`;
+      const objectKey = buildVideoObjectKey(courseId, req.file.originalname, timestamp);
+      const cdnUrl = getVideoCdnUrl(objectKey);
 
       console.log("[B2 Proxy Upload] Starting upload", {
         objectKey,
+        cdnUrl,
         size: req.file.size,
         contentType: req.file.mimetype,
       });
@@ -1397,14 +1401,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       await b2Client.send(command);
+      console.log("[B2 Proxy Upload] PutObject completed, verifying...");
 
-      const cdnUrl = getVideoCdnUrl(objectKey);
-      console.log("[B2 Proxy Upload] Success", { cdnUrl });
+      // VERIFY object exists in B2 before returning success
+      const objectExists = await verifyObjectExistsInB2(b2Client, objectKey);
+      if (!objectExists) {
+        console.error("[B2 Proxy Upload] VERIFICATION FAILED - object not found after upload:", objectKey);
+        return res.status(500).json({ 
+          message: "Upload verification failed - file not found in storage",
+          errorCode: "B2_VERIFY_FAILED"
+        });
+      }
 
-      res.json({ cdnUrl, objectKey });
+      // Also verify CDN URL is accessible (may take a moment for propagation)
+      const cdnAccessible = await verifyCdnUrlAccessible(cdnUrl);
+      if (!cdnAccessible) {
+        console.warn("[B2 Proxy Upload] CDN not immediately accessible, but B2 verified:", cdnUrl);
+        // Don't fail - B2 verified, CDN may need propagation time
+      }
+
+      console.log("[B2 Proxy Upload] Success - verified", { objectKey, cdnUrl, objectExists, cdnAccessible });
+
+      res.json({ cdnUrl, objectKey, verified: true });
     } catch (error: any) {
       console.error("[B2 Proxy Upload] Error:", error?.message || error);
       res.status(500).json({ message: "Failed to upload video", details: error?.message });
+    }
+  });
+
+  // Backblaze B2 - Verify upload completed successfully (for direct uploads)
+  app.post("/api/b2/video/verify", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+
+      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only teachers and super admins can verify uploads" });
+      }
+
+      const { objectKey, cdnUrl } = req.body;
+      if (!objectKey) {
+        return res.status(400).json({ message: "objectKey is required" });
+      }
+
+      const b2Client = getB2Client();
+      if (!b2Client || !B2_BUCKET_NAME) {
+        return res.status(503).json({ message: "Video storage not configured" });
+      }
+
+      console.log("[B2 Verify] Checking object:", objectKey);
+
+      // Verify object exists in B2
+      const objectExists = await verifyObjectExistsInB2(b2Client, objectKey);
+      if (!objectExists) {
+        console.log("[B2 Verify] Object NOT found:", objectKey);
+        return res.status(404).json({ 
+          message: "Video file not found in storage",
+          errorCode: "B2_OBJECT_NOT_FOUND",
+          verified: false 
+        });
+      }
+
+      // Also verify CDN URL is accessible
+      const computedCdnUrl = cdnUrl || getVideoCdnUrl(objectKey);
+      const cdnAccessible = await verifyCdnUrlAccessible(computedCdnUrl);
+      
+      console.log("[B2 Verify] Result:", { objectKey, objectExists, cdnAccessible, cdnUrl: computedCdnUrl });
+
+      res.json({ 
+        verified: true, 
+        objectExists, 
+        cdnAccessible,
+        cdnUrl: computedCdnUrl 
+      });
+    } catch (error: any) {
+      console.error("[B2 Verify] Error:", error?.message || error);
+      res.status(500).json({ message: "Failed to verify upload", details: error?.message });
     }
   });
 

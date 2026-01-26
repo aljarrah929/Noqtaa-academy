@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useRoute, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
@@ -16,7 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  Lock
+  Lock,
+  AlertTriangle
 } from "lucide-react";
 import type { Lesson, CourseWithRelations } from "@shared/schema";
 
@@ -29,6 +31,7 @@ export default function LessonDetail() {
   const courseId = params?.courseId;
   const lessonId = params?.lessonId;
   const { user, isAuthenticated } = useAuth();
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   const { data: course, isLoading: courseLoading } = useQuery<CourseWithRelations>({
     queryKey: ["/api/courses", courseId],
@@ -125,6 +128,30 @@ export default function LessonDetail() {
             </div>
           );
         }
+        // Show error state if video failed to load
+        if (videoError) {
+          return (
+            <div className="aspect-video rounded-lg overflow-hidden bg-muted flex flex-col items-center justify-center p-8" data-testid="video-player-error">
+              <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
+              <h3 className="font-semibold text-lg mb-2 text-destructive">Video Unavailable</h3>
+              <p className="text-muted-foreground text-center mb-4 max-w-md">
+                {videoError}
+              </p>
+              <p className="text-xs text-muted-foreground text-center break-all max-w-md">
+                URL: {lesson.content}
+              </p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => setVideoError(null)}
+                data-testid="button-retry-video"
+              >
+                Try Again
+              </Button>
+            </div>
+          );
+        }
+
         return (
           <div className="aspect-video rounded-lg overflow-hidden bg-black" data-testid="video-player-native">
             <video 
@@ -134,6 +161,8 @@ export default function LessonDetail() {
               onError={(e) => {
                 console.error("[Video Player] Error loading video:", e);
                 console.error("[Video Player] Video src:", lesson.content);
+                // Show visible error message
+                setVideoError("The video file could not be loaded. It may have been deleted or the link is broken.");
               }}
             >
               Your browser does not support the video tag.
