@@ -1,0 +1,42 @@
+Root cause: student and teacher receive the same CDN URL, but the video does not play. curl/HEAD to the CDN URL returns 404.
+So the stored CDN URL points to an object that does NOT exist at that key in Backblaze.
+
+Fix this permanently (no more "fake success"):
+
+1) Make objectKey generation SINGLE SOURCE OF TRUTH:
+   - Create a shared function buildVideoObjectKey(courseId, filename, timestamp) used by:
+     - presign endpoint
+     - upload logic
+     - DB store
+     - player
+   - Format: videos/<courseId>/<timestamp>-<sanitizedFilename>
+   - Ensure no accidental double prefix (no "CPE-academy/" in the key if the bucket is already CPE-academy).
+
+2) After upload completes, VERIFY the object exists before storing:
+   - Perform a HEAD request against S3 (HeadObjectCommand) using the same bucket and objectKey.
+   - If HeadObject fails -> return error and DO NOT store lesson videoUrl.
+   - Also optionally HEAD the CDN URL and require 200/206.
+
+3) Fix the upload flow to ensure the PUT actually succeeds:
+   - For direct presigned PUT:
+     - Use fetch PUT and check response.ok
+     - If not ok, capture status/text and throw
+   - Implement fallback backend proxy upload:
+     - Backend receives file (multipart/form-data)
+     - Backend uploads to B2 (PutObjectCommand) using the SAME objectKey
+     - Then verifies with HeadObject
+   - Only after verification return { cdnUrl }.
+
+4) Fix the player to show a clear error message when the CDN URL returns 404/403:
+   - Add a HEAD check client-side (optional) to show "Video not found" instead of silent black player.
+
+5) Provide me:
+   - The exact files changed
+   - The final objectKey you generate for an upload
+   - A test: upload small mp4, confirm object exists in B2 under that exact key, then open:
+     https://media.cpeacademy.online/<objectKey> and it must return 200/206
+
+Constraints:
+- Do not change Cloudflare or Backblaze settings.
+- Keep bucket public.
+- Store only CDN URL in DB, but only after verification succeeds.

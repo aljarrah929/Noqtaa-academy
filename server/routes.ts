@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated, seedSuperAdmin } from "./auth";
 import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema, updateAdminDashboardStatsConfigSchema } from "@shared/schema";
 import { z } from "zod";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import bcrypt from "bcryptjs";
 import multer from "multer";
@@ -60,6 +60,47 @@ function getVideoCdnUrl(objectKey: string): string {
     return `${CDN_BASE_URL}/${objectKey}`;
   }
   return `${B2_ENDPOINT}/${B2_BUCKET_NAME}/${objectKey}`;
+}
+
+// SINGLE SOURCE OF TRUTH: Build video object key
+// Format: videos/<courseId>/<timestamp>-<sanitizedFilename>
+// No bucket name prefix - the bucket is already "CPE-academy"
+function buildVideoObjectKey(courseId: number | string, fileName: string, timestamp?: number): string {
+  const ts = timestamp || Date.now();
+  // Sanitize filename: keep only alphanumeric, dots, underscores, hyphens
+  const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `videos/${courseId}/${ts}-${safeFileName}`;
+}
+
+// Verify object exists in B2 bucket using HeadObject
+async function verifyObjectExistsInB2(b2Client: S3Client, objectKey: string): Promise<boolean> {
+  if (!B2_BUCKET_NAME) return false;
+  
+  try {
+    const command = new HeadObjectCommand({
+      Bucket: B2_BUCKET_NAME,
+      Key: objectKey,
+    });
+    await b2Client.send(command);
+    console.log("[B2 Verify] Object exists:", objectKey);
+    return true;
+  } catch (error: any) {
+    console.log("[B2 Verify] Object NOT found:", objectKey, error?.message || error);
+    return false;
+  }
+}
+
+// Verify CDN URL returns 200/206 (optional additional check)
+async function verifyCdnUrlAccessible(cdnUrl: string): Promise<boolean> {
+  try {
+    const response = await fetch(cdnUrl, { method: "HEAD" });
+    const ok = response.status === 200 || response.status === 206;
+    console.log("[CDN Verify]", cdnUrl, "status:", response.status, "ok:", ok);
+    return ok;
+  } catch (error: any) {
+    console.log("[CDN Verify] Error:", cdnUrl, error?.message || error);
+    return false;
+  }
 }
 
 // Allowed file types for upload
