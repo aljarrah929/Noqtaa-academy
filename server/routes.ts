@@ -462,6 +462,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let hasAccess = false;
       let isCourseLocked = false;
       
+      console.log("[Lesson Access Debug]", {
+        lessonId: id,
+        userId,
+        userRole: user?.role,
+        courseTeacherId: course.teacherId,
+        courseIsLocked: course.isLocked,
+        lessonContent: lesson.content?.substring(0, 100),
+        lessonContentType: lesson.contentType,
+      });
+      
       if (user) {
         if (user.role === "SUPER_ADMIN") {
           // Super admins have access to all content
@@ -475,6 +485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           // Students need to be enrolled AND course not locked
           const enrolled = await storage.isEnrolled(userId, lesson.courseId);
+          console.log("[Lesson Access Debug] Student enrollment check:", { userId, courseId: lesson.courseId, enrolled });
           if (enrolled && course.isLocked) {
             // Enrolled but course is locked by teacher
             isCourseLocked = true;
@@ -484,6 +495,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
+      
+      console.log("[Lesson Access Debug] Final access decision:", { hasAccess, isCourseLocked });
       
       // If course is locked for this enrolled student
       if (isCourseLocked) {
@@ -497,6 +510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ ...lessonWithoutContent, content: null, locked: true });
       }
       
+      console.log("[Lesson Access Debug] Returning full lesson with content:", { lessonId: id, contentLength: lesson.content?.length });
       res.json(lesson);
     } catch (error) {
       console.error("Error fetching lesson:", error);

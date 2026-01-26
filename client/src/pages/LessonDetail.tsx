@@ -77,6 +77,14 @@ export default function LessonDetail() {
   };
 
   const renderContent = () => {
+    console.log("[LessonDetail] renderContent called", {
+      lessonId: lesson?.id,
+      hasContent: !!lesson?.content,
+      contentType: lesson?.contentType,
+      contentPreview: lesson?.content?.substring(0, 100),
+      locked: lesson?.locked,
+    });
+
     if (!lesson?.content) {
       return (
         <div className="text-center py-12 text-muted-foreground">
@@ -87,6 +95,7 @@ export default function LessonDetail() {
 
     switch (lesson.contentType) {
       case "video":
+        console.log("[LessonDetail] Rendering video player with URL:", lesson.content);
         // Check if it's a Cloudflare Stream UID (32-character hex string)
         const isCloudflareStreamUid = /^[a-f0-9]{32}$/i.test(lesson.content);
         if (isCloudflareStreamUid) {
