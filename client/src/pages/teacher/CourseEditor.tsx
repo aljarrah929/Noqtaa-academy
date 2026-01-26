@@ -39,7 +39,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Plus, Trash2, Save, ArrowLeft, ShieldAlert } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations, College, Lesson } from "@shared/schema";
-import { VideoUploader } from "@/components/VideoUploader";
+import { B2VideoUploader } from "@/components/B2VideoUploader";
 
 const courseFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
@@ -463,9 +463,10 @@ export default function CourseEditor() {
                     </FormLabel>
                     <FormControl>
                       {lessonForm.watch("contentType") === "video" ? (
-                        <VideoUploader
+                        <B2VideoUploader
+                          courseId={parseInt(courseId || "0")}
                           value={field.value}
-                          onChange={(uid) => field.onChange(uid || "")}
+                          onChange={(cdnUrl) => field.onChange(cdnUrl || "")}
                         />
                       ) : (
                         <Textarea 

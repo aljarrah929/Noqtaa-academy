@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { VideoUploader } from "@/components/VideoUploader";
+import { B2VideoUploader } from "@/components/B2VideoUploader";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -252,7 +252,8 @@ export default function UploadVideo() {
 
             <div className="space-y-2">
               <Label>Video File *</Label>
-              <VideoUploader
+              <B2VideoUploader
+                courseId={parseInt(courseId || "0")}
                 value={videoUid}
                 onChange={handleVideoChange}
                 onUploadComplete={handleVideoUploadComplete}
