@@ -147,8 +147,12 @@ export default function LessonDetail() {
           <div className="aspect-video rounded-lg overflow-hidden bg-black" data-testid="video-player-native">
             <video 
               controls 
+              controlsList="nodownload noplaybackrate noremoteplayback"
+              disablePictureInPicture
+              playsInline
               className="w-full h-full" 
               src={lesson.content}
+              onContextMenu={(e) => e.preventDefault()}
               onError={(e) => {
                 console.error("[Video Player] Error loading video:", e);
                 console.error("[Video Player] Video src:", lesson.content);
