@@ -95,18 +95,24 @@ Preferred communication style: Simple, everyday language.
 - **Access**: TEACHER and SUPER_ADMIN roles only
 - **Required Secrets**: `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_TOKEN`
 
-**Option 2: Backblaze B2 + Cloudflare CDN** (cost-effective self-hosted)
-- **Endpoint**: `POST /api/b2/video/presign` - Creates presigned PUT URL for B2 upload
+**Option 2: Backblaze B2 + Cloudflare CDN** (cost-effective self-hosted) - **ACTIVE**
+- **Presign Endpoint**: `POST /api/b2/video/presign` - Creates presigned PUT URL for direct B2 upload
+- **Proxy Endpoint**: `POST /api/b2/video/upload` - Backend proxy upload (multipart/form-data fallback for CORS)
 - **Access**: TEACHER and SUPER_ADMIN roles only
 - **Max Size**: 500MB per video
 - **Object Key Format**: `videos/<courseId>/<timestamp>-<safeFileName>`
+- **CDN URL Format**: `https://media.cpeacademy.online/<objectKey>` (stored in DB)
+- **Upload Flow**:
+  1. Frontend requests presigned URL → tries direct PUT to B2
+  2. If CORS/network error → falls back to proxy upload via backend
+  3. Backend uploads to B2 using S3 SDK → returns CDN URL
 - **Required Secrets**:
   - `B2_KEY_ID`: Backblaze B2 application key ID
   - `B2_APP_KEY`: Backblaze B2 application key secret
-  - `B2_BUCKET_NAME`: Name of the B2 bucket
-  - `B2_ENDPOINT`: S3-compatible endpoint (e.g., `https://s3.us-west-004.backblazeb2.com`)
-  - `B2_REGION`: Region for S3 compatibility (e.g., `us-west-004`)
-  - `CDN_BASE_URL`: Cloudflare CDN URL (e.g., `https://media.yourdomain.com`)
+  - `B2_BUCKET_NAME`: Name of the B2 bucket (CPE-academy)
+  - `B2_ENDPOINT`: S3-compatible endpoint (e.g., `s3.eu-central-003.backblazeb2.com` - https:// added automatically)
+  - `B2_REGION`: Region for S3 compatibility (e.g., `eu-central-003`)
+  - `CDN_BASE_URL`: Cloudflare CDN URL (`https://media.cpeacademy.online`)
 
 ### File Storage
 - **Cloudflare R2**: S3-compatible object storage for lesson files

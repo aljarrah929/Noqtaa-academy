@@ -1279,6 +1279,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Backblaze B2 - Backend proxy upload (fallback for CORS issues)
+  const videoUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only video files are allowed"));
+      }
+    },
+  });
+
+  app.post("/api/b2/video/upload", isAuthenticated, videoUpload.single("video"), async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+
+      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only teachers and super admins can upload videos" });
+      }
+
+      const courseId = req.body.courseId;
+      if (!courseId) {
+        return res.status(400).json({ message: "courseId is required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No video file provided" });
+      }
+
+      // Verify teacher owns this course or is super admin
+      if (user.role === "TEACHER") {
+        const course = await storage.getCourseById(parseInt(courseId));
+        if (!course || course.teacherId !== userId) {
+          return res.status(403).json({ message: "You can only upload videos to your own courses" });
+        }
+      }
+
+      const b2Client = getB2Client();
+      if (!b2Client || !B2_BUCKET_NAME) {
+        return res.status(503).json({ message: "Video storage not configured" });
+      }
+
+      const timestamp = Date.now();
+      const safeFileName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const objectKey = `videos/${courseId}/${timestamp}-${safeFileName}`;
+
+      console.log("[B2 Proxy Upload] Starting upload", {
+        objectKey,
+        size: req.file.size,
+        contentType: req.file.mimetype,
+      });
+
+      const command = new PutObjectCommand({
+        Bucket: B2_BUCKET_NAME,
+        Key: objectKey,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      });
+
+      await b2Client.send(command);
+
+      const cdnUrl = getVideoCdnUrl(objectKey);
+      console.log("[B2 Proxy Upload] Success", { cdnUrl });
+
+      res.json({ cdnUrl, objectKey });
+    } catch (error: any) {
+      console.error("[B2 Proxy Upload] Error:", error?.message || error);
+      res.status(500).json({ message: "Failed to upload video", details: error?.message });
+    }
+  });
+
   // Cloudflare R2 - Presigned URL for file upload
   app.post("/api/r2/presign", isAuthenticated, async (req: any, res) => {
     try {

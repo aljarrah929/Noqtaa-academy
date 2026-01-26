@@ -30,6 +30,7 @@ export function B2VideoUploader({
   const [fileSize, setFileSize] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadMethod, setUploadMethod] = useState<"direct" | "proxy">("direct");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
 
@@ -39,6 +40,122 @@ export function B2VideoUploader({
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  const log = (message: string, data?: any) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[B2Upload ${timestamp}] ${message}`, data || "");
+  };
+
+  const uploadViaProxy = async (file: File): Promise<string> => {
+    log("Starting proxy upload", { fileName: file.name, size: file.size, type: file.type });
+    setUploadMethod("proxy");
+
+    const formData = new FormData();
+    formData.append("video", file);
+    formData.append("courseId", String(courseId));
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhrRef.current = xhr;
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentage = Math.round((event.loaded / event.total) * 100);
+          setProgress(percentage);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            log("Proxy upload success", { cdnUrl: response.cdnUrl });
+            resolve(response.cdnUrl);
+          } catch (e) {
+            log("Proxy upload response parse error", { responseText: xhr.responseText });
+            reject(new Error("Invalid response from server"));
+          }
+        } else {
+          let errorMsg = `Proxy upload failed (${xhr.status})`;
+          try {
+            const response = JSON.parse(xhr.responseText);
+            if (response.message) errorMsg = response.message;
+          } catch {}
+          log("Proxy upload error", { status: xhr.status, errorMsg });
+          reject(new Error(errorMsg));
+        }
+      };
+
+      xhr.onerror = () => {
+        log("Proxy upload network error");
+        reject(new Error("Network error during proxy upload"));
+      };
+
+      xhr.onabort = () => {
+        reject(new Error("Upload cancelled"));
+      };
+
+      xhr.open("POST", "/api/b2/video/upload");
+      xhr.withCredentials = true;
+      xhr.send(formData);
+    });
+  };
+
+  const uploadDirect = async (file: File, uploadUrl: string, cdnUrl: string): Promise<string> => {
+    const urlHost = new URL(uploadUrl).host;
+    log("Starting direct upload", {
+      host: urlHost,
+      fileSize: file.size,
+      fileType: file.type || "application/octet-stream",
+    });
+    setUploadMethod("direct");
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhrRef.current = xhr;
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentage = Math.round((event.loaded / event.total) * 100);
+          setProgress(percentage);
+        }
+      };
+
+      xhr.onload = () => {
+        log("Direct upload response", {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          responseText: xhr.responseText?.substring(0, 500),
+        });
+
+        if (xhr.status >= 200 && xhr.status < 300) {
+          log("Direct upload success", { cdnUrl });
+          resolve(cdnUrl);
+        } else {
+          const errorMsg = `Direct upload failed: ${xhr.status} ${xhr.statusText}`;
+          log("Direct upload failed", { status: xhr.status, responseText: xhr.responseText });
+          reject(new Error(errorMsg));
+        }
+      };
+
+      xhr.onerror = () => {
+        log("Direct upload network error (likely CORS)", {
+          readyState: xhr.readyState,
+          status: xhr.status,
+        });
+        reject(new Error("CORS_OR_NETWORK_ERROR"));
+      };
+
+      xhr.onabort = () => {
+        reject(new Error("Upload cancelled"));
+      };
+
+      xhr.open("PUT", uploadUrl);
+      const contentType = file.type || "application/octet-stream";
+      xhr.setRequestHeader("Content-Type", contentType);
+      xhr.send(file);
+    });
   };
 
   const uploadFile = useCallback(async (file: File) => {
@@ -62,16 +179,25 @@ export function B2VideoUploader({
     setErrorMessage("");
     onUploadStart?.();
 
+    log("Upload started", {
+      fileName: file.name,
+      size: file.size,
+      type: file.type,
+      courseId,
+    });
+
     try {
+      log("Requesting presigned URL...");
       const response = await apiRequest("POST", "/api/b2/video/presign", {
         fileName: file.name,
-        contentType: file.type,
+        contentType: file.type || "application/octet-stream",
         courseId,
         fileSize: file.size,
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        log("Presign request failed", { status: response.status, errorData });
         if (response.status === 401) {
           throw new Error("Please log in to upload videos");
         } else if (response.status === 403) {
@@ -81,66 +207,44 @@ export function B2VideoUploader({
         }
         throw new Error(errorData.message || `Request failed (${response.status})`);
       }
-      
+
       const data = await response.json();
+      log("Presign response received", {
+        hasUploadUrl: !!data.uploadUrl,
+        hasCdnUrl: !!data.cdnUrl,
+        cdnUrl: data.cdnUrl,
+      });
 
       if (!data.uploadUrl || !data.cdnUrl) {
         throw new Error("Invalid response from video service");
       }
-      
+
       setUploadState("uploading");
 
-      const xhr = new XMLHttpRequest();
-      xhrRef.current = xhr;
-      
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percentage = Math.round((event.loaded / event.total) * 100);
-          setProgress(percentage);
-        }
-      };
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          setUploadState("success");
-          setProgress(100);
-          onChange(data.cdnUrl);
-          onUploadComplete?.(data.cdnUrl);
+      let cdnUrl: string;
+      try {
+        cdnUrl = await uploadDirect(file, data.uploadUrl, data.cdnUrl);
+      } catch (directError: any) {
+        if (directError.message === "CORS_OR_NETWORK_ERROR" || directError.message.includes("CORS")) {
+          log("Direct upload failed, falling back to proxy upload");
+          setProgress(0);
+          cdnUrl = await uploadViaProxy(file);
+        } else if (directError.message === "Upload cancelled") {
+          setUploadState("idle");
+          setProgress(0);
+          return;
         } else {
-          let errorMsg = `Upload failed (${xhr.status})`;
-          try {
-            const response = JSON.parse(xhr.responseText);
-            if (response.message) {
-              errorMsg = response.message;
-            }
-          } catch {
-            if (xhr.status === 413) {
-              errorMsg = "File too large.";
-            }
-          }
-          setErrorMessage(errorMsg);
-          setUploadState("error");
-          onUploadError?.(errorMsg);
+          throw directError;
         }
-      };
+      }
 
-      xhr.onerror = () => {
-        const errorMsg = "Network error during upload";
-        setErrorMessage(errorMsg);
-        setUploadState("error");
-        onUploadError?.(errorMsg);
-      };
+      setUploadState("success");
+      setProgress(100);
+      onChange(cdnUrl);
+      onUploadComplete?.(cdnUrl);
 
-      xhr.onabort = () => {
-        setUploadState("idle");
-        setProgress(0);
-      };
-
-      xhr.open("PUT", data.uploadUrl);
-      xhr.setRequestHeader("Content-Type", file.type);
-      xhr.send(file);
-
-    } catch (error) {
+    } catch (error: any) {
+      log("Upload error", { name: error?.name, message: error?.message });
       const message = error instanceof Error ? error.message : "Failed to start upload";
       setErrorMessage(message);
       setUploadState("error");
@@ -247,7 +351,9 @@ export function B2VideoUploader({
               <Video className="w-5 h-5 text-primary animate-pulse" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">Uploading to CDN...</p>
+              <p className="font-medium text-sm">
+                Uploading to CDN{uploadMethod === "proxy" ? " (via server)" : ""}...
+              </p>
               <p className="text-xs text-muted-foreground truncate">{fileName} ({fileSize})</p>
             </div>
             <Button
