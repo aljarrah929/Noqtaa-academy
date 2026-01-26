@@ -10,7 +10,13 @@ export function ProtectedVideo({ src, onError }: ProtectedVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [blocked, setBlocked] = useState(false);
   const wasPlayingRef = useRef(false);
+  const savedTimeRef = useRef(0);
   const unblockTimerRef = useRef<number | null>(null);
+  const originalSrcRef = useRef(src);
+
+  useEffect(() => {
+    originalSrcRef.current = src;
+  }, [src]);
 
   const blockNow = () => {
     if (unblockTimerRef.current) {
@@ -21,7 +27,13 @@ export function ProtectedVideo({ src, onError }: ProtectedVideoProps) {
     const v = videoRef.current;
     if (v) {
       wasPlayingRef.current = !v.paused && !v.ended;
+      savedTimeRef.current = v.currentTime;
       v.pause();
+      v.removeAttribute("src");
+      while (v.firstChild) {
+        v.removeChild(v.firstChild);
+      }
+      v.load();
     }
     setBlocked(true);
   };
@@ -30,15 +42,24 @@ export function ProtectedVideo({ src, onError }: ProtectedVideoProps) {
     if (unblockTimerRef.current) window.clearTimeout(unblockTimerRef.current);
 
     unblockTimerRef.current = window.setTimeout(() => {
-      setBlocked(false);
-
       const v = videoRef.current;
-      if (v && wasPlayingRef.current) {
-        v.play().catch(() => {
-        });
+      if (v) {
+        v.src = originalSrcRef.current;
+        v.load();
+
+        const restorePlayback = () => {
+          v.currentTime = savedTimeRef.current;
+          if (wasPlayingRef.current) {
+            v.play().catch(() => {});
+          }
+          v.removeEventListener("loadedmetadata", restorePlayback);
+        };
+        v.addEventListener("loadedmetadata", restorePlayback);
       }
+
+      setBlocked(false);
       unblockTimerRef.current = null;
-    }, 400);
+    }, 500);
   };
 
   useEffect(() => {
