@@ -98,14 +98,20 @@ Preferred communication style: Simple, everyday language.
 **Option 2: Backblaze B2 + Cloudflare CDN** (cost-effective self-hosted) - **ACTIVE**
 - **Presign Endpoint**: `POST /api/b2/video/presign` - Creates presigned PUT URL for direct B2 upload
 - **Proxy Endpoint**: `POST /api/b2/video/upload` - Backend proxy upload (multipart/form-data fallback for CORS)
+- **Verify Endpoint**: `POST /api/b2/video/verify` - Verifies object exists in B2 after upload
 - **Access**: TEACHER and SUPER_ADMIN roles only
 - **Max Size**: 500MB per video
-- **Object Key Format**: `videos/<courseId>/<timestamp>-<safeFileName>`
-- **CDN URL Format**: `https://media.cpeacademy.online/<objectKey>` (stored in DB)
-- **Upload Flow**:
-  1. Frontend requests presigned URL → tries direct PUT to B2
-  2. If CORS/network error → falls back to proxy upload via backend
-  3. Backend uploads to B2 using S3 SDK → returns CDN URL
+- **Object Key Format**: `videos/<courseId>/<timestamp>-<safeFileName>` (generated via `buildVideoObjectKey()`)
+- **CDN URL Format**: `https://media.cpeacademy.online/<objectKey>` (stored in DB only after verification)
+- **Upload Flow with Verification**:
+  1. Frontend requests presigned URL → receives `uploadUrl`, `cdnUrl`, `objectKey`
+  2. Frontend tries direct PUT to B2
+  3. After PUT success, frontend calls `/api/b2/video/verify` with `objectKey`
+  4. Backend uses HeadObjectCommand to verify object exists in B2
+  5. If verification fails → falls back to proxy upload via backend
+  6. Proxy upload also verifies object exists before returning success
+  7. Only after B2 verification succeeds is the CDN URL considered valid
+- **Video Player Error Handling**: Shows visible "Video Unavailable" error with retry button if video fails to load
 - **Required Secrets**:
   - `B2_KEY_ID`: Backblaze B2 application key ID
   - `B2_APP_KEY`: Backblaze B2 application key secret
