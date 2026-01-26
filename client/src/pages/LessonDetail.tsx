@@ -127,7 +127,15 @@ export default function LessonDetail() {
         }
         return (
           <div className="aspect-video rounded-lg overflow-hidden bg-black" data-testid="video-player-native">
-            <video controls className="w-full h-full" src={lesson.content}>
+            <video 
+              controls 
+              className="w-full h-full" 
+              src={lesson.content}
+              onError={(e) => {
+                console.error("[Video Player] Error loading video:", e);
+                console.error("[Video Player] Video src:", lesson.content);
+              }}
+            >
               Your browser does not support the video tag.
             </video>
           </div>
@@ -284,6 +292,19 @@ export default function LessonDetail() {
             Back to {course.title}
           </Button>
         </Link>
+
+        {/* DEBUG: Video URL Debug Banner - Remove after testing */}
+        {lesson.contentType === "video" && (
+          <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-lg text-sm" data-testid="debug-video-url">
+            <p className="font-medium text-yellow-800 dark:text-yellow-200">DEBUG: Video URL received</p>
+            <p className="text-yellow-700 dark:text-yellow-300 break-all mt-1">
+              {lesson.content || "(empty - no video URL)"}
+            </p>
+            <p className="text-yellow-600 dark:text-yellow-400 mt-1">
+              Enrolled: {isEnrolled ? "Yes" : "No"} | Locked: {lesson.locked ? "Yes" : "No"} | Role: {user?.role || "unknown"}
+            </p>
+          </div>
+        )}
 
         <Card className="mb-6">
           <CardHeader>
