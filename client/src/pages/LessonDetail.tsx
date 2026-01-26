@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoute, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
@@ -32,6 +32,36 @@ export default function LessonDetail() {
   const lessonId = params?.lessonId;
   const { user, isAuthenticated } = useAuth();
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [videoBlocked, setVideoBlocked] = useState(false);
+
+  // Privacy shield: block video when page is hidden or window loses focus
+  useEffect(() => {
+    const checkBlocked = () => {
+      const isHidden = document.visibilityState !== "visible";
+      setVideoBlocked(isHidden);
+    };
+
+    const handleVisibilityChange = () => checkBlocked();
+    const handleBlur = () => setVideoBlocked(true);
+    const handleFocus = () => {
+      if (document.visibilityState === "visible") {
+        setVideoBlocked(false);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+
+    // Initial check
+    checkBlocked();
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
 
   const { data: course, isLoading: courseLoading } = useQuery<CourseWithRelations>({
     queryKey: ["/api/courses", courseId],
@@ -144,7 +174,7 @@ export default function LessonDetail() {
         }
 
         return (
-          <div className="aspect-video rounded-lg overflow-hidden bg-black" data-testid="video-player-native">
+          <div className="aspect-video rounded-lg overflow-hidden bg-black relative" data-testid="video-player-native">
             <video 
               controls 
               controlsList="nodownload noplaybackrate noremoteplayback"
@@ -162,6 +192,19 @@ export default function LessonDetail() {
             >
               Your browser does not support the video tag.
             </video>
+            {/* Privacy shield overlay - covers video when page loses focus */}
+            {videoBlocked && (
+              <div 
+                className="absolute inset-0 bg-black flex items-center justify-center z-50"
+                data-testid="video-privacy-shield"
+              >
+                <div className="text-center text-white">
+                  <Lock className="w-12 h-12 mx-auto mb-3 opacity-60" />
+                  <p className="text-lg font-medium">Video Protected</p>
+                  <p className="text-sm opacity-70 mt-1">Click here to continue watching</p>
+                </div>
+              </div>
+            )}
           </div>
         );
 
