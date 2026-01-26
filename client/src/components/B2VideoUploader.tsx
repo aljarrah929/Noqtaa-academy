@@ -165,9 +165,9 @@ export function B2VideoUploader({
       return;
     }
 
-    const maxSize = 500 * 1024 * 1024;
+    const maxSize = 1024 * 1024 * 1024;
     if (file.size > maxSize) {
-      setErrorMessage("File too large. Maximum size is 500MB.");
+      setErrorMessage("File too large. Maximum size is 1GB.");
       setUploadState("error");
       return;
     }
@@ -460,7 +460,7 @@ export function B2VideoUploader({
         </div>
         <div>
           <p className="font-medium text-sm">Drop your video here or click to browse</p>
-          <p className="text-xs text-muted-foreground mt-1">MP4, MOV, WebM (max 500MB) - Served via CDN</p>
+          <p className="text-xs text-muted-foreground mt-1">MP4, MOV, WebM (max 1GB) - Served via CDN</p>
         </div>
       </div>
     </div>

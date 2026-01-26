@@ -1265,10 +1265,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Only video files (mp4, webm, mov, avi) are allowed" });
       }
       
-      // Validate file size (500MB max for videos)
-      const maxVideoSize = 500 * 1024 * 1024;
+      // Validate file size (1GB max for videos)
+      const maxVideoSize = 1024 * 1024 * 1024;
       if (fileSize && fileSize > maxVideoSize) {
-        return res.status(400).json({ message: "Video size exceeds 500MB limit" });
+        return res.status(400).json({ message: "Video size exceeds 1GB limit" });
       }
       
       // Verify teacher owns this course or is super admin
@@ -1339,7 +1339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Backblaze B2 - Backend proxy upload (fallback for CORS issues)
   const videoUpload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
+    limits: { fileSize: 1024 * 1024 * 1024 }, // 1GB
     fileFilter: (req, file, cb) => {
       const allowedTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"];
       if (allowedTypes.includes(file.mimetype)) {

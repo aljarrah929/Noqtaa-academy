@@ -100,7 +100,7 @@ Preferred communication style: Simple, everyday language.
 - **Proxy Endpoint**: `POST /api/b2/video/upload` - Backend proxy upload (multipart/form-data fallback for CORS)
 - **Verify Endpoint**: `POST /api/b2/video/verify` - Verifies object exists in B2 after upload
 - **Access**: TEACHER and SUPER_ADMIN roles only
-- **Max Size**: 500MB per video
+- **Max Size**: 1GB per video
 - **Object Key Format**: `videos/<courseId>/<timestamp>-<safeFileName>` (generated via `buildVideoObjectKey()`)
 - **CDN URL Format**: `https://media.cpeacademy.online/<objectKey>` (stored in DB only after verification)
 - **Upload Flow with Verification**:
