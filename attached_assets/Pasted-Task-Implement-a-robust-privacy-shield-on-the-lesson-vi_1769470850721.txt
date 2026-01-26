@@ -1,0 +1,119 @@
+Task: Implement a robust “privacy shield” on the lesson video player to reduce screen-capture/focus switching leakage.
+
+Goal:
+- When the page becomes hidden OR window loses focus, immediately pause the video and cover it with a black overlay (hijab).
+- When focus returns and the page is visible, remove the overlay after a short debounce (400ms) to prevent flicker, and resume playback ONLY if it was playing before.
+
+Requirements:
+1) Locate the student lesson video player component (where the <video> element is rendered).
+2) Replace the existing video rendering with the component below (or merge it into the existing component).
+3) Keep current video URL logic unchanged (use the same `videoUrl`/`src` coming from DB).
+4) Do NOT touch backend, Cloudflare Worker, Backblaze, or auth.
+5) Keep “no download UI” improvements:
+   - controlsList="nodownload noplaybackrate noremoteplayback"
+   - disablePictureInPicture
+   - prevent right-click on the video
+
+Implement this code:
+
+----- START CODE -----
+import React, { useEffect, useRef, useState } from "react";
+
+export function ProtectedVideo({ src }: { src: string }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [blocked, setBlocked] = useState(false);
+  const wasPlayingRef = useRef(false);
+  const unblockTimerRef = useRef<number | null>(null);
+
+  const blockNow = () => {
+    // Cancel any pending unblock
+    if (unblockTimerRef.current) {
+      window.clearTimeout(unblockTimerRef.current);
+      unblockTimerRef.current = null;
+    }
+
+    const v = videoRef.current;
+    if (v) {
+      wasPlayingRef.current = !v.paused && !v.ended;
+      v.pause(); // Prevent flicker + stop audio immediately
+    }
+    setBlocked(true);
+  };
+
+  const unblockSoon = () => {
+    // Debounce to avoid quick focus/blur flicker
+    if (unblockTimerRef.current) window.clearTimeout(unblockTimerRef.current);
+
+    unblockTimerRef.current = window.setTimeout(() => {
+      setBlocked(false);
+
+      const v = videoRef.current;
+      // Resume only if it was playing before blocking
+      if (v && wasPlayingRef.current) {
+        v.play().catch(() => {
+          // Autoplay policies may block play(); ignore safely
+        });
+      }
+      unblockTimerRef.current = null;
+    }, 400);
+  };
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") blockNow();
+      else unblockSoon();
+    };
+
+    const onBlur = () => blockNow();
+    const onFocus = () => unblockSoon();
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
+      if (unblockTimerRef.current) window.clearTimeout(unblockTimerRef.current);
+    };
+  }, []);
+
+  return (
+    <div style={{ position: "relative", width: "100%" }}>
+      <video
+        ref={videoRef}
+        src={src}
+        controls
+        controlsList="nodownload noplaybackrate noremoteplayback"
+        disablePictureInPicture
+        playsInline
+        onContextMenu={(e) => e.preventDefault()}
+        style={{ width: "100%", display: "block" }}
+      />
+
+      {blocked && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "black",
+            opacity: 1,
+            zIndex: 10,
+          }}
+        />
+      )}
+    </div>
+  );
+}
+----- END CODE -----
+
+Integration instructions:
+- Create a new file `ProtectedVideo.tsx` (or similar) and paste the component above.
+- In the existing lesson player page/component, replace the <video ...> with:
+  <ProtectedVideo src={videoUrl} />
+- Remove any old debug banner or old overlay logic.
+- Confirm no flicker: when switching tabs/windows, video pauses + black overlay appears; when returning, overlay disappears after ~400ms and video resumes only if it was playing.
+
+Output:
+- List files changed and show the final snippet where ProtectedVideo is used.
