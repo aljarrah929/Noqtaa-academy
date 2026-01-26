@@ -1,0 +1,42 @@
+Upload still fails: UI shows "Upload failed 500: { message: 'Failed to create video upload URL' }".
+This means the backend presign endpoint is throwing an error.
+
+Do the following in order, without redesigning anything:
+
+1) Locate the backend route that creates the presigned upload URL:
+   - It is called by the frontend as /api/b2/video/presign (or similar).
+   - Open the exact file(s) and show the code path.
+
+2) Add detailed server-side logging (TEMPORARY) around the presign code:
+   - Log which env vars are present (only their existence, not values):
+     B2_KEY_ID, B2_APP_KEY, B2_BUCKET_NAME, B2_ENDPOINT, B2_REGION, CDN_BASE_URL
+   - Log the final computed objectKey, bucket, endpoint host, and region.
+   - Catch and log the full error stack, then return a JSON error with a safe message and an errorCode.
+
+3) Fix the Backblaze B2 S3 presign implementation for AWS SDK v3:
+   - Use endpoint: process.env.B2_ENDPOINT (must be like https://s3.eu-central-003.backblazeb2.com)
+   - Use region: process.env.B2_REGION (eu-central-003)
+   - Credentials: accessKeyId = B2_KEY_ID, secretAccessKey = B2_APP_KEY
+   - IMPORTANT for Backblaze:
+     - Set forcePathStyle: true
+     - Use S3Client with the endpoint override (do not rely on default AWS endpoints)
+   - Use PutObjectCommand + getSignedUrl for a PUT URL.
+   - Ensure ContentType is included from the uploaded file.
+   - Return:
+     {
+       uploadUrl: <presignedPutUrl>,
+       cdnUrl: `${CDN_BASE_URL}/${objectKey}`
+     }
+   - objectKey must be: videos/<courseId>/<timestamp>-<sanitizedFilename>
+
+4) Ensure the frontend uses the returned uploadUrl for PUT, and stores ONLY cdnUrl in DB.
+
+5) After changes:
+   - Restart the Replit server process.
+   - Provide me the exact curl command I can run to test the presign endpoint, and what output to expect.
+   - Confirm by uploading a small test file.
+
+Constraints:
+- Do NOT use Cloudflare Stream or R2 anywhere.
+- Do NOT require a private bucket or signed playback URLs.
+- Keep this minimal: only make upload presign endpoint work and return CDN URL.

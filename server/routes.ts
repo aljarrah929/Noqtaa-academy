@@ -33,17 +33,21 @@ function getR2Client(): S3Client | null {
 const B2_KEY_ID = process.env.B2_KEY_ID;
 const B2_APP_KEY = process.env.B2_APP_KEY;
 const B2_BUCKET_NAME = process.env.B2_BUCKET_NAME;
-const B2_ENDPOINT = process.env.B2_ENDPOINT;
-const B2_REGION = process.env.B2_REGION || "us-west-004";
+const B2_ENDPOINT_RAW = process.env.B2_ENDPOINT || "";
+const B2_ENDPOINT = B2_ENDPOINT_RAW.startsWith("http") ? B2_ENDPOINT_RAW : `https://${B2_ENDPOINT_RAW}`;
+const B2_REGION = process.env.B2_REGION || "eu-central-003";
 const CDN_BASE_URL = process.env.CDN_BASE_URL;
 
 function getB2Client(): S3Client | null {
-  if (!B2_KEY_ID || !B2_APP_KEY || !B2_ENDPOINT) {
+  if (!B2_KEY_ID || !B2_APP_KEY || !B2_ENDPOINT_RAW) {
+    console.log("[B2] Client not configured - missing credentials");
     return null;
   }
+  console.log("[B2] Creating S3Client with endpoint:", B2_ENDPOINT, "region:", B2_REGION);
   return new S3Client({
     region: B2_REGION,
     endpoint: B2_ENDPOINT,
+    forcePathStyle: true,
     credentials: {
       accessKeyId: B2_KEY_ID,
       secretAccessKey: B2_APP_KEY,
@@ -1220,9 +1224,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      console.log("[B2 Presign] Env check:", {
+        B2_KEY_ID: !!B2_KEY_ID,
+        B2_APP_KEY: !!B2_APP_KEY,
+        B2_BUCKET_NAME: !!B2_BUCKET_NAME,
+        B2_ENDPOINT: !!B2_ENDPOINT_RAW,
+        B2_REGION: B2_REGION,
+        CDN_BASE_URL: !!CDN_BASE_URL,
+      });
+
       const b2Client = getB2Client();
       if (!b2Client || !B2_BUCKET_NAME) {
-        return res.status(503).json({ message: "Video storage not configured" });
+        console.log("[B2 Presign] Storage not configured");
+        return res.status(503).json({ message: "Video storage not configured", errorCode: "B2_NOT_CONFIGURED" });
       }
       
       // Generate object key: videos/<courseId>/<timestamp>-<safeFileName>
@@ -1230,6 +1244,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
       const objectKey = `videos/${courseId}/${timestamp}-${safeFileName}`;
       
+      console.log("[B2 Presign] Generating URL for:", {
+        bucket: B2_BUCKET_NAME,
+        objectKey,
+        endpoint: B2_ENDPOINT,
+        region: B2_REGION,
+        contentType,
+      });
+
       // Generate presigned PUT URL (30 minute expiry for large videos)
       const command = new PutObjectCommand({
         Bucket: B2_BUCKET_NAME,
@@ -1240,14 +1262,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const uploadUrl = await getSignedUrl(b2Client, command, { expiresIn: 1800 });
       const cdnUrl = getVideoCdnUrl(objectKey);
       
+      console.log("[B2 Presign] Success - CDN URL:", cdnUrl);
+      
       res.json({
         uploadUrl,
-        objectKey,
         cdnUrl,
       });
-    } catch (error) {
-      console.error("Error creating B2 presigned URL:", error);
-      res.status(500).json({ message: "Failed to create video upload URL" });
+    } catch (error: any) {
+      console.error("[B2 Presign] Error:", error?.message || error);
+      console.error("[B2 Presign] Stack:", error?.stack);
+      res.status(500).json({ 
+        message: "Failed to create video upload URL", 
+        errorCode: "B2_PRESIGN_FAILED",
+        details: error?.message || "Unknown error"
+      });
     }
   });
 
