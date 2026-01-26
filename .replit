@@ -40,3 +40,9 @@ waitForPort = 5000
 
 [agent]
 integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "resend:1.0.0"]
+
+[userenv]
+
+[userenv.shared]
+CDN_BASE_URL = "https://media.cpeacademy.online"
+B2_REGION = "eu-central-003"
