@@ -2061,6 +2061,187 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== ACCOUNTANT ENDPOINTS ====================
+  
+  // Get enrollment statistics grouped by college
+  app.get("/api/accountant/enrollments", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+    try {
+      // Get all colleges
+      const allColleges = await storage.getColleges();
+      
+      // Get all published courses with enrollment counts (getCourses already includes _count)
+      const allCourses = await storage.getCourses();
+      
+      // Build grouped structure
+      let totalEnrollments = 0;
+      let totalCourses = 0;
+      
+      const colleges = allColleges.map(college => {
+        // Get courses for this college (published only)
+        const collegeCourses = allCourses.filter(
+          c => c.collegeId === college.id && c.status === "PUBLISHED"
+        );
+        
+        // Group by college (no subject/tab since schema doesn't have it)
+        const courses = collegeCourses.map(course => {
+          const enrollmentCount = course._count?.enrollments || 0;
+          totalEnrollments += enrollmentCount;
+          totalCourses++;
+          return {
+            id: course.id,
+            title: course.title,
+            enrollments: enrollmentCount,
+          };
+        });
+        
+        return {
+          id: college.id,
+          name: college.name,
+          courses,
+        };
+      }).filter(college => college.courses.length > 0);
+      
+      res.json({
+        totals: {
+          totalEnrollments,
+          totalCourses,
+          totalColleges: colleges.length,
+        },
+        colleges,
+      });
+    } catch (error) {
+      console.error("Error fetching accountant enrollments:", error);
+      res.status(500).json({ message: "Failed to fetch enrollment data" });
+    }
+  });
+  
+  // Generate PDF enrollment report
+  app.get("/api/accountant/enrollments.pdf", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+    try {
+      // Get all colleges
+      const allColleges = await storage.getColleges();
+      
+      // Get all published courses with enrollment counts (getCourses already includes _count)
+      const allCourses = await storage.getCourses();
+      
+      // Build data
+      let totalEnrollments = 0;
+      let totalCourses = 0;
+      
+      const colleges = allColleges.map(college => {
+        const collegeCourses = allCourses.filter(
+          c => c.collegeId === college.id && c.status === "PUBLISHED"
+        );
+        
+        const courses = collegeCourses.map(course => {
+          const enrollmentCount = course._count?.enrollments || 0;
+          totalEnrollments += enrollmentCount;
+          totalCourses++;
+          return {
+            id: course.id,
+            title: course.title,
+            enrollments: enrollmentCount,
+          };
+        });
+        
+        return {
+          id: college.id,
+          name: college.name,
+          courses,
+        };
+      }).filter(college => college.courses.length > 0);
+      
+      // Generate PDF
+      const doc = new PDFDocument({ margin: 50 });
+      
+      // Set response headers
+      const dateStr = new Date().toISOString().split("T")[0];
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="enrollment-report-${dateStr}.pdf"`);
+      
+      doc.pipe(res);
+      
+      // Title
+      doc.fontSize(24).font("Helvetica-Bold").text("Enrollment Report", { align: "center" });
+      doc.moveDown(0.5);
+      
+      // Generated date
+      doc.fontSize(10).font("Helvetica").fillColor("#666666")
+        .text(`Generated at: ${new Date().toLocaleString("en-US")}`, { align: "center" });
+      doc.moveDown(1.5);
+      
+      // Summary section
+      doc.fontSize(14).font("Helvetica-Bold").fillColor("#000000").text("Summary");
+      doc.moveDown(0.3);
+      doc.fontSize(11).font("Helvetica")
+        .text(`Total Enrollments: ${totalEnrollments}`)
+        .text(`Total Courses: ${totalCourses}`)
+        .text(`Total Colleges: ${colleges.length}`);
+      doc.moveDown(1.5);
+      
+      // Divider
+      doc.strokeColor("#cccccc").lineWidth(1)
+        .moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+      doc.moveDown(1);
+      
+      // College sections
+      for (const college of colleges) {
+        // Check if we need a new page
+        if (doc.y > 700) {
+          doc.addPage();
+        }
+        
+        // College name
+        doc.fontSize(14).font("Helvetica-Bold").fillColor("#2563eb").text(college.name);
+        doc.moveDown(0.3);
+        
+        // Courses table header
+        doc.fontSize(10).font("Helvetica-Bold").fillColor("#000000");
+        const headerY = doc.y;
+        doc.text("Course Title", 50, headerY);
+        doc.text("Enrollments", 450, headerY, { width: 80, align: "right" });
+        doc.moveDown(0.3);
+        
+        // Underline
+        doc.strokeColor("#dddddd").lineWidth(0.5)
+          .moveTo(50, doc.y).lineTo(545, doc.y).stroke();
+        doc.moveDown(0.3);
+        
+        // Course rows
+        doc.fontSize(10).font("Helvetica").fillColor("#333333");
+        for (const course of college.courses) {
+          if (doc.y > 720) {
+            doc.addPage();
+          }
+          const rowY = doc.y;
+          // Truncate long titles
+          const maxTitleWidth = 380;
+          doc.text(course.title, 50, rowY, { width: maxTitleWidth, ellipsis: true });
+          doc.text(String(course.enrollments), 450, rowY, { width: 80, align: "right" });
+          doc.moveDown(0.5);
+        }
+        
+        // College total
+        const collegeTotal = college.courses.reduce((sum, c) => sum + c.enrollments, 0);
+        doc.fontSize(10).font("Helvetica-Bold").fillColor("#000000");
+        const totalY = doc.y;
+        doc.text("College Total:", 50, totalY);
+        doc.text(String(collegeTotal), 450, totalY, { width: 80, align: "right" });
+        doc.moveDown(1.5);
+      }
+      
+      // Footer
+      doc.moveDown(2);
+      doc.fontSize(8).font("Helvetica").fillColor("#999999")
+        .text("This report is confidential and intended for authorized personnel only.", { align: "center" });
+      
+      doc.end();
+    } catch (error) {
+      console.error("Error generating PDF report:", error);
+      res.status(500).json({ message: "Failed to generate PDF report" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
