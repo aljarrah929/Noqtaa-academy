@@ -41,7 +41,7 @@ import {
   User,
   UserPlus,
 } from "lucide-react";
-import { getRoleDisplayName, canAccessAdminDashboard, canAccessTeacherDashboard, canManageColleges, canManageRoles } from "@/lib/authUtils";
+import { getRoleDisplayName, canAccessAdminDashboard, canAccessTeacherDashboard, canAccessAccountantDashboard, canManageColleges, canManageRoles } from "@/lib/authUtils";
 import { BRAND_NAME } from "@/lib/branding";
 import cpeIconUrl from "@assets/Untitled_(1)_1765745611438.png";
 
@@ -105,6 +105,10 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     { href: "/admin/home-stats", label: "Home Stats", icon: BarChart3 },
   ];
 
+  const accountantMenuItems = [
+    { href: "/accountant", label: "Enrollment Stats", icon: BarChart3 },
+  ];
+
   const getMenuItems = () => {
     if (!user) return [];
     
@@ -124,6 +128,10 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     
     if (canManageRoles(user.role) || canManageColleges(user.role)) {
       items.push({ group: "Super Admin", items: superAdminMenuItems });
+    }
+
+    if (canAccessAccountantDashboard(user.role)) {
+      items.push({ group: "Accountant", items: accountantMenuItems });
     }
     
     return items;

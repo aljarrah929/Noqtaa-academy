@@ -60,9 +60,15 @@ export function getRoleDisplayName(role: string): string {
       return "Teacher";
     case "STUDENT":
       return "Student";
+    case "ACCOUNTANT":
+      return "Accountant";
     default:
       return role;
   }
+}
+
+export function canAccessAccountantDashboard(role: string): boolean {
+  return role === "ACCOUNTANT" || role === "SUPER_ADMIN";
 }
 
 export function canAccessAdminDashboard(role: string): boolean {
