@@ -1,0 +1,129 @@
+I want to add a new user role called "ACCOUNTANT" to my platform.
+
+Goal:
+The Accountant can ONLY view enrollment statistics:
+- Number of enrolled students per course
+- Grouped by College and by Subject/Tab inside the College
+The Accountant should NOT be able to:
+- Upload or edit courses/lessons
+- Watch video lessons
+- Access teacher/admin dashboards
+- Change anything (read-only)
+
+NEW REQUIREMENT (add this without changing anything else):
+- Add an option for the Accountant to download the enrollment data as a PDF report ONLY.
+- The PDF must be in ENGLISH.
+- No Excel/CSV download; PDF only.
+
+Requirements:
+
+1) Database / Role
+- Add a new role enum/value: ACCOUNTANT
+- Ensure it can be assigned to users (seed/admin UI if exists, otherwise manual DB update is fine)
+
+2) Authorization rules
+- Create a protected route group for Accountant:
+  /accountant
+- Only users with role ACCOUNTANT can access it
+- Teachers, students, admins should NOT access accountant pages unless explicitly allowed (Admin can be allowed to access too if the existing policy allows it)
+
+3) Accountant Dashboard UI (Read-only)
+Create a page:
+  /accountant/enrollments
+
+This page must show:
+A) A list grouped by College:
+   - College Name
+   - Under it, list all Subjects/Tabs
+   - Under each Subject/Tab, list Courses:
+       - Course title
+       - Enrollment count (number of students enrolled)
+
+B) Search + filters:
+   - Search course by title
+   - Filter by College
+   - Filter by Subject/Tab
+
+C) Summary cards at top:
+   - Total enrollments (label clearly as total enrollments)
+   - Total courses
+   - Total colleges
+
+D) PDF download button (PDF only, English):
+- Add a button: "Download PDF Report"
+- The PDF must include:
+  - Title: "Enrollment Report"
+  - Generated at: <date/time>
+  - Grouped sections: College -> Subject/Tab -> Courses
+  - Each course line: Course Title | Enrollment Count
+  - Summary at top: Total Enrollments / Total Courses / Total Colleges
+- The PDF file name: enrollment-report-YYYY-MM-DD.pdf
+- English text only in the PDF
+
+4) Backend API (Read-only)
+Implement an API endpoint:
+  GET /api/accountant/enrollments
+- Require auth
+- Allow only ACCOUNTANT (and optionally ADMIN)
+- Return a structured JSON grouped by college and subject/tab
+
+Example JSON shape:
+{
+  "totals": {
+    "totalEnrollments": 1234,
+    "totalCourses": 55,
+    "totalColleges": 6
+  },
+  "colleges": [
+    {
+      "id": 1,
+      "name": "Pharmacy",
+      "subjects": [
+        {
+          "id": 10,
+          "name": "Clinical",
+          "courses": [
+            { "id": 100, "title": "Course A", "enrollments": 120 },
+            { "id": 101, "title": "Course B", "enrollments": 75 }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+5) PDF generation (server-side)
+Add a PDF generation endpoint:
+  GET /api/accountant/enrollments.pdf
+- Auth required
+- Only ACCOUNTANT (and optionally ADMIN)
+- Generates the PDF in English ONLY
+- Uses the same data source as /api/accountant/enrollments
+- Sets headers:
+  Content-Type: application/pdf
+  Content-Disposition: attachment; filename="enrollment-report-YYYY-MM-DD.pdf"
+
+6) Enrollment counting logic
+- Enrollment count = number of students enrolled in each course
+- Use the existing enrollment table/model (do not invent a new one)
+- Count only active enrollments if the schema has status/active flags
+
+7) Implementation constraints
+- Do not break existing roles
+- Do not change current student/teacher/admin flows
+- Keep it minimal and clean UI
+- Add clear error handling (403 if unauthorized)
+
+Before coding:
+- Inspect the current schema/models to identify:
+  - User role field
+  - Enrollment table
+  - Course -> Subject/Tab -> College relations
+Then implement accordingly.
+
+Deliverables:
+- Updated role system with ACCOUNTANT
+- API endpoint for enrollments summary
+- Accountant dashboard page with grouping + filters + search
+- PDF download (English only) via /api/accountant/enrollments.pdf and a UI button
+- Access control enforced on frontend and backend
