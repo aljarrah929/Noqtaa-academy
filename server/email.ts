@@ -1,18 +1,15 @@
 import { Resend } from "resend";
 
-const DEFAULT_FROM_EMAIL = "onboarding@resend.dev";
+const FROM_EMAIL = "Noqtaa Academy <onboarding@resend.dev>";
 
-function getResendCredentials(): { apiKey: string; fromEmail: string } {
+function getResendApiKey(): string {
   const apiKey = process.env.RESEND_API_KEY;
   
   if (!apiKey) {
     throw new Error("RESEND_API_KEY environment variable not set");
   }
 
-  return {
-    apiKey,
-    fromEmail: process.env.EMAIL_FROM || DEFAULT_FROM_EMAIL,
-  };
+  return apiKey;
 }
 
 interface SendEmailOptions {
@@ -37,7 +34,7 @@ export function getAppUrl(): string {
 
 export function verifyEmailConnection(): boolean {
   try {
-    const { apiKey } = getResendCredentials();
+    const apiKey = getResendApiKey();
     if (apiKey) {
       console.log("[Resend] Connection verified - API key configured");
       return true;
@@ -73,14 +70,14 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   try {
     console.log(`[Resend] Starting email send to ${options.to}...`);
     
-    const { apiKey, fromEmail } = getResendCredentials();
-    console.log(`[Resend] Using from address: ${fromEmail}`);
+    const apiKey = getResendApiKey();
+    console.log(`[Resend] Using from address: ${FROM_EMAIL}`);
     
     const resend = new Resend(apiKey);
 
     const { data, error } = await withTimeout(
       resend.emails.send({
-        from: fromEmail,
+        from: FROM_EMAIL,
         to: options.to,
         subject: options.subject,
         text: options.text,
@@ -120,7 +117,7 @@ export function sendEmailInBackground(options: SendEmailOptions): void {
 }
 
 export function getPasswordResetEmailContent(resetUrl: string): { subject: string; text: string; html: string } {
-  const subject = "Reset Your Password";
+  const subject = "Reset Your Password - Noqtaa Academy";
 
   const text = `
 You requested to reset your password.
