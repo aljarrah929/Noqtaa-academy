@@ -6,7 +6,7 @@ import crypto from "crypto";
 import { storage } from "./storage";
 import { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "@shared/schema";
 import { z } from "zod";
-import { sendEmail, getPasswordResetEmailContent, getAppUrl, verifyEmailConnection } from "./email";
+import { sendEmailInBackground, getPasswordResetEmailContent, getAppUrl, verifyEmailConnection } from "./email";
 
 declare module "express-session" {
   interface SessionData {
@@ -172,7 +172,7 @@ export async function setupAuth(app: Express) {
         const resetUrl = `${baseUrl}/reset-password?token=${token}`;
         const emailContent = getPasswordResetEmailContent(resetUrl);
         
-        await sendEmail({
+        sendEmailInBackground({
           to: user.email,
           ...emailContent,
         });
@@ -222,7 +222,7 @@ export async function setupAuth(app: Express) {
         const resetUrl = `${baseUrl}/reset-password?token=${token}`;
         const emailContent = getPasswordResetEmailContent(resetUrl);
         
-        await sendEmail({
+        sendEmailInBackground({
           to: user.email,
           ...emailContent,
         });

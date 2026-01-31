@@ -70,18 +70,46 @@ export async function verifyEmailConnection(): Promise<boolean> {
   }
 }
 
+const EMAIL_TIMEOUT_MS = 10000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${operation} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    promise
+      .then((result) => {
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   try {
-    const { apiKey, fromEmail } = await getResendCredentials();
+    const { apiKey, fromEmail } = await withTimeout(
+      getResendCredentials(),
+      EMAIL_TIMEOUT_MS,
+      "Getting Resend credentials"
+    );
     const resend = new Resend(apiKey);
 
-    const { data, error } = await resend.emails.send({
-      from: fromEmail,
-      to: options.to,
-      subject: options.subject,
-      text: options.text,
-      html: options.html,
-    });
+    const { data, error } = await withTimeout(
+      resend.emails.send({
+        from: fromEmail,
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+      }),
+      EMAIL_TIMEOUT_MS,
+      "Sending email"
+    );
 
     if (error) {
       console.error("[Resend] Failed to send email:", error);
@@ -94,6 +122,18 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
     console.error("[Resend] Error sending email:", error.message);
     return false;
   }
+}
+
+export function sendEmailInBackground(options: SendEmailOptions): void {
+  sendEmail(options)
+    .then((success) => {
+      if (!success) {
+        console.error(`[Resend] Background email to ${options.to} failed`);
+      }
+    })
+    .catch((error) => {
+      console.error(`[Resend] Background email error to ${options.to}:`, error.message);
+    });
 }
 
 export function getPasswordResetEmailContent(resetUrl: string): { subject: string; text: string; html: string } {
