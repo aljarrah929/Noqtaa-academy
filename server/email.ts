@@ -1,38 +1,17 @@
 import { Resend } from "resend";
 
-let connectionSettings: any = null;
+const DEFAULT_FROM_EMAIL = "onboarding@resend.dev";
 
-async function getResendCredentials(): Promise<{ apiKey: string; fromEmail: string }> {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? "repl " + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-    ? "depl " + process.env.WEB_REPL_RENEWAL
-    : null;
-
-  if (!xReplitToken) {
-    throw new Error("X_REPLIT_TOKEN not found for repl/depl");
-  }
-
-  connectionSettings = await fetch(
-    "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
-    {
-      headers: {
-        Accept: "application/json",
-        X_REPLIT_TOKEN: xReplitToken,
-      },
-    }
-  )
-    .then((res) => res.json())
-    .then((data) => data.items?.[0]);
-
-  if (!connectionSettings || !connectionSettings.settings.api_key) {
-    throw new Error("Resend not connected");
+function getResendCredentials(): { apiKey: string; fromEmail: string } {
+  const apiKey = process.env.RESEND_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY environment variable not set");
   }
 
   return {
-    apiKey: connectionSettings.settings.api_key,
-    fromEmail: connectionSettings.settings.from_email || process.env.EMAIL_FROM || "noreply@example.com",
+    apiKey,
+    fromEmail: process.env.EMAIL_FROM || DEFAULT_FROM_EMAIL,
   };
 }
 
@@ -56,9 +35,9 @@ export function getAppUrl(): string {
   return "http://localhost:5000";
 }
 
-export async function verifyEmailConnection(): Promise<boolean> {
+export function verifyEmailConnection(): boolean {
   try {
-    const { apiKey } = await getResendCredentials();
+    const { apiKey } = getResendCredentials();
     if (apiKey) {
       console.log("[Resend] Connection verified - API key configured");
       return true;
@@ -92,11 +71,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: strin
 
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   try {
-    const { apiKey, fromEmail } = await withTimeout(
-      getResendCredentials(),
-      EMAIL_TIMEOUT_MS,
-      "Getting Resend credentials"
-    );
+    const { apiKey, fromEmail } = getResendCredentials();
     const resend = new Resend(apiKey);
 
     const { data, error } = await withTimeout(
