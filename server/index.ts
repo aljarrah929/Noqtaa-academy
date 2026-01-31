@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupAuth } from "./auth"; // استيراد دالة الإعداد الأصلية
+import { setupAuth, seedSuperAdmin } from "./auth"; // أضفنا استيراد seedSuperAdmin
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { verifyEmailConnection } from "./email";
@@ -11,7 +11,6 @@ const app = express();
 // Trust proxy for production (Replit proxy) - MUST be before any middleware
 app.set("trust proxy", 1);
 
-// إعدادات أساسية
 app.use(express.json({
   verify: (req: any, _res, buf) => {
     req.rawBody = buf;
@@ -26,16 +25,9 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-// Middleware للـ Logging
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: any;
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
@@ -46,27 +38,34 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // 1. تأكد من وجود البيانات الأساسية
+  // 1. تأكد من وجود البيانات الأساسية (الكليات)
   await ensureCollegesExist();
 
-  // 2. تفعيل الصلاحيات والجلسات (هذا يحل محل الكود اليدوي القديم)
+  // 2. تفعيل الصلاحيات والجلسات
   await setupAuth(app); 
 
-  // 3. تسجيل المسارات
+  // 3. إنشاء حساب السوبر أدمن تلقائياً (الخطوة الناقصة)
+  // هذه الدالة ستفحص قاعدة البيانات: إذا الحساب مش موجود بتعمله فوراً
+  try {
+    await seedSuperAdmin();
+    log("Super Admin seeding process completed");
+  } catch (error) {
+    log(`Seeding error: ${error}`);
+  }
+
+  // 4. تسجيل المسارات
   const httpServer = await registerRoutes(app);
 
-  // Error Handling
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     res.status(status).json({ message: err.message || "Internal Server Error" });
   });
 
-  // تشغيل Vite أو Static
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
     const { setupVite } = await import("./vite");
-    await setupVite(httpServer, app);
+    await setupVite(app, httpServer);
   }
 
   const port = parseInt(process.env.PORT || "5000", 10);
