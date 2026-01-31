@@ -162,7 +162,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               <div className="p-1.5 rounded-md bg-primary/10 flex items-center justify-center" style={{ width: '32px', height: '32px' }}>
                 <img 
                   src={cpeIconUrl} 
-                  alt="CPE" 
+                  alt="Noqtaa Academy" 
                   className="h-6 w-auto object-contain"
                   data-testid="img-sidebar-brand-icon"
                 />

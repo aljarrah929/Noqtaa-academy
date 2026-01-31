@@ -1,4 +1,4 @@
-# University E-Learning Platform
+# Noqtaa Academy - University E-Learning Platform
 
 ## Overview
 

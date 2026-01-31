@@ -29,7 +29,7 @@ function BrandIcon({ className, isCollegeThemed }: { className?: string; isColle
   return (
     <img 
       src={cpeIconUrl} 
-      alt="CPE" 
+      alt="Noqtaa Academy" 
       className={className}
       onError={() => setHasError(true)}
       data-testid="img-brand-icon"
