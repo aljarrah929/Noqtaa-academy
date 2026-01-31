@@ -100,15 +100,19 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
 }
 
 export function sendEmailInBackground(options: SendEmailOptions): void {
-  sendEmail(options)
-    .then((success) => {
-      if (!success) {
-        console.error(`[Resend] Background email to ${options.to} failed`);
-      }
-    })
-    .catch((error) => {
-      console.error(`[Resend] Background email error to ${options.to}:`, error.message);
-    });
+  console.log(`[Resend] Attempting to send email to ${options.to}...`);
+  
+  setImmediate(() => {
+    sendEmail(options)
+      .then((success) => {
+        if (!success) {
+          console.error(`[Resend] Background email to ${options.to} failed`);
+        }
+      })
+      .catch((error) => {
+        console.error(`[Resend] Background email error to ${options.to}:`, error.message);
+      });
+  });
 }
 
 export function getPasswordResetEmailContent(resetUrl: string): { subject: string; text: string; html: string } {
