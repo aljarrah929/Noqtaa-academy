@@ -71,7 +71,11 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: strin
 
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
   try {
+    console.log(`[Resend] Starting email send to ${options.to}...`);
+    
     const { apiKey, fromEmail } = getResendCredentials();
+    console.log(`[Resend] Using from address: ${fromEmail}`);
+    
     const resend = new Resend(apiKey);
 
     const { data, error } = await withTimeout(
@@ -87,14 +91,14 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
     );
 
     if (error) {
-      console.error("[Resend] Failed to send email:", error);
+      console.error("[Resend] EMAIL FAILED:", JSON.stringify(error));
       return false;
     }
 
     console.log(`[Resend] Email sent successfully to ${options.to}, ID: ${data?.id}`);
     return true;
   } catch (error: any) {
-    console.error("[Resend] Error sending email:", error.message);
+    console.error("[Resend] EMAIL FAILED:", error.message);
     return false;
   }
 }

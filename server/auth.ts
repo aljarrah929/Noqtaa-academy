@@ -143,8 +143,15 @@ export async function setupAuth(app: Express) {
   app.post("/api/auth/forgot-password", async (req, res) => {
     try {
       const data = forgotPasswordSchema.parse(req.body);
+      console.log(`[Auth] Forgot password request for: ${data.email}`);
       
       const user = await storage.getUserByEmail(data.email);
+      
+      if (!user) {
+        console.log(`[Auth] User not found for email: ${data.email}`);
+      } else if (!user.passwordHash) {
+        console.log(`[Auth] User found but no password set (OAuth user): ${data.email}`);
+      }
       
       if (user && user.passwordHash) {
         const cooldownSeconds = 60;
@@ -191,8 +198,15 @@ export async function setupAuth(app: Express) {
   app.post("/api/auth/resend-forgot-password", async (req, res) => {
     try {
       const data = forgotPasswordSchema.parse(req.body);
+      console.log(`[Auth] Resend forgot password request for: ${data.email}`);
       
       const user = await storage.getUserByEmail(data.email);
+      
+      if (!user) {
+        console.log(`[Auth] User not found for email: ${data.email}`);
+      } else if (!user.passwordHash) {
+        console.log(`[Auth] User found but no password set (OAuth user): ${data.email}`);
+      }
       
       if (user && user.passwordHash) {
         const cooldownSeconds = 60;
