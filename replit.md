@@ -2,7 +2,7 @@
 
 ## Overview
 
-A scalable university e-learning platform (MVP) for paid academic courses targeting university students across multiple colleges. The platform features strict role-based access control with four user roles (Student, Teacher, Admin, Super Admin) and supports three colleges (Pharmacy, Engineering, IT) with distinct visual themes.
+A scalable university e-learning platform (MVP) for paid academic courses targeting university students across multiple colleges. The platform features strict role-based access control with five user roles (Student, Teacher, Admin, Super Admin, Accountant) and supports three colleges (Pharmacy, Engineering, IT) with distinct visual themes.
 
 Key features:
 - Course browsing with locked lesson content for non-enrolled students
@@ -66,6 +66,11 @@ Preferred communication style: Simple, everyday language.
 - **TEACHER**: Create/edit own courses, submit for approval, manage lesson content, upload videos to Cloudflare Stream
 - **ADMIN**: Approve/reject courses, manage teachers within assigned college
 - **SUPER_ADMIN**: Full system access, manage all users/roles, manage colleges, upload videos
+- **ACCOUNTANT**: Read-only access to enrollment statistics grouped by college, PDF report download (`/accountant` dashboard)
+
+### Accountant API Endpoints
+- `GET /api/accountant/enrollments` - Returns enrollment stats grouped by college (requires ACCOUNTANT or SUPER_ADMIN role)
+- `GET /api/accountant/enrollments.pdf` - Generates English PDF enrollment report (requires ACCOUNTANT or SUPER_ADMIN role)
 
 ### Client-Server Communication
 - **Data Fetching**: TanStack Query with automatic caching and refetching

@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Users, BookOpen, Building2, FileDown, Search, GraduationCap } from "lucide-react";
+import { Users, BookOpen, Building2, FileDown, Search, GraduationCap, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { canAccessAccountantDashboard } from "@/lib/authUtils";
 
 interface CourseEnrollment {
   id: number;
@@ -39,12 +42,23 @@ interface EnrollmentData {
 
 export default function AccountantDashboard() {
   const { toast } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [collegeFilter, setCollegeFilter] = useState<string>("all");
   const [isDownloading, setIsDownloading] = useState(false);
 
+  const hasAccess = user ? canAccessAccountantDashboard(user.role) : false;
+
+  useEffect(() => {
+    if (!authLoading && !hasAccess) {
+      setLocation("/");
+    }
+  }, [authLoading, hasAccess, setLocation]);
+
   const { data, isLoading, error } = useQuery<EnrollmentData>({
     queryKey: ["/api/accountant/enrollments"],
+    enabled: !!hasAccess,
   });
 
   const filteredData = useMemo(() => {
