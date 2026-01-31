@@ -25,20 +25,18 @@ export function getSession() {
   });
 
   const isProduction = process.env.NODE_ENV === "production";
+  console.log(`[Session] Configuring session middleware, isProduction: ${isProduction}`);
 
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
-    // إضافة خاصية proxy ليعمل الـ Cookie مع Replit
-    proxy: isProduction, 
+    proxy: true,
     cookie: {
       httpOnly: true,
-      // تأكد أن secure يعمل فقط في الإنتاج
-      secure: isProduction, 
-      // التغيير الجوهري: استخدام 'none' في الإنتاج و 'lax' في التطوير
-      sameSite: isProduction ? "none" : "lax", 
+      secure: true,
+      sameSite: "none" as const,
       maxAge: sessionTtl,
     },
   });
@@ -49,14 +47,17 @@ export async function setupAuth(app: Express) {
   app.post("/api/auth/signup", async (req, res) => {
     try {
       const data = signupSchema.parse(req.body);
+      console.log(`[Signup] Attempting signup for email: ${data.email}`);
       
       const existingUser = await storage.getUserByEmail(data.email);
       if (existingUser) {
+        console.log(`[Signup] Email already registered: ${data.email}`);
         return res.status(400).json({ message: "Email already registered" });
       }
 
       const college = await storage.getCollegeById(data.collegeId);
       if (!college) {
+        console.log(`[Signup] Invalid college ID: ${data.collegeId}`);
         return res.status(400).json({ message: "Invalid college selected" });
       }
 
@@ -70,16 +71,26 @@ export async function setupAuth(app: Express) {
         collegeId: data.collegeId,
         role: "STUDENT",
       });
+      console.log(`[Signup] User created: id=${user.id}`);
 
       req.session.userId = user.id;
+      console.log(`[Signup] Session userId set to: ${user.id}, saving session...`);
       
-      const userWithCollege = await storage.getUserWithCollege(user.id);
-      res.status(201).json(userWithCollege);
+      req.session.save(async (err) => {
+        if (err) {
+          console.error(`[Signup] Session save ERROR:`, err);
+          return res.status(500).json({ message: "Failed to save session" });
+        }
+        console.log(`[Signup] Session saved successfully for userId: ${user.id}`);
+        
+        const userWithCollege = await storage.getUserWithCollege(user.id);
+        res.status(201).json(userWithCollege);
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      console.error("Signup error:", error);
+      console.error("[Signup] Unexpected error:", error);
       res.status(500).json({ message: "Failed to create account" });
     }
   });
@@ -87,30 +98,49 @@ export async function setupAuth(app: Express) {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const data = loginSchema.parse(req.body);
+      console.log(`[Login] Attempting login for email: ${data.email}`);
       
       const user = await storage.getUserByEmail(data.email);
-      if (!user || !user.passwordHash) {
+      if (!user) {
+        console.log(`[Login] User NOT found for email: ${data.email}`);
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      console.log(`[Login] User FOUND: id=${user.id}, hasPasswordHash=${!!user.passwordHash}`);
+      
+      if (!user.passwordHash) {
+        console.log(`[Login] User has no passwordHash (OAuth-only user)`);
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
       const validPassword = await bcrypt.compare(data.password, user.passwordHash);
+      console.log(`[Login] Password comparison result: ${validPassword}`);
       if (!validPassword) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
       if (!user.isActive) {
+        console.log(`[Login] User account is disabled`);
         return res.status(403).json({ message: "Account is disabled" });
       }
 
       req.session.userId = user.id;
+      console.log(`[Login] Session userId set to: ${user.id}, saving session...`);
       
-      const userWithCollege = await storage.getUserWithCollege(user.id);
-      res.json(userWithCollege);
+      req.session.save(async (err) => {
+        if (err) {
+          console.error(`[Login] Session save ERROR:`, err);
+          return res.status(500).json({ message: "Failed to save session" });
+        }
+        console.log(`[Login] Session saved successfully for userId: ${user.id}`);
+        
+        const userWithCollege = await storage.getUserWithCollege(user.id);
+        res.json(userWithCollege);
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      console.error("Login error:", error);
+      console.error("[Login] Unexpected error:", error);
       res.status(500).json({ message: "Failed to log in" });
     }
   });
