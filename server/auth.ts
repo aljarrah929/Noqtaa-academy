@@ -23,20 +23,26 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+
+  const isProduction = process.env.NODE_ENV === "production";
+
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    // إضافة خاصية proxy ليعمل الـ Cookie مع Replit
+    proxy: isProduction, 
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      // تأكد أن secure يعمل فقط في الإنتاج
+      secure: isProduction, 
+      // التغيير الجوهري: استخدام 'none' في الإنتاج و 'lax' في التطوير
+      sameSite: isProduction ? "none" : "lax", 
       maxAge: sessionTtl,
     },
   });
 }
-
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
