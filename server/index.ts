@@ -8,6 +8,9 @@ import { ensureCollegesExist } from "./db-init";
 
 const app = express();
 
+// Trust proxy for production (Replit proxy) - MUST be before any middleware
+app.set("trust proxy", 1);
+
 // إعدادات أساسية
 app.use(express.json({
   verify: (req: any, _res, buf) => {
@@ -63,7 +66,7 @@ app.use((req, res, next) => {
     serveStatic(app);
   } else {
     const { setupVite } = await import("./vite");
-    await setupVite(app, httpServer);
+    await setupVite(httpServer, app);
   }
 
   const port = parseInt(process.env.PORT || "5000", 10);
