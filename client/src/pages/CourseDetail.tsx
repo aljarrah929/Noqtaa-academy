@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/hooks/useAuth";
 import { LessonList, LockedContentMessage } from "@/components/courses/LessonList";
+import { JoinRequestModal } from "@/components/courses/JoinRequestModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,8 @@ import {
   Lock,
   ArrowLeft,
   Building2,
-  Mail as MailIcon
+  UserPlus,
+  Clock
 } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations } from "@shared/schema";
@@ -43,6 +45,22 @@ export default function CourseDetail() {
   });
 
   const isEnrolled = enrollmentCheck?.enrolled ?? false;
+
+  // Check join request status for students
+  const { data: joinRequestStatus } = useQuery<{
+    exists: boolean;
+    id?: number;
+    status: "PENDING" | "APPROVED" | "REJECTED" | null;
+    createdAt?: string;
+  }>({
+    queryKey: ["/api/join-requests/me", courseId ? parseInt(courseId) : 0],
+    queryFn: async () => {
+      const res = await fetch(`/api/join-requests/me?courseId=${courseId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch status");
+      return res.json();
+    },
+    enabled: !!courseId && isAuthenticated && user?.role === "STUDENT" && !isEnrolled,
+  });
 
   const getCollegeBadgeColor = (slug?: string) => {
     switch (slug) {
@@ -266,18 +284,60 @@ export default function CourseDetail() {
             {isAuthenticated && !isEnrolled && user?.role === "STUDENT" && (
               <Card className="border-primary/50">
                 <CardContent className="py-6 text-center">
-                  <MailIcon className="w-10 h-10 mx-auto text-primary mb-3" />
-                  <h3 className="font-semibold mb-2">Want to Enroll?</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Contact the teacher for enrollment information.
-                  </p>
-                  {course.teacher?.email && (
-                    <Button className="w-full" asChild data-testid="button-contact-enrollment">
-                      <a href={`mailto:${course.teacher.email}?subject=Enrollment Request: ${course.title}`}>
-                        <MailIcon className="w-4 h-4 mr-2" />
-                        Contact Teacher
-                      </a>
-                    </Button>
+                  {joinRequestStatus?.exists && joinRequestStatus.status === "PENDING" ? (
+                    <>
+                      <Clock className="w-10 h-10 mx-auto text-amber-500 mb-3" />
+                      <h3 className="font-semibold mb-2">Request Pending</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Your enrollment request is being reviewed by the teacher.
+                      </p>
+                      <JoinRequestModal
+                        courseId={parseInt(courseId!)}
+                        courseTitle={course.title}
+                        trigger={
+                          <Button variant="outline" className="w-full" data-testid="button-view-request-status">
+                            <Clock className="w-4 h-4 mr-2" />
+                            View Status
+                          </Button>
+                        }
+                      />
+                    </>
+                  ) : joinRequestStatus?.exists && joinRequestStatus.status === "REJECTED" ? (
+                    <>
+                      <UserPlus className="w-10 h-10 mx-auto text-primary mb-3" />
+                      <h3 className="font-semibold mb-2">Request Rejected</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Your previous request was rejected. You can submit a new one.
+                      </p>
+                      <JoinRequestModal
+                        courseId={parseInt(courseId!)}
+                        courseTitle={course.title}
+                        trigger={
+                          <Button className="w-full" data-testid="button-resubmit-request">
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Submit New Request
+                          </Button>
+                        }
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-10 h-10 mx-auto text-primary mb-3" />
+                      <h3 className="font-semibold mb-2">Want to Enroll?</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Submit your payment receipt to request enrollment.
+                      </p>
+                      <JoinRequestModal
+                        courseId={parseInt(courseId!)}
+                        courseTitle={course.title}
+                        trigger={
+                          <Button className="w-full" data-testid="button-request-to-join">
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Request to Join
+                          </Button>
+                        }
+                      />
+                    </>
                   )}
                 </CardContent>
               </Card>

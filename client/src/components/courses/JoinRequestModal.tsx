@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -13,13 +13,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Upload, 
   FileCheck, 
   Clock, 
   CheckCircle2,
   XCircle,
-  Loader2 
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 
 interface JoinRequestModalProps {
@@ -28,18 +30,35 @@ interface JoinRequestModalProps {
   trigger: React.ReactNode;
 }
 
+interface JoinRequestStatus {
+  exists: boolean;
+  id?: number;
+  status: "PENDING" | "APPROVED" | "REJECTED" | null;
+  message?: string;
+  createdAt?: string;
+  reviewedAt?: string;
+}
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+const ALLOWED_EXTENSIONS = ".jpg, .jpeg, .png, .pdf";
+
 export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequestModalProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [message, setMessage] = useState("");
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const { data: status, isLoading: statusLoading } = useQuery<{
-    hasPending: boolean;
-    hasApproved: boolean;
-    isEnrolled: boolean;
-  }>({
-    queryKey: ["/api/courses", courseId, "join-request", "status"],
+  const { data: status, isLoading: statusLoading, refetch: refetchStatus } = useQuery<JoinRequestStatus>({
+    queryKey: ["/api/join-requests/me", courseId],
+    queryFn: async () => {
+      const res = await fetch(`/api/join-requests/me?courseId=${courseId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch status");
+      return res.json();
+    },
     enabled: open,
     staleTime: 0,
     refetchOnMount: "always",
@@ -47,47 +66,52 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (!file) throw new Error("Receipt is required");
+      if (!file) throw new Error("Receipt file is required");
       
-      const formData = new FormData();
-      formData.append("receipt", file);
-      if (message.trim()) {
-        formData.append("message", message.trim());
-      }
+      setIsUploading(true);
+      setUploadError(null);
       
-      console.log(`[JoinRequest] Submitting request for course ${courseId}, file: ${file.name}, size: ${file.size}`);
-      
-      let response: Response;
       try {
-        response = await fetch(`/api/courses/${courseId}/join-request`, {
-          method: "POST",
-          credentials: "include",
-          body: formData,
+        // Step 1: Get presigned URL
+        console.log("[JoinRequest] Getting presigned URL for file:", file.name);
+        const presignRes = await apiRequest("POST", "/api/join-requests/presign-receipt", {
+          fileName: file.name,
+          contentType: file.type,
+          courseId,
         });
-      } catch (networkError: any) {
-        console.error("[JoinRequest] Network error:", networkError);
-        throw new Error("Network error - please check your connection and try again");
+        
+        const { uploadUrl, objectKey } = presignRes;
+        console.log("[JoinRequest] Got presigned URL, uploading to R2...");
+        
+        // Step 2: Upload file directly to R2
+        const uploadRes = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": file.type,
+          },
+          body: file,
+        });
+        
+        if (!uploadRes.ok) {
+          console.error("[JoinRequest] R2 upload failed:", uploadRes.status);
+          throw new Error("Failed to upload file to storage");
+        }
+        
+        console.log("[JoinRequest] File uploaded, creating join request...");
+        
+        // Step 3: Create join request with receipt metadata
+        const result = await apiRequest("POST", "/api/join-requests", {
+          courseId,
+          message: message.trim() || null,
+          receiptKey: objectKey,
+          receiptMime: file.type,
+          receiptSize: file.size,
+        });
+        
+        return result;
+      } finally {
+        setIsUploading(false);
       }
-      
-      console.log(`[JoinRequest] Response status: ${response.status}`);
-      
-      let data: any;
-      try {
-        const text = await response.text();
-        console.log(`[JoinRequest] Response body: ${text}`);
-        data = text ? JSON.parse(text) : {};
-      } catch (parseError) {
-        console.error("[JoinRequest] Failed to parse response:", parseError);
-        throw new Error("Server returned an invalid response");
-      }
-      
-      if (!response.ok) {
-        const errorMsg = data.message || `Request failed (${response.status})`;
-        console.error(`[JoinRequest] Error: ${errorMsg}, code: ${data.code}`);
-        throw new Error(errorMsg);
-      }
-      
-      return data;
     },
     onSuccess: () => {
       toast({
@@ -97,10 +121,12 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
       setOpen(false);
       setFile(null);
       setMessage("");
-      queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId, "join-request", "status"] });
+      setUploadError(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/join-requests/me", courseId] });
     },
     onError: (error: Error) => {
       console.error("[JoinRequest] Mutation error:", error);
+      setUploadError(error.message);
       toast({
         title: "Submission Failed",
         description: error.message,
@@ -111,29 +137,49 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
+    setUploadError(null);
+    
     if (selected) {
-      if (selected.size > 5 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Receipt image must be under 5MB",
-          variant: "destructive",
-        });
+      // Validate file type
+      if (!ALLOWED_TYPES.includes(selected.type)) {
+        setUploadError(`Invalid file type. Allowed: ${ALLOWED_EXTENSIONS}`);
         return;
       }
+      
+      // Validate file size
+      if (selected.size > MAX_FILE_SIZE) {
+        setUploadError("File too large. Maximum size is 10 MB.");
+        return;
+      }
+      
       setFile(selected);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!file) {
+      setUploadError("Please select a receipt file");
+      return;
+    }
     submitMutation.mutate();
   };
 
-  if (status?.hasPending) {
+  const resetForm = () => {
+    setFile(null);
+    setMessage("");
+    setUploadError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Show pending state
+  if (status?.exists && status.status === "PENDING") {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>{trigger}</DialogTrigger>
-        <DialogContent data-testid="dialog-join-request">
+        <DialogContent data-testid="dialog-join-request-pending">
           <DialogHeader>
             <DialogTitle>Request Pending</DialogTitle>
             <DialogDescription>
@@ -146,51 +192,64 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
             <p className="text-muted-foreground text-sm">
               Your enrollment request is pending. The teacher will review your payment receipt and respond soon.
             </p>
+            {status.createdAt && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Submitted: {new Date(status.createdAt).toLocaleDateString()}
+              </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>
     );
   }
 
-  if (status?.hasApproved || status?.isEnrolled) {
+  // Show approved state
+  if (status?.exists && status.status === "APPROVED") {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>{trigger}</DialogTrigger>
-        <DialogContent data-testid="dialog-join-request">
+        <DialogContent data-testid="dialog-join-request-approved">
           <DialogHeader>
-            <DialogTitle>Already Enrolled</DialogTitle>
+            <DialogTitle>Enrollment Approved</DialogTitle>
             <DialogDescription>
-              in {courseTitle}
+              for {courseTitle}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center py-6 text-center">
             <CheckCircle2 className="w-12 h-12 text-green-500 mb-4" />
-            <h3 className="font-semibold text-lg mb-2">You&apos;re In!</h3>
+            <h3 className="font-semibold text-lg mb-2">You're Enrolled!</h3>
             <p className="text-muted-foreground text-sm">
               Your enrollment has been approved. You can now access all course content.
             </p>
           </div>
+          <Button onClick={() => setOpen(false)} className="w-full" data-testid="button-close-approved">
+            Close
+          </Button>
         </DialogContent>
       </Dialog>
     );
   }
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent data-testid="dialog-join-request">
-        <DialogHeader>
-          <DialogTitle>Request to Join Course</DialogTitle>
-          <DialogDescription>
-            Upload your payment receipt to request enrollment in {courseTitle}
-          </DialogDescription>
-        </DialogHeader>
-        
-        {statusLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+  // Show rejected state with option to resubmit
+  if (status?.exists && status.status === "REJECTED") {
+    return (
+      <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (val) resetForm(); }}>
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+        <DialogContent data-testid="dialog-join-request-rejected">
+          <DialogHeader>
+            <DialogTitle>Request Rejected</DialogTitle>
+            <DialogDescription>
+              for {courseTitle}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center py-4 text-center">
+            <XCircle className="w-12 h-12 text-red-500 mb-4" />
+            <h3 className="font-semibold text-lg mb-2">Request Not Approved</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              Your previous request was rejected. You can submit a new request with a valid payment receipt.
+            </p>
           </div>
-        ) : (
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="receipt">Payment Receipt *</Label>
@@ -198,13 +257,14 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
                 className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
                   file ? "border-green-500 bg-green-50 dark:bg-green-900/10" : "border-border hover:border-primary/50"
                 }`}
-                onClick={() => document.getElementById("receipt-input")?.click()}
+                onClick={() => fileInputRef.current?.click()}
                 data-testid="dropzone-receipt"
               >
                 <input
+                  ref={fileInputRef}
                   id="receipt-input"
                   type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  accept={ALLOWED_TYPES.join(",")}
                   onChange={handleFileChange}
                   className="hidden"
                   data-testid="input-receipt"
@@ -214,7 +274,7 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
                     <FileCheck className="w-10 h-10 text-green-500" />
                     <span className="font-medium text-sm">{file.name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {(file.size / 1024).toFixed(1)} KB
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
                     </span>
                   </div>
                 ) : (
@@ -222,12 +282,19 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
                     <Upload className="w-10 h-10 text-muted-foreground" />
                     <span className="font-medium">Click to upload receipt</span>
                     <span className="text-xs text-muted-foreground">
-                      PNG, JPG, or WebP (max 5MB)
+                      {ALLOWED_EXTENSIONS} (max 10MB)
                     </span>
                   </div>
                 )}
               </div>
             </div>
+
+            {uploadError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{uploadError}</AlertDescription>
+              </Alert>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="message">Message (optional)</Label>
@@ -254,13 +321,120 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
               <Button
                 type="submit"
                 className="flex-1"
-                disabled={!file || submitMutation.isPending}
+                disabled={!file || submitMutation.isPending || isUploading}
                 data-testid="button-submit-request"
               >
-                {submitMutation.isPending ? (
+                {(submitMutation.isPending || isUploading) ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Submitting...
+                    {isUploading ? "Uploading..." : "Submitting..."}
+                  </>
+                ) : (
+                  "Submit New Request"
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Show form for new request
+  return (
+    <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (val) resetForm(); }}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent data-testid="dialog-join-request">
+        <DialogHeader>
+          <DialogTitle>Request to Join Course</DialogTitle>
+          <DialogDescription>
+            Upload your payment receipt to request enrollment in {courseTitle}
+          </DialogDescription>
+        </DialogHeader>
+        
+        {statusLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="receipt">Payment Receipt *</Label>
+              <div 
+                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                  file ? "border-green-500 bg-green-50 dark:bg-green-900/10" : "border-border hover:border-primary/50"
+                }`}
+                onClick={() => fileInputRef.current?.click()}
+                data-testid="dropzone-receipt"
+              >
+                <input
+                  ref={fileInputRef}
+                  id="receipt-input"
+                  type="file"
+                  accept={ALLOWED_TYPES.join(",")}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  data-testid="input-receipt"
+                />
+                {file ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <FileCheck className="w-10 h-10 text-green-500" />
+                    <span className="font-medium text-sm">{file.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="w-10 h-10 text-muted-foreground" />
+                    <span className="font-medium">Click to upload receipt</span>
+                    <span className="text-xs text-muted-foreground">
+                      {ALLOWED_EXTENSIONS} (max 10MB)
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {uploadError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{uploadError}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="message">Message (optional)</Label>
+              <Textarea
+                id="message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Any additional notes for the teacher..."
+                maxLength={500}
+                data-testid="input-message"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setOpen(false)}
+                data-testid="button-cancel-request"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={!file || submitMutation.isPending || isUploading}
+                data-testid="button-submit-request"
+              >
+                {(submitMutation.isPending || isUploading) ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {isUploading ? "Uploading..." : "Submitting..."}
                   </>
                 ) : (
                   "Submit Request"
