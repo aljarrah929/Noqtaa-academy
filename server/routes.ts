@@ -1882,313 +1882,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Student - Check join request status for a course
-  app.get("/api/courses/:courseId/join-request/status", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const courseId = parseInt(req.params.courseId);
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== "STUDENT") {
-        return res.status(403).json({ message: "Only students can check join request status" });
-      }
-      
-      const hasPending = await storage.hasPendingJoinRequest(userId, courseId);
-      const hasApproved = await storage.hasApprovedJoinRequest(userId, courseId);
-      const isEnrolled = await storage.isEnrolled(userId, courseId);
-      
-      res.json({ hasPending, hasApproved, isEnrolled });
-    } catch (error) {
-      console.error("Error checking join request status:", error);
-      res.status(500).json({ message: "Failed to check join request status" });
-    }
+  // ==================== JOIN REQUEST FEATURE DISABLED ====================
+  // These endpoints are temporarily disabled. Remove this section when re-enabling.
+  
+  // Student - Check join request status (DISABLED)
+  app.get("/api/courses/:courseId/join-request/status", (req, res) => {
+    res.status(404).json({ error: "JOIN_REQUEST_DISABLED", message: "Join request feature is temporarily disabled" });
   });
 
-  // Student - Submit join request with receipt
-  app.post("/api/courses/:courseId/join-request", isAuthenticated, receiptUpload.single("receipt"), async (req: any, res) => {
-    const courseId = parseInt(req.params.courseId);
-    console.log(`[JoinRequest] POST /api/courses/${courseId}/join-request started`);
-    
-    try {
-      const userId = req.user?.id;
-      console.log(`[JoinRequest] userId=${userId}, courseId=${courseId}`);
-      
-      if (!userId) {
-        console.log("[JoinRequest] ERROR: No user ID in request");
-        return res.status(401).json({ message: "Not authenticated", code: "AUTH_REQUIRED" });
-      }
-      
-      const user = await storage.getUser(userId);
-      console.log(`[JoinRequest] User role: ${user?.role}`);
-      
-      if (!user || user.role !== "STUDENT") {
-        console.log(`[JoinRequest] ERROR: User role is not STUDENT (role=${user?.role})`);
-        return res.status(403).json({ message: "Only students can submit join requests", code: "NOT_STUDENT" });
-      }
-      
-      // Check if course exists and is published
-      const course = await storage.getCourseById(courseId);
-      if (!course) {
-        console.log(`[JoinRequest] ERROR: Course ${courseId} not found`);
-        return res.status(404).json({ message: "Course not found", code: "COURSE_NOT_FOUND" });
-      }
-      if (course.status !== "PUBLISHED") {
-        console.log(`[JoinRequest] ERROR: Course ${courseId} is not PUBLISHED (status=${course.status})`);
-        return res.status(400).json({ message: "Course is not available for enrollment", code: "COURSE_NOT_PUBLISHED" });
-      }
-      
-      // Check if already enrolled
-      const isEnrolled = await storage.isEnrolled(userId, courseId);
-      if (isEnrolled) {
-        console.log(`[JoinRequest] ERROR: User already enrolled in course ${courseId}`);
-        return res.status(400).json({ message: "You are already enrolled in this course", code: "ALREADY_ENROLLED" });
-      }
-      
-      // Check for pending request
-      const hasPending = await storage.hasPendingJoinRequest(userId, courseId);
-      if (hasPending) {
-        console.log(`[JoinRequest] ERROR: Pending request already exists`);
-        return res.status(400).json({ message: "Your request is already pending", code: "PENDING_EXISTS" });
-      }
-      
-      // Check for approved request (shouldn't happen but just in case)
-      const hasApproved = await storage.hasApprovedJoinRequest(userId, courseId);
-      if (hasApproved) {
-        console.log(`[JoinRequest] ERROR: Approved request already exists`);
-        return res.status(400).json({ message: "Your request was already approved", code: "ALREADY_APPROVED" });
-      }
-      
-      // Validate receipt file
-      console.log(`[JoinRequest] File present: ${!!req.file}, size: ${req.file?.size}, mimetype: ${req.file?.mimetype}`);
-      if (!req.file) {
-        console.log("[JoinRequest] ERROR: No file uploaded");
-        return res.status(400).json({ message: "Payment receipt is required", code: "NO_FILE" });
-      }
-      
-      // Upload receipt to R2 (private)
-      const r2Client = getR2Client();
-      console.log(`[JoinRequest] R2 client configured: ${!!r2Client}, bucket: ${R2_BUCKET_NAME || 'NOT SET'}`);
-      
-      if (!r2Client) {
-        console.error("[JoinRequest] ERROR: R2 client not configured - missing R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, or R2_SECRET_ACCESS_KEY");
-        return res.status(500).json({ message: "File storage service credentials not configured", code: "R2_NO_CLIENT" });
-      }
-      if (!R2_BUCKET_NAME) {
-        console.error("[JoinRequest] ERROR: R2_BUCKET_NAME not set");
-        return res.status(500).json({ message: "File storage bucket not configured", code: "R2_NO_BUCKET" });
-      }
-      
-      const timestamp = Date.now();
-      const safeFileName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const receiptKey = `receipts/${courseId}/${userId}/${timestamp}-${safeFileName}`;
-      console.log(`[JoinRequest] Uploading to R2 key: ${receiptKey}`);
-      
-      const uploadCommand = new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: receiptKey,
-        Body: req.file.buffer,
-        ContentType: req.file.mimetype,
-      });
-      
-      try {
-        await r2Client.send(uploadCommand);
-        console.log(`[JoinRequest] R2 upload successful: ${receiptKey}`);
-      } catch (uploadError: any) {
-        console.error(`[JoinRequest] R2 upload FAILED:`, uploadError.message, uploadError.stack);
-        return res.status(500).json({ 
-          message: "Failed to upload receipt file", 
-          code: "R2_UPLOAD_FAILED",
-          ...(process.env.NODE_ENV !== 'production' && { detail: uploadError.message })
-        });
-      }
-      
-      // Create join request record
-      console.log(`[JoinRequest] Creating DB record...`);
-      const joinRequest = await storage.createJoinRequest({
-        courseId,
-        studentId: userId,
-        message: req.body.message || null,
-        receiptKey,
-        receiptMime: req.file.mimetype,
-        receiptSize: req.file.size,
-        status: "PENDING",
-      });
-      
-      console.log(`[JoinRequest] SUCCESS - requestId=${joinRequest.id}`);
-      res.status(201).json({ 
-        success: true, 
-        message: "Request submitted. Wait for teacher approval.",
-        requestId: joinRequest.id,
-      });
-    } catch (error: any) {
-      console.error(`[JoinRequest] UNHANDLED ERROR for courseId=${courseId}:`, error.message, error.stack);
-      if (error.message?.includes("Only PNG")) {
-        return res.status(400).json({ message: error.message, code: "INVALID_FILE_TYPE" });
-      }
-      res.status(500).json({ 
-        message: "Failed to submit join request", 
-        code: "INTERNAL_ERROR",
-        ...(process.env.NODE_ENV !== 'production' && { detail: error.message })
-      });
-    }
+  // Student - Submit join request (DISABLED)
+  app.post("/api/courses/:courseId/join-request", (req, res) => {
+    res.status(404).json({ error: "JOIN_REQUEST_DISABLED", message: "Join request feature is temporarily disabled" });
   });
 
-  // Teacher - Get all join requests for their courses
-  app.get("/api/teacher/join-requests", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
-        return res.status(403).json({ message: "Only teachers can view join requests" });
-      }
-      
-      const requests = await storage.getJoinRequestsByTeacher(userId);
-      res.json(requests);
-    } catch (error) {
-      console.error("Error fetching join requests:", error);
-      res.status(500).json({ message: "Failed to fetch join requests" });
-    }
+  // Teacher - Get all join requests (DISABLED)
+  app.get("/api/teacher/join-requests", (req, res) => {
+    res.status(404).json({ error: "JOIN_REQUEST_DISABLED", message: "Join request feature is temporarily disabled" });
   });
 
-  // Teacher - Approve join request
-  app.post("/api/teacher/join-requests/:id/approve", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const requestId = parseInt(req.params.id);
-      const user = await storage.getUser(userId);
-      
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
-        return res.status(403).json({ message: "Only teachers can approve join requests" });
-      }
-      
-      // Get join request with course info
-      const joinRequest = await storage.getJoinRequestById(requestId);
-      if (!joinRequest) {
-        return res.status(404).json({ message: "Join request not found" });
-      }
-      
-      // Verify teacher owns the course
-      const course = await storage.getCourseById(joinRequest.courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      if (course.teacherId !== userId && user.role !== "SUPER_ADMIN") {
-        return res.status(403).json({ message: "You can only approve requests for your own courses" });
-      }
-      
-      // Check if request is still pending
-      if (joinRequest.status !== "PENDING") {
-        return res.status(400).json({ message: "This request has already been processed" });
-      }
-      
-      // Create enrollment
-      await storage.createEnrollment({
-        courseId: joinRequest.courseId,
-        studentId: joinRequest.studentId,
-        createdByUserId: userId,
-      });
-      
-      // Update join request status
-      await storage.updateJoinRequestStatus(requestId, "APPROVED");
-      
-      res.json({ success: true, message: "Request approved and student enrolled" });
-    } catch (error) {
-      console.error("Error approving join request:", error);
-      res.status(500).json({ message: "Failed to approve join request" });
-    }
+  // Teacher - Approve join request (DISABLED)
+  app.post("/api/teacher/join-requests/:id/approve", (req, res) => {
+    res.status(404).json({ error: "JOIN_REQUEST_DISABLED", message: "Join request feature is temporarily disabled" });
   });
 
-  // Teacher - Reject join request
-  app.post("/api/teacher/join-requests/:id/reject", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const requestId = parseInt(req.params.id);
-      const user = await storage.getUser(userId);
-      
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
-        return res.status(403).json({ message: "Only teachers can reject join requests" });
-      }
-      
-      // Get join request with course info
-      const joinRequest = await storage.getJoinRequestById(requestId);
-      if (!joinRequest) {
-        return res.status(404).json({ message: "Join request not found" });
-      }
-      
-      // Verify teacher owns the course
-      const course = await storage.getCourseById(joinRequest.courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      if (course.teacherId !== userId && user.role !== "SUPER_ADMIN") {
-        return res.status(403).json({ message: "You can only reject requests for your own courses" });
-      }
-      
-      // Check if request is still pending
-      if (joinRequest.status !== "PENDING") {
-        return res.status(400).json({ message: "This request has already been processed" });
-      }
-      
-      // Update join request status
-      await storage.updateJoinRequestStatus(requestId, "REJECTED");
-      
-      res.json({ success: true, message: "Request rejected" });
-    } catch (error) {
-      console.error("Error rejecting join request:", error);
-      res.status(500).json({ message: "Failed to reject join request" });
-    }
+  // Teacher - Reject join request (DISABLED)
+  app.post("/api/teacher/join-requests/:id/reject", (req, res) => {
+    res.status(404).json({ error: "JOIN_REQUEST_DISABLED", message: "Join request feature is temporarily disabled" });
   });
 
-  // Teacher - Get receipt signed URL
-  app.get("/api/teacher/join-requests/:id/receipt", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const requestId = parseInt(req.params.id);
-      const user = await storage.getUser(userId);
-      
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
-        return res.status(403).json({ message: "Only teachers can view receipts" });
-      }
-      
-      // Get join request with course info
-      const joinRequest = await storage.getJoinRequestById(requestId);
-      if (!joinRequest) {
-        return res.status(404).json({ message: "Join request not found" });
-      }
-      
-      // Verify teacher owns the course
-      const course = await storage.getCourseById(joinRequest.courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      if (course.teacherId !== userId && user.role !== "SUPER_ADMIN") {
-        return res.status(403).json({ message: "You can only view receipts for your own courses" });
-      }
-      
-      // Generate signed URL (60 seconds)
-      const r2Client = getR2Client();
-      if (!r2Client || !R2_BUCKET_NAME) {
-        return res.status(500).json({ message: "File storage service is not configured" });
-      }
-      
-      const getCommand = new GetObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: joinRequest.receiptKey,
-      });
-      
-      const signedUrl = await getSignedUrl(r2Client, getCommand, { expiresIn: 60 });
-      
-      res.json({ 
-        url: signedUrl, 
-        mimeType: joinRequest.receiptMime,
-        expiresIn: 60,
-      });
-    } catch (error) {
-      console.error("Error getting receipt URL:", error);
-      res.status(500).json({ message: "Failed to get receipt URL" });
-    }
+  // Teacher - Get receipt signed URL (DISABLED)
+  app.get("/api/teacher/join-requests/:id/receipt", (req, res) => {
+    res.status(404).json({ error: "JOIN_REQUEST_DISABLED", message: "Join request feature is temporarily disabled" });
   });
+
+  // ==================== END JOIN REQUEST DISABLED SECTION ====================
 
   // ==================== ACCOUNTANT ENDPOINTS ====================
   
