@@ -43,7 +43,7 @@ export default function AdminDashboard() {
     totalStudents: "0",
   });
 
-  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const isSuperAdmin = user?.role === "super_admin";
 
   const { data: pendingCourses, isLoading: coursesLoading } = useQuery<CourseWithRelations[]>({
     queryKey: ["/api/admin/pending"],

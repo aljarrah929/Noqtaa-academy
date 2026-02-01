@@ -201,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      if (!user || user.role !== "SUPER_ADMIN") {
+      if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can create colleges" });
       }
       const data = insertCollegeSchema.parse(req.body);
@@ -217,7 +217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      if (!user || user.role !== "SUPER_ADMIN") {
+      if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can update colleges" });
       }
       const id = parseInt(req.params.id);
@@ -237,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      if (!user || user.role !== "SUPER_ADMIN") {
+      if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can delete colleges" });
       }
       const id = parseInt(req.params.id);
@@ -292,7 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can create courses" });
       }
       const data = insertCourseSchema.parse({ ...req.body, teacherId: req.body.teacherId || userId });
@@ -315,8 +315,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Course not found" });
       }
       
-      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
-      const isTeacher = user?.role === "TEACHER";
+      const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+      const isTeacher = user?.role === "instructor";
       const isOwner = course.teacherId === userId;
       
       // Teachers can only update their own courses
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Course not found" });
       }
       
-      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+      const isAdmin = user?.role === "admin" || user?.role === "super_admin";
       
       if (!isAdmin) {
         return res.status(403).json({ message: "Only admins can delete courses" });
@@ -406,7 +406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can approve courses" });
       }
       
@@ -440,7 +440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can reject courses" });
       }
       
@@ -535,16 +535,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       if (user) {
-        if (user.role === "SUPER_ADMIN") {
+        if (user.role === "super_admin") {
           // Super admins have access to all content
           hasAccess = true;
-        } else if (user.role === "ACCOUNTANT") {
+        } else if (user.role === "accountant") {
           // Accountants cannot view course content - only stats
           hasAccess = false;
-        } else if (user.role === "ADMIN") {
+        } else if (user.role === "admin") {
           // Admins have access to content in their college
           hasAccess = user.collegeId === course.collegeId;
-        } else if (user.role === "TEACHER") {
+        } else if (user.role === "instructor") {
           // Teachers have access to their own courses
           hasAccess = course.teacherId === userId;
         } else {
@@ -642,7 +642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const isOwner = course.teacherId === userId;
-      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+      const isAdmin = user?.role === "admin" || user?.role === "super_admin";
       
       if (!isOwner && !isAdmin) {
         return res.status(403).json({ message: "Not authorized to view enrollments" });
@@ -668,7 +668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const isOwner = course.teacherId === userId;
-      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+      const isAdmin = user?.role === "admin" || user?.role === "super_admin";
       
       if (!isOwner && !isAdmin) {
         return res.status(403).json({ message: "Only teachers and admins can enroll students" });
@@ -681,7 +681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!studentUser) {
         return res.status(404).json({ message: "Student not found" });
       }
-      if (studentUser.role !== "STUDENT") {
+      if (studentUser.role !== "student") {
         return res.status(400).json({ message: "This user is not a student account" });
       }
       
@@ -718,7 +718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check authorization: teacher owns course OR is admin
       const isOwner = course.teacherId === userId;
-      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+      const isAdmin = user?.role === "admin" || user?.role === "super_admin";
       
       if (!isOwner && !isAdmin) {
         return res.status(403).json({ message: "Unauthorized" });
@@ -729,7 +729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!studentUser) {
         return res.status(404).json({ message: "Student not found" });
       }
-      if (studentUser.role !== "STUDENT") {
+      if (studentUser.role !== "student") {
         return res.status(400).json({ message: "User is not a student" });
       }
       
@@ -754,7 +754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       const id = parseInt(req.params.id);
       
-      const canDelete = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+      const canDelete = user?.role === "admin" || user?.role === "super_admin";
       
       if (!canDelete) {
         return res.status(403).json({ message: "Only admins can remove enrollments" });
@@ -831,7 +831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== "TEACHER") {
+      if (!user || user.role !== "instructor") {
         return res.status(403).json({ message: "Only instructors can request to add courses" });
       }
       
@@ -859,7 +859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create course with PENDING_APPROVAL status (requires Admin approval)
       const course = await storage.createCourse(courseData);
       
-      console.log(`[RBAC LOG] Course creation request by TEACHER ${userId}: course ${course.id} "${title}" - status: PENDING_APPROVAL`);
+      console.log(`[RBAC LOG] Course creation request by instructor ${userId}: course ${course.id} "${title}" - status: PENDING_APPROVAL`);
       
       res.status(201).json(course);
     } catch (error) {
@@ -893,7 +893,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check authorization: teacher owns course or is admin
       const isOwner = course.teacherId === userId;
-      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+      const isAdmin = user?.role === "admin" || user?.role === "super_admin";
       
       if (!isOwner && !isAdmin) {
         return res.status(403).json({ message: "You can only lock/unlock your own courses" });
@@ -913,11 +913,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can view stats" });
       }
       
-      const collegeId = user.role === "ADMIN" ? user.collegeId || undefined : undefined;
+      const collegeId = user.role === "admin" ? user.collegeId || undefined : undefined;
       const stats = await storage.getAdminStats(collegeId);
       res.json(stats);
     } catch (error) {
@@ -931,11 +931,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can view pending courses" });
       }
       
-      const collegeId = user.role === "ADMIN" ? user.collegeId || undefined : undefined;
+      const collegeId = user.role === "admin" ? user.collegeId || undefined : undefined;
       const pending = await storage.getPendingCourses(collegeId);
       res.json(pending);
     } catch (error) {
@@ -949,11 +949,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can view teachers" });
       }
       
-      const collegeId = user.role === "ADMIN" ? user.collegeId || undefined : undefined;
+      const collegeId = user.role === "admin" ? user.collegeId || undefined : undefined;
       const teachers = await storage.getTeachersWithStats(collegeId);
       res.json(teachers);
     } catch (error) {
@@ -968,7 +968,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can view potential instructors" });
       }
       
@@ -977,7 +977,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let instructors = allUsers;
       
       // For Admin, filter to users in same college
-      if (user.role === "ADMIN" && user.collegeId) {
+      if (user.role === "admin" && user.collegeId) {
         instructors = allUsers.filter(u => u.collegeId === user.collegeId);
       }
       
@@ -1001,7 +1001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== "SUPER_ADMIN") {
+      if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can view all users" });
       }
       
@@ -1018,7 +1018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== "SUPER_ADMIN") {
+      if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can change user roles" });
       }
       
@@ -1046,12 +1046,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "TEACHER" && user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "instructor" && user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Not authorized" });
       }
       
       const allUsers = await storage.getAllUsers();
-      const students = allUsers.filter(u => u.role === "STUDENT");
+      const students = allUsers.filter(u => u.role === "student");
       res.json(students);
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -1070,7 +1070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Only teachers, admins, and super admins can search
-      if (!["TEACHER", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+      if (!["instructor", "admin", "super_admin"].includes(user.role)) {
         return res.status(403).json({ message: "Not authorized" });
       }
       
@@ -1093,13 +1093,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Featured Profiles - Admin endpoints (SUPER_ADMIN only)
+  // Featured Profiles - Admin endpoints (super_admin only)
   app.get("/api/admin/featured-profiles", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== "SUPER_ADMIN") {
+      if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can manage featured profiles" });
       }
       
@@ -1116,7 +1116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== "SUPER_ADMIN") {
+      if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can create featured profiles" });
       }
       
@@ -1138,7 +1138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== "SUPER_ADMIN") {
+      if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can update featured profiles" });
       }
       
@@ -1165,7 +1165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== "SUPER_ADMIN") {
+      if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can delete featured profiles" });
       }
       
@@ -1189,13 +1189,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Home Stats - Admin endpoint (SUPER_ADMIN only)
+  // Home Stats - Admin endpoint (super_admin only)
   app.patch("/api/admin/home-stats", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== "SUPER_ADMIN") {
+      if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can update home stats" });
       }
       
@@ -1221,12 +1221,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can view dashboard stats" });
       }
       
       const config = await storage.getOrCreateAdminDashboardStatsConfig();
-      const collegeId = user.role === "ADMIN" ? user.collegeId || undefined : undefined;
+      const collegeId = user.role === "admin" ? user.collegeId || undefined : undefined;
       const computedStats = await storage.getAdminStats(collegeId);
       
       if (config.mode === "MANUAL") {
@@ -1254,13 +1254,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Dashboard Stats Config - SUPER_ADMIN only update
+  // Admin Dashboard Stats Config - super_admin only update
   app.patch("/api/super-admin/admin-dashboard-stats", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== "SUPER_ADMIN") {
+      if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can update dashboard stats config" });
       }
       
@@ -1287,7 +1287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "instructor" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only teachers and super admins can upload videos" });
       }
       
@@ -1350,7 +1350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "instructor" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only teachers and super admins can upload videos" });
       }
       
@@ -1373,7 +1373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Verify teacher owns this course or is super admin
-      if (user.role === "TEACHER") {
+      if (user.role === "instructor") {
         const course = await storage.getCourseById(courseId);
         if (!course || course.teacherId !== userId) {
           return res.status(403).json({ message: "You can only upload videos to your own courses" });
@@ -1456,7 +1456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
 
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "instructor" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only teachers and super admins can upload videos" });
       }
 
@@ -1470,7 +1470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify teacher owns this course or is super admin
-      if (user.role === "TEACHER") {
+      if (user.role === "instructor") {
         const course = await storage.getCourseById(parseInt(courseId));
         if (!course || course.teacherId !== userId) {
           return res.status(403).json({ message: "You can only upload videos to your own courses" });
@@ -1536,7 +1536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
 
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "instructor" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only teachers and super admins can verify uploads" });
       }
 
@@ -1587,7 +1587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
+      if (!user || (user.role !== "instructor" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only teachers and super admins can upload files" });
       }
       
@@ -1623,7 +1623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Teachers can only upload to their own courses
       // Super admins can upload to any course (by design - full system access)
-      if (user.role === "TEACHER" && course.teacherId !== userId) {
+      if (user.role === "instructor" && course.teacherId !== userId) {
         console.warn(`[R2 UPLOAD DENIED] Teacher ${userId} attempted to upload to course ${courseId} owned by ${course.teacherId}`);
         return res.status(403).json({ message: "You can only upload files to your own courses" });
       }
@@ -1701,12 +1701,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Course not found" });
       }
       
-      const isTeacher = user.role === "TEACHER" && course.teacherId === userId;
-      const isSuperAdmin = user.role === "SUPER_ADMIN";
-      const isAdmin = user.role === "ADMIN";
+      const isTeacher = user.role === "instructor" && course.teacherId === userId;
+      const isSuperAdmin = user.role === "super_admin";
+      const isAdmin = user.role === "admin";
       
       let isEnrolledStudent = false;
-      if (user.role === "STUDENT") {
+      if (user.role === "student") {
         const enrollments = await storage.getEnrollmentsByStudent(userId);
         isEnrolledStudent = enrollments.some(e => e.courseId === courseId);
       }
@@ -1902,7 +1902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const courseId = parseInt(req.params.courseId);
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== "STUDENT") {
+      if (!user || user.role !== "student") {
         return res.status(403).json({ message: "Only students can check join request status" });
       }
       
@@ -1924,7 +1924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const courseId = parseInt(req.params.courseId);
       const user = await storage.getUser(userId);
       
-      if (!user || user.role !== "STUDENT") {
+      if (!user || user.role !== "student") {
         return res.status(403).json({ message: "Only students can submit join requests" });
       }
       
@@ -2010,16 +2010,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      const allowedRoles = ["TEACHER", "ADMIN", "SUPER_ADMIN"];
+      const allowedRoles = ["instructor", "admin", "super_admin"];
       if (!user || !allowedRoles.includes(user.role)) {
         return res.status(403).json({ message: "Only teachers and admins can view join requests" });
       }
       
       let requests;
-      if (user.role === "SUPER_ADMIN") {
+      if (user.role === "super_admin") {
         // Super Admin sees all join requests
         requests = await storage.getAllJoinRequests();
-      } else if (user.role === "ADMIN") {
+      } else if (user.role === "admin") {
         // Admin sees join requests for courses in their college
         if (!user.collegeId) {
           return res.status(400).json({ message: "Admin must be assigned to a college" });
@@ -2044,7 +2044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestId = parseInt(req.params.id);
       const user = await storage.getUser(userId);
       
-      const allowedRoles = ["TEACHER", "ADMIN", "SUPER_ADMIN"];
+      const allowedRoles = ["instructor", "admin", "super_admin"];
       if (!user || !allowedRoles.includes(user.role)) {
         return res.status(403).json({ message: "Only teachers and admins can approve join requests" });
       }
@@ -2063,8 +2063,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check access: Teacher must own course, Admin must be in same college, Super Admin has full access
       const isTeacher = course.teacherId === userId;
-      const isAdminInCollege = user.role === "ADMIN" && user.collegeId === course.collegeId;
-      const isSuperAdmin = user.role === "SUPER_ADMIN";
+      const isAdminInCollege = user.role === "admin" && user.collegeId === course.collegeId;
+      const isSuperAdmin = user.role === "super_admin";
       
       if (!isTeacher && !isAdminInCollege && !isSuperAdmin) {
         return res.status(403).json({ message: "You don't have permission to approve this request" });
@@ -2099,7 +2099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestId = parseInt(req.params.id);
       const user = await storage.getUser(userId);
       
-      const allowedRoles = ["TEACHER", "ADMIN", "SUPER_ADMIN"];
+      const allowedRoles = ["instructor", "admin", "super_admin"];
       if (!user || !allowedRoles.includes(user.role)) {
         return res.status(403).json({ message: "Only teachers and admins can reject join requests" });
       }
@@ -2118,8 +2118,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check access: Teacher must own course, Admin must be in same college, Super Admin has full access
       const isTeacher = course.teacherId === userId;
-      const isAdminInCollege = user.role === "ADMIN" && user.collegeId === course.collegeId;
-      const isSuperAdmin = user.role === "SUPER_ADMIN";
+      const isAdminInCollege = user.role === "admin" && user.collegeId === course.collegeId;
+      const isSuperAdmin = user.role === "super_admin";
       
       if (!isTeacher && !isAdminInCollege && !isSuperAdmin) {
         return res.status(403).json({ message: "You don't have permission to reject this request" });
@@ -2147,7 +2147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requestId = parseInt(req.params.id);
       const user = await storage.getUser(userId);
       
-      const allowedRoles = ["TEACHER", "ADMIN", "SUPER_ADMIN"];
+      const allowedRoles = ["instructor", "admin", "super_admin"];
       if (!user || !allowedRoles.includes(user.role)) {
         return res.status(403).json({ message: "Only teachers and admins can view receipts" });
       }
@@ -2166,8 +2166,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check access: Teacher must own course, Admin must be in same college, Super Admin has full access
       const isTeacher = course.teacherId === userId;
-      const isAdminInCollege = user.role === "ADMIN" && user.collegeId === course.collegeId;
-      const isSuperAdmin = user.role === "SUPER_ADMIN";
+      const isAdminInCollege = user.role === "admin" && user.collegeId === course.collegeId;
+      const isSuperAdmin = user.role === "super_admin";
       
       if (!isTeacher && !isAdminInCollege && !isSuperAdmin) {
         return res.status(403).json({ message: "You don't have permission to view this receipt" });
@@ -2200,7 +2200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== ACCOUNTANT ENDPOINTS ====================
   
   // Get enrollment statistics grouped by college
-  app.get("/api/accountant/enrollments", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+  app.get("/api/accountant/enrollments", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
       // Get all colleges
       const allColleges = await storage.getColleges();
@@ -2271,7 +2271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Generate PDF enrollment report
-  app.get("/api/accountant/enrollments.pdf", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+  app.get("/api/accountant/enrollments.pdf", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
       // Get all colleges
       const allColleges = await storage.getColleges();
@@ -2400,7 +2400,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== DISCOUNT COUPONS ENDPOINTS ====================
   
   // Get all discount coupons
-  app.get("/api/coupons", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+  app.get("/api/coupons", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
       const coupons = await storage.getDiscountCoupons();
       res.json(coupons);
@@ -2411,7 +2411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single coupon by ID
-  app.get("/api/coupons/:id", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+  app.get("/api/coupons/:id", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
       const coupon = await storage.getDiscountCouponById(parseInt(req.params.id));
       if (!coupon) {
@@ -2425,7 +2425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new coupon
-  app.post("/api/coupons", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+  app.post("/api/coupons", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
       const data = insertDiscountCouponSchema.parse(req.body);
       
@@ -2450,7 +2450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update coupon
-  app.patch("/api/coupons/:id", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+  app.patch("/api/coupons/:id", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
       const couponId = parseInt(req.params.id);
       const existing = await storage.getDiscountCouponById(couponId);
@@ -2480,7 +2480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete coupon
-  app.delete("/api/coupons/:id", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+  app.delete("/api/coupons/:id", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
       const couponId = parseInt(req.params.id);
       const existing = await storage.getDiscountCouponById(couponId);

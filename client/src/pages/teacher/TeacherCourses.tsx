@@ -39,8 +39,8 @@ export default function TeacherCourses() {
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<CourseWithRelations | null>(null);
 
-  // Only TEACHER and SUPER_ADMIN can upload videos
-  const canUploadVideo = user?.role === "TEACHER" || user?.role === "SUPER_ADMIN";
+  // Only instructor and super_admin can upload videos
+  const canUploadVideo = user?.role === "instructor" || user?.role === "super_admin";
 
   const { data: courses, isLoading } = useQuery<CourseWithRelations[]>({
     queryKey: ["/api/teacher/courses"],

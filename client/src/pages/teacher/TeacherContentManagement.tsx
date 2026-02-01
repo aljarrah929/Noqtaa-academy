@@ -181,7 +181,7 @@ export default function TeacherContentManagement() {
   }
 
   const sortedLessons = [...(course?.lessons || [])].sort((a, b) => a.orderIndex - b.orderIndex);
-  const canUploadVideo = user?.role === "TEACHER" || user?.role === "SUPER_ADMIN";
+  const canUploadVideo = user?.role === "instructor" || user?.role === "super_admin";
 
   return (
     <DashboardLayout title={`Manage Content: ${course.title}`}>

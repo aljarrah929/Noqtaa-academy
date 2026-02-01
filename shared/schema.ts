@@ -14,7 +14,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
-export const userRoleEnum = pgEnum("user_role", ["STUDENT", "TEACHER", "ADMIN", "SUPER_ADMIN", "ACCOUNTANT"]);
+export const userRoleEnum = pgEnum("user_role", ["student", "instructor", "admin", "accountant", "super_admin"]);
 export const courseStatusEnum = pgEnum("course_status", ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "REJECTED"]);
 export const contentTypeEnum = pgEnum("content_type", ["video", "text", "link", "file"]);
 export const approvalActionEnum = pgEnum("approval_action", ["APPROVE", "REJECT"]);
@@ -51,7 +51,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name", { length: 100 }),
   lastName: varchar("last_name", { length: 100 }),
   profileImageUrl: text("profile_image_url"),
-  role: userRoleEnum("role").notNull().default("STUDENT"),
+  role: userRoleEnum("role").notNull().default("student"),
   collegeId: integer("college_id").references(() => colleges.id),
   isActive: boolean("is_active").notNull().default(true),
   publicId: varchar("public_id", { length: 8 }).unique(),

@@ -69,7 +69,7 @@ export async function setupAuth(app: Express) {
         firstName: data.firstName,
         lastName: data.lastName,
         collegeId: data.collegeId,
-        role: "STUDENT",
+        role: "student",
       });
       console.log(`[Signup] User created: id=${user.id}`);
 
@@ -362,8 +362,8 @@ export async function seedSuperAdmin() {
   
   if (existingUser) {
     let updated = false;
-    if (existingUser.role !== "SUPER_ADMIN") {
-      await storage.updateUserRole(existingUser.id, "SUPER_ADMIN");
+    if (existingUser.role !== "super_admin") {
+      await storage.updateUserRole(existingUser.id, "super_admin");
       updated = true;
     }
     if (!existingUser.passwordHash) {
@@ -382,7 +382,7 @@ export async function seedSuperAdmin() {
     firstName: "Super",
     lastName: "Admin",
     collegeId: 1,
-    role: "SUPER_ADMIN",
+    role: "super_admin",
   });
   console.log("Created SUPER_ADMIN user:", email);
 }

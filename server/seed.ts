@@ -47,7 +47,7 @@ async function seed() {
         email: "superadmin@edulearn.edu",
         firstName: "System",
         lastName: "Administrator",
-        role: "SUPER_ADMIN",
+        role: "super_admin",
         collegeId: null,
       },
     ])
@@ -63,7 +63,7 @@ async function seed() {
         email: "admin@pharmacy.edu",
         firstName: "Alice",
         lastName: "Admin",
-        role: "ADMIN",
+        role: "admin",
         collegeId: pharmacyCollege.id,
       },
     ])
@@ -79,7 +79,7 @@ async function seed() {
         email: "teacher1@pharmacy.edu",
         firstName: "Dr. Sarah",
         lastName: "Johnson",
-        role: "TEACHER",
+        role: "instructor",
         collegeId: pharmacyCollege.id,
       },
       {
@@ -87,7 +87,7 @@ async function seed() {
         email: "teacher2@engineering.edu",
         firstName: "Prof. Michael",
         lastName: "Chen",
-        role: "TEACHER",
+        role: "instructor",
         collegeId: engineeringCollege.id,
       },
       {
@@ -95,7 +95,7 @@ async function seed() {
         email: "teacher3@it.edu",
         firstName: "Dr. Emily",
         lastName: "Williams",
-        role: "TEACHER",
+        role: "instructor",
         collegeId: itCollege.id,
       },
     ])
@@ -111,7 +111,7 @@ async function seed() {
         email: "student@pharmacy.edu",
         firstName: "Sam",
         lastName: "Student",
-        role: "STUDENT",
+        role: "student",
         collegeId: pharmacyCollege.id,
       },
     ])

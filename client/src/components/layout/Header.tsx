@@ -68,11 +68,11 @@ export function Header() {
   const getDashboardLink = () => {
     if (!user) return "/dashboard";
     switch (user.role) {
-      case "SUPER_ADMIN":
+      case "super_admin":
         return "/admin";
-      case "ADMIN":
+      case "admin":
         return "/admin";
-      case "TEACHER":
+      case "instructor":
         return "/teacher";
       default:
         return "/dashboard";
@@ -86,11 +86,11 @@ export function Header() {
     return (first + last) || user.email?.[0]?.toUpperCase() || "U";
   };
 
-  const headerStyle = collegeTheme && user?.role === "STUDENT" ? {
+  const headerStyle = collegeTheme && user?.role === "student" ? {
     backgroundColor: collegeTheme.primaryColor,
   } : undefined;
 
-  const isCollegeThemed = collegeTheme && user?.role === "STUDENT";
+  const isCollegeThemed = collegeTheme && user?.role === "student";
 
   return (
     <header 
@@ -106,7 +106,7 @@ export function Header() {
             <span className={`font-semibold text-lg hidden sm:block ${isCollegeThemed ? 'text-white' : 'text-foreground'}`} data-testid="text-logo">
               {BRAND_NAME}
             </span>
-            {collegeTheme && user?.role === "STUDENT" && (
+            {collegeTheme && user?.role === "student" && (
               <Badge variant="secondary" className="ml-2 hidden md:flex bg-white/20 text-white border-white/30">
                 {collegeTheme.name}
               </Badge>

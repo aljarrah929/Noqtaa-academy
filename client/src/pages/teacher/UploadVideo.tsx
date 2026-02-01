@@ -27,8 +27,8 @@ export default function UploadVideo() {
   const [videoUid, setVideoUid] = useState<string | undefined>();
   const [uploadComplete, setUploadComplete] = useState(false);
 
-  // Only TEACHER and SUPER_ADMIN can upload videos
-  const canUpload = user?.role === "TEACHER" || user?.role === "SUPER_ADMIN";
+  // Only instructor and super_admin can upload videos
+  const canUpload = user?.role === "instructor" || user?.role === "super_admin";
 
   const { data: course, isLoading: courseLoading } = useQuery<CourseWithRelations>({
     queryKey: ["/api/courses", courseId],

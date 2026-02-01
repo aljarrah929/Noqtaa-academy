@@ -65,7 +65,7 @@ export default function HomeStatsManagement() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!authLoading && (!user || user.role !== "SUPER_ADMIN")) {
+    if (!authLoading && (!user || user.role !== "super_admin")) {
       setLocation("/admin");
     }
   }, [user, authLoading, setLocation]);

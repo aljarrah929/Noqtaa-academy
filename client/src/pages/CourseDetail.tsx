@@ -264,7 +264,7 @@ export default function CourseDetail() {
               </Card>
             )}
 
-            {isAuthenticated && !isEnrolled && user?.role === "STUDENT" && (
+            {isAuthenticated && !isEnrolled && user?.role === "student" && (
               <Card className="border-primary/50">
                 <CardContent className="py-6 text-center">
                   <UserPlus className="w-10 h-10 mx-auto text-primary mb-3" />

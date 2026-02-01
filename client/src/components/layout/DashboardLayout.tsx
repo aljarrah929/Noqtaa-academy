@@ -116,7 +116,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     
     const items = [];
     
-    if (user.role === "STUDENT") {
+    if (user.role === "student") {
       items.push({ group: "Student", items: studentMenuItems });
     }
     
@@ -171,7 +171,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               </div>
               <span className="font-semibold">{BRAND_NAME}</span>
             </Link>
-            {collegeTheme && user?.role === "STUDENT" && (
+            {collegeTheme && user?.role === "student" && (
               <Badge variant="outline" className="mt-2 w-fit">
                 {collegeTheme.name}
               </Badge>

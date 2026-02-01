@@ -53,11 +53,11 @@ export default function Login() {
       }
       
       switch (user.role) {
-        case "SUPER_ADMIN":
-        case "ADMIN":
+        case "super_admin":
+        case "admin":
           setLocation("/admin");
           break;
-        case "TEACHER":
+        case "instructor":
           setLocation("/teacher");
           break;
         default:

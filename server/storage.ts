@@ -186,7 +186,7 @@ export class DatabaseStorage implements IStorage {
       firstName: data.firstName,
       lastName: data.lastName,
       collegeId: data.collegeId,
-      role: data.role || "STUDENT",
+      role: data.role || "student",
       publicId,
     }).returning();
     return user;
@@ -203,8 +203,8 @@ export class DatabaseStorage implements IStorage {
     const isPublicIdSearch = publicIdPattern.test(query.toUpperCase());
     
     // Teachers can only search for students
-    const roleFilter = searcherRole === "TEACHER" 
-      ? eq(users.role, "STUDENT")
+    const roleFilter = searcherRole === "instructor" 
+      ? eq(users.role, "student")
       : undefined;
     
     let results;
@@ -645,12 +645,12 @@ export class DatabaseStorage implements IStorage {
       : await db.select().from(courses);
 
     let teacherQuery = collegeId
-      ? await db.select().from(users).where(and(eq(users.role, "TEACHER"), eq(users.collegeId, collegeId)))
-      : await db.select().from(users).where(eq(users.role, "TEACHER"));
+      ? await db.select().from(users).where(and(eq(users.role, "instructor"), eq(users.collegeId, collegeId)))
+      : await db.select().from(users).where(eq(users.role, "instructor"));
 
     let studentQuery = collegeId
-      ? await db.select().from(users).where(and(eq(users.role, "STUDENT"), eq(users.collegeId, collegeId)))
-      : await db.select().from(users).where(eq(users.role, "STUDENT"));
+      ? await db.select().from(users).where(and(eq(users.role, "student"), eq(users.collegeId, collegeId)))
+      : await db.select().from(users).where(eq(users.role, "student"));
 
     // Get pending join requests
     let pendingJoinRequestsQuery;
@@ -676,8 +676,8 @@ export class DatabaseStorage implements IStorage {
 
   async getTeachersWithStats(collegeId?: number): Promise<(UserWithCollege & { _count: { courses: number; students: number } })[]> {
     let teacherQuery = collegeId
-      ? await db.select().from(users).leftJoin(colleges, eq(users.collegeId, colleges.id)).where(and(eq(users.role, "TEACHER"), eq(users.collegeId, collegeId)))
-      : await db.select().from(users).leftJoin(colleges, eq(users.collegeId, colleges.id)).where(eq(users.role, "TEACHER"));
+      ? await db.select().from(users).leftJoin(colleges, eq(users.collegeId, colleges.id)).where(and(eq(users.role, "instructor"), eq(users.collegeId, collegeId)))
+      : await db.select().from(users).leftJoin(colleges, eq(users.collegeId, colleges.id)).where(eq(users.role, "instructor"));
 
     const teacherIds = teacherQuery.map(t => t.users.id);
 
