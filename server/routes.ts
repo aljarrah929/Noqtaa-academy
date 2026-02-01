@@ -249,14 +249,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/courses", async (req, res) => {
+  app.get("/api/courses", async (req: any, res) => {
     try {
       const collegeId = req.query.collegeId ? parseInt(req.query.collegeId as string) : undefined;
-      const status = req.query.status as any;
-      let courseList = await storage.getCourses(collegeId, status);
-      if (!req.query.status) {
+      const requestedStatus = req.query.status as any;
+      
+      // Check if authenticated user is admin
+      const user = req.user;
+      const isAdmin = user?.role === "SUPER_ADMIN" || user?.role === "ADMIN";
+      
+      let courseList = await storage.getCourses(collegeId);
+      
+      // Only admins can see all courses or filter by status
+      // Non-admins always see only PUBLISHED courses
+      if (isAdmin && requestedStatus) {
+        courseList = courseList.filter(c => c.status === requestedStatus);
+      } else if (!isAdmin) {
         courseList = courseList.filter(c => c.status === "PUBLISHED");
       }
+      // Admins without status filter see all courses
+      
       res.json(courseList);
     } catch (error) {
       console.error("Error fetching courses:", error);
