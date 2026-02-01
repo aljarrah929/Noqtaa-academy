@@ -10,7 +10,6 @@ import {
   adminDashboardStatsConfig,
   passwordResetTokens,
   joinRequests,
-  discountCoupons,
   type User,
   type UpsertUser,
   type College,
@@ -35,9 +34,6 @@ import {
   type JoinRequest,
   type InsertJoinRequest,
   type JoinRequestWithRelations,
-  type DiscountCoupon,
-  type InsertDiscountCoupon,
-  type UpdateDiscountCoupon,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql, or, ilike, isNull } from "drizzle-orm";
@@ -118,7 +114,6 @@ export interface IStorage {
   deleteLesson(id: number): Promise<void>;
   getEnrollmentsByCourse(courseId: number): Promise<(Enrollment & { student: User })[]>;
   getEnrollmentsByStudent(studentId: string): Promise<(Enrollment & { course: CourseWithRelations })[]>;
-  getEnrollments(): Promise<Enrollment[]>;
   isEnrolled(studentId: string, courseId: number): Promise<boolean>;
   createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment>;
   deleteEnrollment(id: number): Promise<void>;
@@ -127,7 +122,7 @@ export interface IStorage {
   createCourseApprovalLog(log: InsertCourseApprovalLog): Promise<CourseApprovalLog>;
   getPendingCourses(collegeId?: number): Promise<CourseWithRelations[]>;
   getTeacherStats(teacherId: string): Promise<{ totalCourses: number; totalStudents: number; publishedCourses: number }>;
-  getAdminStats(collegeId?: number): Promise<{ totalCourses: number; totalStudents: number; totalTeachers: number; pendingApprovals: number; pendingJoinRequests: number }>;
+  getAdminStats(collegeId?: number): Promise<{ totalCourses: number; totalStudents: number; totalTeachers: number; pendingApprovals: number }>;
   getTeachersWithStats(collegeId?: number): Promise<(UserWithCollege & { _count: { courses: number; students: number } })[]>;
   getFeaturedProfiles(activeOnly?: boolean): Promise<FeaturedProfile[]>;
   getFeaturedProfileById(id: number): Promise<FeaturedProfile | undefined>;
@@ -149,20 +144,10 @@ export interface IStorage {
   getJoinRequestById(id: number): Promise<JoinRequestWithRelations | undefined>;
   getJoinRequestsByCourse(courseId: number): Promise<JoinRequestWithRelations[]>;
   getJoinRequestsByTeacher(teacherId: string): Promise<JoinRequestWithRelations[]>;
-  getJoinRequestsByCollege(collegeId: number): Promise<JoinRequestWithRelations[]>;
-  getAllJoinRequests(): Promise<JoinRequestWithRelations[]>;
   getStudentJoinRequestForCourse(studentId: string, courseId: number): Promise<JoinRequest | undefined>;
   hasPendingJoinRequest(studentId: string, courseId: number): Promise<boolean>;
   hasApprovedJoinRequest(studentId: string, courseId: number): Promise<boolean>;
   updateJoinRequestStatus(id: number, status: JoinRequest["status"]): Promise<JoinRequest | undefined>;
-  
-  // Discount Coupons
-  getDiscountCoupons(): Promise<DiscountCoupon[]>;
-  getDiscountCouponById(id: number): Promise<DiscountCoupon | undefined>;
-  getDiscountCouponByCode(code: string): Promise<DiscountCoupon | undefined>;
-  createDiscountCoupon(data: Omit<InsertDiscountCoupon, "createdByUserId"> & { createdByUserId: string }): Promise<DiscountCoupon>;
-  updateDiscountCoupon(id: number, data: Partial<UpdateDiscountCoupon>): Promise<DiscountCoupon | undefined>;
-  deleteDiscountCoupon(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -186,7 +171,7 @@ export class DatabaseStorage implements IStorage {
       firstName: data.firstName,
       lastName: data.lastName,
       collegeId: data.collegeId,
-      role: data.role || "student",
+      role: data.role || "STUDENT",
       publicId,
     }).returning();
     return user;
@@ -203,8 +188,8 @@ export class DatabaseStorage implements IStorage {
     const isPublicIdSearch = publicIdPattern.test(query.toUpperCase());
     
     // Teachers can only search for students
-    const roleFilter = searcherRole === "instructor" 
-      ? eq(users.role, "student")
+    const roleFilter = searcherRole === "TEACHER" 
+      ? eq(users.role, "STUDENT")
       : undefined;
     
     let results;
@@ -582,10 +567,6 @@ export class DatabaseStorage implements IStorage {
     return !!enrollment;
   }
 
-  async getEnrollments(): Promise<Enrollment[]> {
-    return await db.select().from(enrollments);
-  }
-
   async createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment> {
     const [created] = await db.insert(enrollments).values(enrollment).returning();
     return created;
@@ -639,45 +620,31 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getAdminStats(collegeId?: number): Promise<{ totalCourses: number; totalStudents: number; totalTeachers: number; pendingApprovals: number; pendingJoinRequests: number }> {
+  async getAdminStats(collegeId?: number): Promise<{ totalCourses: number; totalStudents: number; totalTeachers: number; pendingApprovals: number }> {
     let courseQuery = collegeId
       ? await db.select().from(courses).where(eq(courses.collegeId, collegeId))
       : await db.select().from(courses);
 
     let teacherQuery = collegeId
-      ? await db.select().from(users).where(and(eq(users.role, "instructor"), eq(users.collegeId, collegeId)))
-      : await db.select().from(users).where(eq(users.role, "instructor"));
+      ? await db.select().from(users).where(and(eq(users.role, "TEACHER"), eq(users.collegeId, collegeId)))
+      : await db.select().from(users).where(eq(users.role, "TEACHER"));
 
     let studentQuery = collegeId
-      ? await db.select().from(users).where(and(eq(users.role, "student"), eq(users.collegeId, collegeId)))
-      : await db.select().from(users).where(eq(users.role, "student"));
-
-    // Get pending join requests
-    let pendingJoinRequestsQuery;
-    if (collegeId) {
-      // For Admin: only count pending requests for courses in their college
-      const collegeCourseIds = courseQuery.map(c => c.id);
-      pendingJoinRequestsQuery = collegeCourseIds.length > 0
-        ? await db.select().from(joinRequests).where(and(eq(joinRequests.status, "PENDING"), sql`${joinRequests.courseId} IN ${collegeCourseIds}`))
-        : [];
-    } else {
-      // For SuperAdmin: count all pending requests
-      pendingJoinRequestsQuery = await db.select().from(joinRequests).where(eq(joinRequests.status, "PENDING"));
-    }
+      ? await db.select().from(users).where(and(eq(users.role, "STUDENT"), eq(users.collegeId, collegeId)))
+      : await db.select().from(users).where(eq(users.role, "STUDENT"));
 
     return {
       totalCourses: courseQuery.length,
       totalStudents: studentQuery.length,
       totalTeachers: teacherQuery.length,
       pendingApprovals: courseQuery.filter(c => c.status === "PENDING_APPROVAL").length,
-      pendingJoinRequests: pendingJoinRequestsQuery.length,
     };
   }
 
   async getTeachersWithStats(collegeId?: number): Promise<(UserWithCollege & { _count: { courses: number; students: number } })[]> {
     let teacherQuery = collegeId
-      ? await db.select().from(users).leftJoin(colleges, eq(users.collegeId, colleges.id)).where(and(eq(users.role, "instructor"), eq(users.collegeId, collegeId)))
-      : await db.select().from(users).leftJoin(colleges, eq(users.collegeId, colleges.id)).where(eq(users.role, "instructor"));
+      ? await db.select().from(users).leftJoin(colleges, eq(users.collegeId, colleges.id)).where(and(eq(users.role, "TEACHER"), eq(users.collegeId, collegeId)))
+      : await db.select().from(users).leftJoin(colleges, eq(users.collegeId, colleges.id)).where(eq(users.role, "TEACHER"));
 
     const teacherIds = teacherQuery.map(t => t.users.id);
 
@@ -871,39 +838,6 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getJoinRequestsByCollege(collegeId: number): Promise<JoinRequestWithRelations[]> {
-    const result = await db
-      .select()
-      .from(joinRequests)
-      .innerJoin(courses, eq(joinRequests.courseId, courses.id))
-      .leftJoin(users, eq(joinRequests.studentId, users.id))
-      .leftJoin(colleges, eq(users.collegeId, colleges.id))
-      .where(eq(courses.collegeId, collegeId))
-      .orderBy(desc(joinRequests.createdAt));
-    
-    return result.map(row => ({
-      ...row.join_requests,
-      student: row.users ? { ...row.users, college: row.colleges || undefined } : undefined,
-      course: row.courses || undefined,
-    }));
-  }
-
-  async getAllJoinRequests(): Promise<JoinRequestWithRelations[]> {
-    const result = await db
-      .select()
-      .from(joinRequests)
-      .innerJoin(courses, eq(joinRequests.courseId, courses.id))
-      .leftJoin(users, eq(joinRequests.studentId, users.id))
-      .leftJoin(colleges, eq(users.collegeId, colleges.id))
-      .orderBy(desc(joinRequests.createdAt));
-    
-    return result.map(row => ({
-      ...row.join_requests,
-      student: row.users ? { ...row.users, college: row.colleges || undefined } : undefined,
-      course: row.courses || undefined,
-    }));
-  }
-
   async getStudentJoinRequestForCourse(studentId: string, courseId: number): Promise<JoinRequest | undefined> {
     const [request] = await db
       .select()
@@ -947,57 +881,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(joinRequests.id, id))
       .returning();
     return updated;
-  }
-
-  // Discount Coupons
-  async getDiscountCoupons(): Promise<DiscountCoupon[]> {
-    return db.select().from(discountCoupons).orderBy(desc(discountCoupons.createdAt));
-  }
-
-  async getDiscountCouponById(id: number): Promise<DiscountCoupon | undefined> {
-    const [coupon] = await db.select().from(discountCoupons).where(eq(discountCoupons.id, id));
-    return coupon;
-  }
-
-  async getDiscountCouponByCode(code: string): Promise<DiscountCoupon | undefined> {
-    const [coupon] = await db.select().from(discountCoupons).where(eq(discountCoupons.code, code.toUpperCase()));
-    return coupon;
-  }
-
-  async createDiscountCoupon(data: Omit<InsertDiscountCoupon, "createdByUserId"> & { createdByUserId: string }): Promise<DiscountCoupon> {
-    const [coupon] = await db.insert(discountCoupons).values({
-      code: data.code.toUpperCase(),
-      description: data.description,
-      discountPercent: data.discountPercent,
-      maxUses: data.maxUses,
-      isActive: data.isActive ?? true,
-      validFrom: data.validFrom ? new Date(data.validFrom) : null,
-      validUntil: data.validUntil ? new Date(data.validUntil) : null,
-      createdByUserId: data.createdByUserId,
-    }).returning();
-    return coupon;
-  }
-
-  async updateDiscountCoupon(id: number, data: Partial<UpdateDiscountCoupon>): Promise<DiscountCoupon | undefined> {
-    const updateData: any = { updatedAt: new Date() };
-    if (data.code !== undefined) updateData.code = data.code.toUpperCase();
-    if (data.description !== undefined) updateData.description = data.description;
-    if (data.discountPercent !== undefined) updateData.discountPercent = data.discountPercent;
-    if (data.maxUses !== undefined) updateData.maxUses = data.maxUses;
-    if (data.isActive !== undefined) updateData.isActive = data.isActive;
-    if (data.validFrom !== undefined) updateData.validFrom = data.validFrom ? new Date(data.validFrom) : null;
-    if (data.validUntil !== undefined) updateData.validUntil = data.validUntil ? new Date(data.validUntil) : null;
-
-    const [updated] = await db
-      .update(discountCoupons)
-      .set(updateData)
-      .where(eq(discountCoupons.id, id))
-      .returning();
-    return updated;
-  }
-
-  async deleteDiscountCoupon(id: number): Promise<void> {
-    await db.delete(discountCoupons).where(eq(discountCoupons.id, id));
   }
 }
 

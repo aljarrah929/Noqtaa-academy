@@ -37,7 +37,7 @@ export default function UploadFile() {
   const [uploadError, setUploadError] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
 
-  const canUpload = user?.role === "instructor" || user?.role === "super_admin";
+  const canUpload = user?.role === "TEACHER" || user?.role === "SUPER_ADMIN";
 
   const { data: course, isLoading: courseLoading } = useQuery<CourseWithRelations>({
     queryKey: ["/api/courses", courseId],

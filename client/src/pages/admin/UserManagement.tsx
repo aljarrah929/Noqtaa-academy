@@ -36,7 +36,7 @@ import { Users, Search, Shield } from "lucide-react";
 import { getRoleDisplayName } from "@/lib/authUtils";
 import type { User } from "@shared/schema";
 
-const ROLES = ["student", "instructor", "admin", "super_admin", "accountant"] as const;
+const ROLES = ["STUDENT", "TEACHER", "ADMIN", "SUPER_ADMIN"] as const;
 
 export default function UserManagement() {
   const { toast } = useToast();
@@ -82,11 +82,11 @@ export default function UserManagement() {
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
-      case "super_admin":
+      case "SUPER_ADMIN":
         return "default";
-      case "admin":
+      case "ADMIN":
         return "secondary";
-      case "instructor":
+      case "TEACHER":
         return "outline";
       default:
         return "outline";

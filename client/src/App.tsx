@@ -31,7 +31,6 @@ import CollegeManagement from "@/pages/admin/CollegeManagement";
 import FeaturedProfilesManagement from "@/pages/admin/FeaturedProfilesManagement";
 import HomeStatsManagement from "@/pages/admin/HomeStatsManagement";
 import AccountantDashboard from "@/pages/accountant/AccountantDashboard";
-import CouponManagement from "@/pages/accountant/CouponManagement";
 import CollegeOnboarding from "@/pages/CollegeOnboarding";
 import Profile from "@/pages/Profile";
 
@@ -67,7 +66,6 @@ function Router() {
       <Route path="/admin/home-stats" component={HomeStatsManagement} />
       <Route path="/accountant" component={AccountantDashboard} />
       <Route path="/accountant/enrollments" component={AccountantDashboard} />
-      <Route path="/accountant/coupons" component={CouponManagement} />
       <Route path="/onboarding" component={CollegeOnboarding} />
       <Route path="/profile" component={Profile} />
       <Route path="*" component={NotFound} />

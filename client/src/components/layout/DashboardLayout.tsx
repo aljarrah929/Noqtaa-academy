@@ -96,7 +96,6 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/approvals", label: "Approvals", icon: FileCheck },
     { href: "/admin/teachers", label: "Teachers", icon: Users },
-    { href: "/teacher/join-requests", label: "Join Requests", icon: UserPlus },
   ];
 
   const superAdminMenuItems = [
@@ -108,7 +107,6 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
 
   const accountantMenuItems = [
     { href: "/accountant", label: "Enrollment Stats", icon: BarChart3 },
-    { href: "/accountant/coupons", label: "Discount Coupons", icon: Settings },
   ];
 
   const getMenuItems = () => {
@@ -116,7 +114,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     
     const items = [];
     
-    if (user.role === "student") {
+    if (user.role === "STUDENT") {
       items.push({ group: "Student", items: studentMenuItems });
     }
     
@@ -171,7 +169,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               </div>
               <span className="font-semibold">{BRAND_NAME}</span>
             </Link>
-            {collegeTheme && user?.role === "student" && (
+            {collegeTheme && user?.role === "STUDENT" && (
               <Badge variant="outline" className="mt-2 w-fit">
                 {collegeTheme.name}
               </Badge>

@@ -14,7 +14,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
-export const userRoleEnum = pgEnum("user_role", ["student", "instructor", "admin", "accountant", "super_admin"]);
+export const userRoleEnum = pgEnum("user_role", ["STUDENT", "TEACHER", "ADMIN", "SUPER_ADMIN", "ACCOUNTANT"]);
 export const courseStatusEnum = pgEnum("course_status", ["DRAFT", "PENDING_APPROVAL", "PUBLISHED", "REJECTED"]);
 export const contentTypeEnum = pgEnum("content_type", ["video", "text", "link", "file"]);
 export const approvalActionEnum = pgEnum("approval_action", ["APPROVE", "REJECT"]);
@@ -68,7 +68,6 @@ export const courses = pgTable("courses", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   coverImageUrl: varchar("cover_image_url", { length: 500 }),
-  price: integer("price").notNull().default(0),
   status: courseStatusEnum("status").notNull().default("DRAFT"),
   isLocked: boolean("is_locked").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
@@ -147,22 +146,6 @@ export const featuredProfiles = pgTable("featured_profiles", {
   sortOrder: integer("sort_order").notNull().default(0),
   createdByUserId: varchar("created_by_user_id").references(() => users.id),
   updatedByUserId: varchar("updated_by_user_id").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Discount Coupons table (managed by Accountant and Super Admin)
-export const discountCoupons = pgTable("discount_coupons", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  code: varchar("code", { length: 50 }).notNull().unique(),
-  description: text("description"),
-  discountPercent: integer("discount_percent").notNull(),
-  maxUses: integer("max_uses"),
-  usedCount: integer("used_count").notNull().default(0),
-  isActive: boolean("is_active").notNull().default(true),
-  validFrom: timestamp("valid_from"),
-  validUntil: timestamp("valid_until"),
-  createdByUserId: varchar("created_by_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -367,23 +350,6 @@ export const updateAdminDashboardStatsConfigSchema = createInsertSchema(adminDas
   totalStudentsValue: z.string().max(50).regex(/^\d+$/, "Must be a non-negative integer").optional(),
 });
 
-export const insertDiscountCouponSchema = createInsertSchema(discountCoupons).omit({
-  id: true,
-  usedCount: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  code: z.string().min(3, "Code must be at least 3 characters").max(50).toUpperCase(),
-  discountPercent: z.number().int().min(1).max(100),
-  maxUses: z.number().int().min(1).optional().nullable(),
-  validFrom: z.string().datetime().optional().nullable(),
-  validUntil: z.string().datetime().optional().nullable(),
-});
-
-export const updateDiscountCouponSchema = insertDiscountCouponSchema.partial().extend({
-  isActive: z.boolean().optional(),
-});
-
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -411,9 +377,6 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertJoinRequest = z.infer<typeof insertJoinRequestSchema>;
 export type JoinRequest = typeof joinRequests.$inferSelect;
-export type InsertDiscountCoupon = z.infer<typeof insertDiscountCouponSchema>;
-export type UpdateDiscountCoupon = z.infer<typeof updateDiscountCouponSchema>;
-export type DiscountCoupon = typeof discountCoupons.$inferSelect;
 
 // Extended types for frontend
 export type JoinRequestWithRelations = JoinRequest & {

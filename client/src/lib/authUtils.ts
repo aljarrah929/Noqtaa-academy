@@ -52,15 +52,15 @@ export function isDevelopmentMode(): boolean {
 
 export function getRoleDisplayName(role: string): string {
   switch (role) {
-    case "super_admin":
+    case "SUPER_ADMIN":
       return "Super Admin";
-    case "admin":
+    case "ADMIN":
       return "Admin";
-    case "instructor":
-      return "Instructor";
-    case "student":
+    case "TEACHER":
+      return "Teacher";
+    case "STUDENT":
       return "Student";
-    case "accountant":
+    case "ACCOUNTANT":
       return "Accountant";
     default:
       return role;
@@ -68,29 +68,29 @@ export function getRoleDisplayName(role: string): string {
 }
 
 export function canAccessAccountantDashboard(role: string): boolean {
-  return role === "accountant" || role === "super_admin";
+  return role === "ACCOUNTANT" || role === "SUPER_ADMIN";
 }
 
 export function canAccessAdminDashboard(role: string): boolean {
-  return role === "admin" || role === "super_admin";
+  return role === "ADMIN" || role === "SUPER_ADMIN";
 }
 
 export function canAccessTeacherDashboard(role: string): boolean {
-  return role === "instructor" || role === "admin" || role === "super_admin";
+  return role === "TEACHER" || role === "ADMIN" || role === "SUPER_ADMIN";
 }
 
 export function canManageRoles(role: string): boolean {
-  return role === "super_admin";
+  return role === "SUPER_ADMIN";
 }
 
 export function canManageColleges(role: string): boolean {
-  return role === "super_admin";
+  return role === "SUPER_ADMIN";
 }
 
 export function canApproveCourses(role: string): boolean {
-  return role === "admin" || role === "super_admin";
+  return role === "ADMIN" || role === "SUPER_ADMIN";
 }
 
 export function canEnrollStudents(role: string, courseTeacherId: string, userId: string): boolean {
-  return courseTeacherId === userId || role === "super_admin";
+  return courseTeacherId === userId || role === "SUPER_ADMIN";
 }

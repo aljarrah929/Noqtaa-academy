@@ -62,25 +62,15 @@ Preferred communication style: Simple, everyday language.
 - `sessions` - PostgreSQL-backed session storage
 
 ### Role-Based Access Control
-Database enum values (lowercase): `student`, `instructor`, `admin`, `accountant`, `super_admin`
-
-- **student**: Browse courses, view enrolled content, access student dashboard
-- **instructor**: Create/edit own courses (except price), submit for approval, manage lesson content, upload videos
-- **admin**: Approve/reject courses, manage teachers within assigned college, set course prices
-- **super_admin**: Full system access, manage all users/roles, manage colleges, upload videos
-- **accountant**: Read-only access to enrollment statistics grouped by college, PDF report download, manage discount coupons
+- **STUDENT**: Browse courses, view enrolled content, access student dashboard
+- **TEACHER**: Create/edit own courses, submit for approval, manage lesson content, upload videos to Cloudflare Stream
+- **ADMIN**: Approve/reject courses, manage teachers within assigned college
+- **SUPER_ADMIN**: Full system access, manage all users/roles, manage colleges, upload videos
+- **ACCOUNTANT**: Read-only access to enrollment statistics grouped by college, PDF report download (`/accountant` dashboard)
 
 ### Accountant API Endpoints
 - `GET /api/accountant/enrollments` - Returns enrollment stats grouped by college (requires ACCOUNTANT or SUPER_ADMIN role)
 - `GET /api/accountant/enrollments.pdf` - Generates English PDF enrollment report (requires ACCOUNTANT or SUPER_ADMIN role)
-
-### Discount Coupons API Endpoints
-- `GET /api/coupons` - List all discount coupons (requires ACCOUNTANT or SUPER_ADMIN role)
-- `POST /api/coupons` - Create a new discount coupon (requires ACCOUNTANT or SUPER_ADMIN role)
-- `PATCH /api/coupons/:id` - Update a discount coupon (requires ACCOUNTANT or SUPER_ADMIN role)
-- `DELETE /api/coupons/:id` - Delete a discount coupon (requires ACCOUNTANT or SUPER_ADMIN role)
-
-**Coupon Fields**: code (unique), discountPercent (1-100), maxUses (optional), usedCount, validFrom/validUntil (optional dates), isActive, description, createdByUserId
 
 ### Client-Server Communication
 - **Data Fetching**: TanStack Query with automatic caching and refetching
