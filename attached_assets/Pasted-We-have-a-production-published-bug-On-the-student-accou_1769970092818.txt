@@ -1,0 +1,60 @@
+We have a production (published) bug:
+
+On the student account, submitting a “Request to Join Course” with a required file upload (payment receipt image) fails with a UI toast:
+“Failed to submit join request”.
+
+I need you to fix this definitively in production, not just locally.
+
+Task:
+1) Locate the exact frontend request that is sent when clicking “Submit Request”.
+   - Identify the endpoint URL, method, and payload (FormData or JSON).
+   - Add TEMPORARY detailed error logging in the frontend:
+     - Log the response status + response body text (if any).
+     - If fetch throws, log the error message.
+   - Ensure the UI displays a meaningful error message (from server) instead of a generic toast.
+
+2) Inspect the backend route handling join requests.
+   - Find the handler/controller/service that creates the join request record and uploads/stores the receipt file.
+   - Add robust server-side logs:
+     - Log request userId, courseId, file presence, file size, mimetype.
+     - Log the final storage path/URL (if upload succeeds).
+     - On error, log full stack trace and return JSON: { message, code } with correct status codes.
+
+3) Fix the root cause (common production issues):
+   - If the upload relies on local filesystem paths, replace with persistent storage (the project already uses B2/Cloudflare media in other parts; reuse that approach).
+   - Ensure ENV/Secrets required for upload/storage exist in BOTH dev and published environments. Validate on startup:
+     - If missing, log clearly and return 500 with “Missing env var: X”.
+   - If the issue is authentication cookies in production:
+     - Ensure session cookies are sent to the API (credentials: "include") if needed.
+     - Ensure cookie SameSite/Secure settings work on the published domain.
+   - If the error is 413 (payload too large):
+     - Increase file upload limit for receipts (reasonable, e.g. 5–10 MB), and ensure body parsing supports multipart.
+   - If the error is CORS:
+     - Fix CORS headers and allow credentials only if needed.
+   - If DB constraint fails:
+     - Fix schema/validation and return proper 400 errors.
+
+4) Ensure API returns proper status codes:
+   - 401 if not logged in
+   - 403 if not allowed
+   - 400 for validation errors (missing file/courseId)
+   - 413 if file too large
+   - 500 only for unexpected errors (with safe message)
+
+5) Add an automated sanity check:
+   - Create a minimal integration test or a dev-only route to simulate join request creation and confirm it works in production build.
+   - Or add a simple server-side health check that confirms storage credentials are valid.
+
+6) After implementing, test end-to-end in the published app:
+   - Create student
+   - Upload receipt (jpg/png)
+   - Submit join request
+   - Confirm join request record is created and receipt URL is stored and viewable by admin/teacher as intended.
+
+Deliverables:
+- Code changes in both frontend and backend.
+- Clear logs and meaningful error responses.
+- Fix must work in production (published) environment.
+- Remove TEMPORARY debug banner/log spam after confirming it’s fixed, but keep useful error handling.
+
+Start by finding the exact failing request in the frontend, then trace it to backend and fix the actual root cause.

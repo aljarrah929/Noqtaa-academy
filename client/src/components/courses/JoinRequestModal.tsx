@@ -55,18 +55,39 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
         formData.append("message", message.trim());
       }
       
-      const response = await fetch(`/api/courses/${courseId}/join-request`, {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      });
+      console.log(`[JoinRequest] Submitting request for course ${courseId}, file: ${file.name}, size: ${file.size}`);
       
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to submit request");
+      let response: Response;
+      try {
+        response = await fetch(`/api/courses/${courseId}/join-request`, {
+          method: "POST",
+          credentials: "include",
+          body: formData,
+        });
+      } catch (networkError: any) {
+        console.error("[JoinRequest] Network error:", networkError);
+        throw new Error("Network error - please check your connection and try again");
       }
       
-      return response.json();
+      console.log(`[JoinRequest] Response status: ${response.status}`);
+      
+      let data: any;
+      try {
+        const text = await response.text();
+        console.log(`[JoinRequest] Response body: ${text}`);
+        data = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        console.error("[JoinRequest] Failed to parse response:", parseError);
+        throw new Error("Server returned an invalid response");
+      }
+      
+      if (!response.ok) {
+        const errorMsg = data.message || `Request failed (${response.status})`;
+        console.error(`[JoinRequest] Error: ${errorMsg}, code: ${data.code}`);
+        throw new Error(errorMsg);
+      }
+      
+      return data;
     },
     onSuccess: () => {
       toast({
@@ -79,8 +100,9 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
       queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId, "join-request", "status"] });
     },
     onError: (error: Error) => {
+      console.error("[JoinRequest] Mutation error:", error);
       toast({
-        title: "Error",
+        title: "Submission Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -90,10 +112,10 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (selected) {
-      if (selected.size > 2 * 1024 * 1024) {
+      if (selected.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Receipt image must be under 2MB",
+          description: "Receipt image must be under 5MB",
           variant: "destructive",
         });
         return;
