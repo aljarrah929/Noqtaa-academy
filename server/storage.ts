@@ -10,6 +10,7 @@ import {
   adminDashboardStatsConfig,
   passwordResetTokens,
   joinRequests,
+  discountCoupons,
   type User,
   type UpsertUser,
   type College,
@@ -34,6 +35,9 @@ import {
   type JoinRequest,
   type InsertJoinRequest,
   type JoinRequestWithRelations,
+  type DiscountCoupon,
+  type InsertDiscountCoupon,
+  type UpdateDiscountCoupon,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, count, sql, or, ilike, isNull } from "drizzle-orm";
@@ -148,6 +152,14 @@ export interface IStorage {
   hasPendingJoinRequest(studentId: string, courseId: number): Promise<boolean>;
   hasApprovedJoinRequest(studentId: string, courseId: number): Promise<boolean>;
   updateJoinRequestStatus(id: number, status: JoinRequest["status"]): Promise<JoinRequest | undefined>;
+  
+  // Discount Coupons
+  getDiscountCoupons(): Promise<DiscountCoupon[]>;
+  getDiscountCouponById(id: number): Promise<DiscountCoupon | undefined>;
+  getDiscountCouponByCode(code: string): Promise<DiscountCoupon | undefined>;
+  createDiscountCoupon(data: Omit<InsertDiscountCoupon, "createdByUserId"> & { createdByUserId: string }): Promise<DiscountCoupon>;
+  updateDiscountCoupon(id: number, data: Partial<UpdateDiscountCoupon>): Promise<DiscountCoupon | undefined>;
+  deleteDiscountCoupon(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -881,6 +893,57 @@ export class DatabaseStorage implements IStorage {
       .where(eq(joinRequests.id, id))
       .returning();
     return updated;
+  }
+
+  // Discount Coupons
+  async getDiscountCoupons(): Promise<DiscountCoupon[]> {
+    return db.select().from(discountCoupons).orderBy(desc(discountCoupons.createdAt));
+  }
+
+  async getDiscountCouponById(id: number): Promise<DiscountCoupon | undefined> {
+    const [coupon] = await db.select().from(discountCoupons).where(eq(discountCoupons.id, id));
+    return coupon;
+  }
+
+  async getDiscountCouponByCode(code: string): Promise<DiscountCoupon | undefined> {
+    const [coupon] = await db.select().from(discountCoupons).where(eq(discountCoupons.code, code.toUpperCase()));
+    return coupon;
+  }
+
+  async createDiscountCoupon(data: Omit<InsertDiscountCoupon, "createdByUserId"> & { createdByUserId: string }): Promise<DiscountCoupon> {
+    const [coupon] = await db.insert(discountCoupons).values({
+      code: data.code.toUpperCase(),
+      description: data.description,
+      discountPercent: data.discountPercent,
+      maxUses: data.maxUses,
+      isActive: data.isActive ?? true,
+      validFrom: data.validFrom ? new Date(data.validFrom) : null,
+      validUntil: data.validUntil ? new Date(data.validUntil) : null,
+      createdByUserId: data.createdByUserId,
+    }).returning();
+    return coupon;
+  }
+
+  async updateDiscountCoupon(id: number, data: Partial<UpdateDiscountCoupon>): Promise<DiscountCoupon | undefined> {
+    const updateData: any = { updatedAt: new Date() };
+    if (data.code !== undefined) updateData.code = data.code.toUpperCase();
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.discountPercent !== undefined) updateData.discountPercent = data.discountPercent;
+    if (data.maxUses !== undefined) updateData.maxUses = data.maxUses;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.validFrom !== undefined) updateData.validFrom = data.validFrom ? new Date(data.validFrom) : null;
+    if (data.validUntil !== undefined) updateData.validUntil = data.validUntil ? new Date(data.validUntil) : null;
+
+    const [updated] = await db
+      .update(discountCoupons)
+      .set(updateData)
+      .where(eq(discountCoupons.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDiscountCoupon(id: number): Promise<void> {
+    await db.delete(discountCoupons).where(eq(discountCoupons.id, id));
   }
 }
 

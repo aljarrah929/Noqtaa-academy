@@ -107,6 +107,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
 
   const accountantMenuItems = [
     { href: "/accountant", label: "Enrollment Stats", icon: BarChart3 },
+    { href: "/accountant/coupons", label: "Discount Coupons", icon: Settings },
   ];
 
   const getMenuItems = () => {

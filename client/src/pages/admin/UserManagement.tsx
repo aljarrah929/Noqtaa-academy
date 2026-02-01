@@ -36,7 +36,7 @@ import { Users, Search, Shield } from "lucide-react";
 import { getRoleDisplayName } from "@/lib/authUtils";
 import type { User } from "@shared/schema";
 
-const ROLES = ["STUDENT", "TEACHER", "ADMIN", "SUPER_ADMIN"] as const;
+const ROLES = ["STUDENT", "TEACHER", "ADMIN", "SUPER_ADMIN", "ACCOUNTANT"] as const;
 
 export default function UserManagement() {
   const { toast } = useToast();

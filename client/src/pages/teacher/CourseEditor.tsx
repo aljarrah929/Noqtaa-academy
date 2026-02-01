@@ -45,7 +45,17 @@ const courseFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().optional(),
   collegeId: z.string().min(1, "College is required"),
+  teacherId: z.string().optional(),
 });
+
+interface InstructorOption {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  role: string;
+  collegeId: number | null;
+}
 
 const lessonFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
@@ -79,12 +89,18 @@ export default function CourseEditor() {
     queryKey: ["/api/colleges"],
   });
 
+  const { data: instructors } = useQuery<InstructorOption[]>({
+    queryKey: ["/api/admin/instructors"],
+    enabled: isAdmin,
+  });
+
   const courseForm = useForm<CourseFormValues>({
     resolver: zodResolver(courseFormSchema),
     defaultValues: {
       title: "",
       description: "",
       collegeId: "",
+      teacherId: user?.id || "",
     },
   });
 
@@ -103,6 +119,7 @@ export default function CourseEditor() {
         title: course.title,
         description: course.description || "",
         collegeId: String(course.collegeId),
+        teacherId: course.teacherId,
       });
     }
   }, [course, courseForm]);
@@ -112,6 +129,7 @@ export default function CourseEditor() {
       const res = await apiRequest("POST", "/api/courses", {
         ...data,
         collegeId: Number(data.collegeId),
+        teacherId: data.teacherId || user?.id,
       });
       return res.json();
     },
@@ -306,7 +324,11 @@ export default function CourseEditor() {
                           </FormControl>
                           <SelectContent>
                             {colleges?.map((college) => (
-                              <SelectItem key={college.id} value={String(college.id)}>
+                              <SelectItem 
+                                key={college.id} 
+                                value={String(college.id)}
+                                data-testid={`select-college-item-${college.id}`}
+                              >
                                 {college.name}
                               </SelectItem>
                             ))}
@@ -316,6 +338,37 @@ export default function CourseEditor() {
                       </FormItem>
                     )}
                   />
+
+                  {isAdmin && instructors && instructors.length > 0 && (
+                    <FormField
+                      control={courseForm.control}
+                      name="teacherId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Course Instructor</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-instructor">
+                                <SelectValue placeholder="Select an instructor" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {instructors.map((instructor) => (
+                                <SelectItem 
+                                  key={instructor.id} 
+                                  value={instructor.id}
+                                  data-testid={`select-instructor-item-${instructor.id}`}
+                                >
+                                  {instructor.firstName} {instructor.lastName} ({instructor.email})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   <FormField
                     control={courseForm.control}

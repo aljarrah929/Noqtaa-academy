@@ -150,6 +150,22 @@ export const featuredProfiles = pgTable("featured_profiles", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Discount Coupons table (managed by Accountant and Super Admin)
+export const discountCoupons = pgTable("discount_coupons", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  description: text("description"),
+  discountPercent: integer("discount_percent").notNull(),
+  maxUses: integer("max_uses"),
+  usedCount: integer("used_count").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  validFrom: timestamp("valid_from"),
+  validUntil: timestamp("valid_until"),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Home Stats table (single-row config for landing page stats)
 export const homeStats = pgTable("home_stats", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -350,6 +366,23 @@ export const updateAdminDashboardStatsConfigSchema = createInsertSchema(adminDas
   totalStudentsValue: z.string().max(50).regex(/^\d+$/, "Must be a non-negative integer").optional(),
 });
 
+export const insertDiscountCouponSchema = createInsertSchema(discountCoupons).omit({
+  id: true,
+  usedCount: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  code: z.string().min(3, "Code must be at least 3 characters").max(50).toUpperCase(),
+  discountPercent: z.number().int().min(1).max(100),
+  maxUses: z.number().int().min(1).optional().nullable(),
+  validFrom: z.string().datetime().optional().nullable(),
+  validUntil: z.string().datetime().optional().nullable(),
+});
+
+export const updateDiscountCouponSchema = insertDiscountCouponSchema.partial().extend({
+  isActive: z.boolean().optional(),
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -377,6 +410,9 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertJoinRequest = z.infer<typeof insertJoinRequestSchema>;
 export type JoinRequest = typeof joinRequests.$inferSelect;
+export type InsertDiscountCoupon = z.infer<typeof insertDiscountCouponSchema>;
+export type UpdateDiscountCoupon = z.infer<typeof updateDiscountCouponSchema>;
+export type DiscountCoupon = typeof discountCoupons.$inferSelect;
 
 // Extended types for frontend
 export type JoinRequestWithRelations = JoinRequest & {

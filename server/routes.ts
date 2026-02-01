@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, requireRole, seedSuperAdmin } from "./auth";
-import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema, updateAdminDashboardStatsConfigSchema } from "@shared/schema";
+import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema, updateAdminDashboardStatsConfigSchema, insertDiscountCouponSchema, updateDiscountCouponSchema } from "@shared/schema";
 import { z } from "zod";
 import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -893,6 +893,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching teachers:", error);
       res.status(500).json({ message: "Failed to fetch teachers" });
+    }
+  });
+
+  // Get users who can be assigned as course instructors (for Admin/Super Admin)
+  app.get("/api/admin/instructors", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only admins can view potential instructors" });
+      }
+      
+      // Get all users (for Super Admin) or users in same college (for Admin)
+      const allUsers = await storage.getAllUsers();
+      let instructors = allUsers;
+      
+      // For Admin, filter to users in same college
+      if (user.role === "ADMIN" && user.collegeId) {
+        instructors = allUsers.filter(u => u.collegeId === user.collegeId);
+      }
+      
+      // Return only essential info for selector
+      res.json(instructors.map(u => ({
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        email: u.email,
+        role: u.role,
+        collegeId: u.collegeId,
+      })));
+    } catch (error) {
+      console.error("Error fetching instructors:", error);
+      res.status(500).json({ message: "Failed to fetch instructors" });
     }
   });
 
@@ -2239,6 +2273,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating PDF report:", error);
       res.status(500).json({ message: "Failed to generate PDF report" });
+    }
+  });
+
+  // ==================== DISCOUNT COUPONS ENDPOINTS ====================
+  
+  // Get all discount coupons
+  app.get("/api/coupons", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+    try {
+      const coupons = await storage.getDiscountCoupons();
+      res.json(coupons);
+    } catch (error) {
+      console.error("Error fetching coupons:", error);
+      res.status(500).json({ message: "Failed to fetch coupons" });
+    }
+  });
+
+  // Get single coupon by ID
+  app.get("/api/coupons/:id", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+    try {
+      const coupon = await storage.getDiscountCouponById(parseInt(req.params.id));
+      if (!coupon) {
+        return res.status(404).json({ message: "Coupon not found" });
+      }
+      res.json(coupon);
+    } catch (error) {
+      console.error("Error fetching coupon:", error);
+      res.status(500).json({ message: "Failed to fetch coupon" });
+    }
+  });
+
+  // Create new coupon
+  app.post("/api/coupons", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+    try {
+      const data = insertDiscountCouponSchema.parse(req.body);
+      
+      // Check if code already exists
+      const existing = await storage.getDiscountCouponByCode(data.code);
+      if (existing) {
+        return res.status(400).json({ message: "Coupon code already exists" });
+      }
+      
+      const coupon = await storage.createDiscountCoupon({
+        ...data,
+        createdByUserId: req.user.id,
+      });
+      res.status(201).json(coupon);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      console.error("Error creating coupon:", error);
+      res.status(500).json({ message: "Failed to create coupon" });
+    }
+  });
+
+  // Update coupon
+  app.patch("/api/coupons/:id", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+    try {
+      const couponId = parseInt(req.params.id);
+      const existing = await storage.getDiscountCouponById(couponId);
+      if (!existing) {
+        return res.status(404).json({ message: "Coupon not found" });
+      }
+      
+      const data = updateDiscountCouponSchema.parse(req.body);
+      
+      // Check if new code conflicts with another coupon
+      if (data.code && data.code.toUpperCase() !== existing.code) {
+        const codeConflict = await storage.getDiscountCouponByCode(data.code);
+        if (codeConflict) {
+          return res.status(400).json({ message: "Coupon code already exists" });
+        }
+      }
+      
+      const updated = await storage.updateDiscountCoupon(couponId, data);
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      console.error("Error updating coupon:", error);
+      res.status(500).json({ message: "Failed to update coupon" });
+    }
+  });
+
+  // Delete coupon
+  app.delete("/api/coupons/:id", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+    try {
+      const couponId = parseInt(req.params.id);
+      const existing = await storage.getDiscountCouponById(couponId);
+      if (!existing) {
+        return res.status(404).json({ message: "Coupon not found" });
+      }
+      
+      await storage.deleteDiscountCoupon(couponId);
+      res.json({ message: "Coupon deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting coupon:", error);
+      res.status(500).json({ message: "Failed to delete coupon" });
     }
   });
 
