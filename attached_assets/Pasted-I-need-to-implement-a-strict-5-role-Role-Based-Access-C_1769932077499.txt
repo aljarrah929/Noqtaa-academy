@@ -1,0 +1,49 @@
+I need to implement a strict 5-role Role-Based Access Control (RBAC) system.
+Please refactor the Database, API Middleware, and Frontend UI to implement these exact permissions.
+
+**1. Update User Roles Enum:**
+The roles are: `student`, `instructor`, `admin`, `accountant`, `super_admin`.
+
+**2. Detailed Permissions per Role:**
+
+**A. Student:**
+* **Shop:** Can browse and purchase courses.
+* **Interact:** Can contact the instructor via email.
+* **Learn:** Can watch course content (videos/files) ONLY for courses they own.
+* **Account:** Can edit their profile and reset their password.
+
+**B. Instructor:**
+* **Course Creation:** Can "Request" to add a new course. (Logic: Created course status must be 'PENDING' by default).
+* **Content Management:** Can upload/delete videos and files only for their own courses.
+* **Stats:** Can see the count of enrolled students in their specific courses.
+
+**C. Admin:**
+* **Approvals:**
+    * Can view "Pending" courses and approve them (change status to 'Active').
+    * Can view "Pending" student enrollment requests and accept them.
+* **User Management:** Can manually add a student to a course using the Student's Email or ID.
+* **Price Control:** Has the exclusive right to set or edit the Price of any course.
+* **Statistics Dashboard:**
+    * Total number of courses.
+    * Number of students per specific course.
+    * Total number of students on the platform.
+    * Total number of instructors.
+    * Count of pending requests (courses & enrollments).
+
+**D. Accountant:**
+* **View Only:** Can view a list of all Instructors.
+* **Drill Down:** Can click an Instructor to see their courses and the student count per course.
+* **Global Stats:** Can see the Total Number of Students on the platform.
+* **Action:** Can generate and "Print" invoices for student payments.
+* **RESTRICTION:** Cannot view course videos or edit prices.
+
+**E. Super Admin:**
+* **Inheritance:** Has ALL permissions of the Admin.
+* **God Mode:** Can view course content (videos/lessons) for ALL courses on the platform (unlike the Accountant).
+
+**3. Implementation Requirements:**
+* **Middleware:** Secure all API routes based on these roles.
+* **UI/Sidebar:** Dynamically hide/show links based on the role. For example, "Edit Price" button should ONLY appear for Admin/Super Admin.
+* **Course Logic:** Ensure Instructors cannot publish a course directly; it must go through Admin approval.
+
+Please proceed with these changes.

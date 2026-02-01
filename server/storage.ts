@@ -127,7 +127,7 @@ export interface IStorage {
   createCourseApprovalLog(log: InsertCourseApprovalLog): Promise<CourseApprovalLog>;
   getPendingCourses(collegeId?: number): Promise<CourseWithRelations[]>;
   getTeacherStats(teacherId: string): Promise<{ totalCourses: number; totalStudents: number; publishedCourses: number }>;
-  getAdminStats(collegeId?: number): Promise<{ totalCourses: number; totalStudents: number; totalTeachers: number; pendingApprovals: number }>;
+  getAdminStats(collegeId?: number): Promise<{ totalCourses: number; totalStudents: number; totalTeachers: number; pendingApprovals: number; pendingJoinRequests: number }>;
   getTeachersWithStats(collegeId?: number): Promise<(UserWithCollege & { _count: { courses: number; students: number } })[]>;
   getFeaturedProfiles(activeOnly?: boolean): Promise<FeaturedProfile[]>;
   getFeaturedProfileById(id: number): Promise<FeaturedProfile | undefined>;
@@ -639,7 +639,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getAdminStats(collegeId?: number): Promise<{ totalCourses: number; totalStudents: number; totalTeachers: number; pendingApprovals: number }> {
+  async getAdminStats(collegeId?: number): Promise<{ totalCourses: number; totalStudents: number; totalTeachers: number; pendingApprovals: number; pendingJoinRequests: number }> {
     let courseQuery = collegeId
       ? await db.select().from(courses).where(eq(courses.collegeId, collegeId))
       : await db.select().from(courses);
@@ -652,11 +652,25 @@ export class DatabaseStorage implements IStorage {
       ? await db.select().from(users).where(and(eq(users.role, "STUDENT"), eq(users.collegeId, collegeId)))
       : await db.select().from(users).where(eq(users.role, "STUDENT"));
 
+    // Get pending join requests
+    let pendingJoinRequestsQuery;
+    if (collegeId) {
+      // For Admin: only count pending requests for courses in their college
+      const collegeCourseIds = courseQuery.map(c => c.id);
+      pendingJoinRequestsQuery = collegeCourseIds.length > 0
+        ? await db.select().from(joinRequests).where(and(eq(joinRequests.status, "PENDING"), sql`${joinRequests.courseId} IN ${collegeCourseIds}`))
+        : [];
+    } else {
+      // For SuperAdmin: count all pending requests
+      pendingJoinRequestsQuery = await db.select().from(joinRequests).where(eq(joinRequests.status, "PENDING"));
+    }
+
     return {
       totalCourses: courseQuery.length,
       totalStudents: studentQuery.length,
       totalTeachers: teacherQuery.length,
       pendingApprovals: courseQuery.filter(c => c.status === "PENDING_APPROVAL").length,
+      pendingJoinRequests: pendingJoinRequestsQuery.length,
     };
   }
 

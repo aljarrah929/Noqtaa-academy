@@ -316,12 +316,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+      const isTeacher = user?.role === "TEACHER";
+      const isOwner = course.teacherId === userId;
       
-      if (!isAdmin) {
-        return res.status(403).json({ message: "Only admins can update course details" });
+      // Teachers can only update their own courses
+      if (isTeacher && !isOwner) {
+        return res.status(403).json({ message: "You can only update your own courses" });
       }
       
-      const data = insertCourseSchema.partial().parse(req.body);
+      // Only Admin/SuperAdmin can update courses they don't own
+      if (!isAdmin && !isOwner) {
+        return res.status(403).json({ message: "Not allowed for your role" });
+      }
+      
+      let data = insertCourseSchema.partial().parse(req.body);
+      
+      // RBAC: Only Admin/SuperAdmin can change price
+      if (data.price !== undefined && !isAdmin) {
+        console.log(`[RBAC] Blocked price update attempt by user ${userId} (role: ${user?.role})`);
+        delete (data as any).price;
+      }
+      
+      // Log sensitive action: price change
+      if (data.price !== undefined && isAdmin) {
+        console.log(`[RBAC LOG] Price updated on course ${id} by ${userId} (${user?.role}): ${course.price} -> ${data.price}`);
+      }
+      
       const updated = await storage.updateCourse(id, data);
       res.json(updated);
     } catch (error) {
@@ -802,6 +822,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching teacher stats:", error);
       res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  // Teacher request to add a new course (PENDING_APPROVAL by default)
+  app.post("/api/teacher/courses/request", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "TEACHER") {
+        return res.status(403).json({ message: "Only instructors can request to add courses" });
+      }
+      
+      const { title, description } = req.body;
+      
+      if (!title) {
+        return res.status(400).json({ message: "Course title is required" });
+      }
+      
+      // RBAC: Teacher can only create courses for their own college
+      if (!user.collegeId) {
+        return res.status(403).json({ message: "Instructor must be assigned to a college to create courses" });
+      }
+      
+      // Validate with schema
+      const courseData = insertCourseSchema.parse({
+        title,
+        description: description || "",
+        collegeId: user.collegeId, // Force to teacher's college (RBAC)
+        teacherId: userId,
+        status: "PENDING_APPROVAL",
+        price: 0, // Only Admin can set price
+      });
+      
+      // Create course with PENDING_APPROVAL status (requires Admin approval)
+      const course = await storage.createCourse(courseData);
+      
+      console.log(`[RBAC LOG] Course creation request by TEACHER ${userId}: course ${course.id} "${title}" - status: PENDING_APPROVAL`);
+      
+      res.status(201).json(course);
+    } catch (error) {
+      console.error("Error creating course request:", error);
+      res.status(500).json({ message: "Failed to create course request" });
     }
   });
 
