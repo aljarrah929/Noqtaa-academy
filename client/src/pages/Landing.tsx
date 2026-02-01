@@ -103,7 +103,7 @@ export default function Landing() {
         {heroImages.map((image, index) => (
           <div
             key={image.src}
-            className="absolute inset-0 transition-opacity duration-[800ms] ease-in-out"
+            className="absolute inset-0 transition-opacity duration-700 ease-in-out"
             style={{ opacity: currentSlide === index ? 1 : 0 }}
           >
             <img

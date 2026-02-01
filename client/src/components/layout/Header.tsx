@@ -90,7 +90,7 @@ export function Header() {
     backgroundColor: collegeTheme.primaryColor,
   } : undefined;
 
-  const isCollegeThemed = collegeTheme && user?.role === "student";
+  const isCollegeThemed = !!(collegeTheme && user?.role === "student");
 
   return (
     <header 
@@ -209,7 +209,7 @@ export function Header() {
               <Link href="/login">
                 <Button 
                   className={isCollegeThemed ? 'bg-white text-gray-900 hover:bg-white/90' : ''} 
-                  data-testid="button-login"
+                  data-testid="button-login-header"
                 >
                   Log in
                 </Button>
