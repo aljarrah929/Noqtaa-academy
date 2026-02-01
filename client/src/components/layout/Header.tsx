@@ -90,7 +90,7 @@ export function Header() {
     backgroundColor: collegeTheme.primaryColor,
   } : undefined;
 
-  const isCollegeThemed = collegeTheme && user?.role === "STUDENT";
+  const isCollegeThemed = !!(collegeTheme && user?.role === "STUDENT");
 
   return (
     <header 
