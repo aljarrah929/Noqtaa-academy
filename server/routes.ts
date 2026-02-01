@@ -2,7 +2,18 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, requireRole, seedSuperAdmin } from "./auth";
-import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema, updateAdminDashboardStatsConfigSchema, insertDiscountCouponSchema, updateDiscountCouponSchema } from "@shared/schema";
+import { 
+  insertCourseSchema, 
+  insertLessonSchema, 
+  insertEnrollmentSchema, 
+  insertCollegeSchema, 
+  insertCourseApprovalLogSchema, 
+  insertFeaturedProfileSchema, 
+  updateHomeStatsSchema, 
+  updateAdminDashboardStatsConfigSchema, 
+  insertDiscountCouponSchema, 
+  updateDiscountCouponSchema 
+} from "@shared/schema";
 import { z } from "zod";
 import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -44,7 +55,6 @@ function getB2Client(): S3Client | null {
     console.log("[B2] Client not configured - missing credentials");
     return null;
   }
-  console.log("[B2] Creating S3Client with endpoint:", B2_ENDPOINT, "region:", B2_REGION);
   return new S3Client({
     region: B2_REGION,
     endpoint: B2_ENDPOINT,
@@ -63,48 +73,35 @@ function getVideoCdnUrl(objectKey: string): string {
   return `${B2_ENDPOINT}/${B2_BUCKET_NAME}/${objectKey}`;
 }
 
-// SINGLE SOURCE OF TRUTH: Build video object key
-// Format: videos/<courseId>/<timestamp>-<sanitizedFilename>
-// No bucket name prefix - the bucket is already "CPE-academy"
 function buildVideoObjectKey(courseId: number | string, fileName: string, timestamp?: number): string {
   const ts = timestamp || Date.now();
-  // Sanitize filename: keep only alphanumeric, dots, underscores, hyphens
   const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   return `videos/${courseId}/${ts}-${safeFileName}`;
 }
 
-// Verify object exists in B2 bucket using HeadObject
 async function verifyObjectExistsInB2(b2Client: S3Client, objectKey: string): Promise<boolean> {
   if (!B2_BUCKET_NAME) return false;
-  
   try {
     const command = new HeadObjectCommand({
       Bucket: B2_BUCKET_NAME,
       Key: objectKey,
     });
     await b2Client.send(command);
-    console.log("[B2 Verify] Object exists:", objectKey);
     return true;
   } catch (error: any) {
-    console.log("[B2 Verify] Object NOT found:", objectKey, error?.message || error);
     return false;
   }
 }
 
-// Verify CDN URL returns 200/206 (optional additional check)
 async function verifyCdnUrlAccessible(cdnUrl: string): Promise<boolean> {
   try {
     const response = await fetch(cdnUrl, { method: "HEAD" });
-    const ok = response.status === 200 || response.status === 206;
-    console.log("[CDN Verify]", cdnUrl, "status:", response.status, "ok:", ok);
-    return ok;
+    return response.status === 200 || response.status === 206;
   } catch (error: any) {
-    console.log("[CDN Verify] Error:", cdnUrl, error?.message || error);
     return false;
   }
 }
 
-// Allowed file types for upload
 const ALLOWED_FILE_TYPES = [
   "application/pdf",
   "application/msword",
@@ -119,13 +116,12 @@ const ALLOWED_FILE_TYPES = [
 ];
 
 const ALLOWED_EXTENSIONS = ["pdf", "doc", "docx", "ppt", "pptx", "zip", "png", "jpg", "jpeg"];
-
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
   await seedSuperAdmin();
-  
+
   // Migrate existing users without public IDs
   try {
     const migratedCount = await storage.migrateUsersWithoutPublicId();
@@ -135,6 +131,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error("Error migrating users with public IDs:", error);
   }
+
+  // ==================== AUTH & USERS ====================
 
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
@@ -151,21 +149,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const { collegeId } = req.body;
-      
       if (!collegeId || typeof collegeId !== "number") {
         return res.status(400).json({ message: "Valid college ID is required" });
       }
-      
       const college = await storage.getCollegeById(collegeId);
       if (!college) {
         return res.status(404).json({ message: "College not found" });
       }
-      
       const user = await storage.updateUserCollege(userId, collegeId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
       res.json(user);
     } catch (error) {
       console.error("Error updating user college:", error);
@@ -173,12 +167,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== COLLEGES ====================
+
   app.get("/api/colleges", async (_req, res) => {
     try {
       const collegeList = await storage.getColleges();
       res.json(collegeList);
     } catch (error) {
-      console.error("Error fetching colleges:", error);
       res.status(500).json({ message: "Failed to fetch colleges" });
     }
   });
@@ -187,12 +182,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const college = await storage.getCollegeById(id);
-      if (!college) {
-        return res.status(404).json({ message: "College not found" });
-      }
+      if (!college) return res.status(404).json({ message: "College not found" });
       res.json(college);
     } catch (error) {
-      console.error("Error fetching college:", error);
       res.status(500).json({ message: "Failed to fetch college" });
     }
   });
@@ -208,7 +200,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const college = await storage.createCollege(data);
       res.status(201).json(college);
     } catch (error) {
-      console.error("Error creating college:", error);
       res.status(500).json({ message: "Failed to create college" });
     }
   });
@@ -223,12 +214,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const data = insertCollegeSchema.partial().parse(req.body);
       const college = await storage.updateCollege(id, data);
-      if (!college) {
-        return res.status(404).json({ message: "College not found" });
-      }
+      if (!college) return res.status(404).json({ message: "College not found" });
       res.json(college);
     } catch (error) {
-      console.error("Error updating college:", error);
       res.status(500).json({ message: "Failed to update college" });
     }
   });
@@ -244,10 +232,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteCollege(id);
       res.status(204).send();
     } catch (error) {
-      console.error("Error deleting college:", error);
       res.status(500).json({ message: "Failed to delete college" });
     }
   });
+
+  // ==================== COURSES (Unified & Protected) ====================
 
   app.get("/api/courses", async (req, res) => {
     try {
@@ -259,7 +248,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(courseList);
     } catch (error) {
-      console.error("Error fetching courses:", error);
       res.status(500).json({ message: "Failed to fetch courses" });
     }
   });
@@ -269,7 +257,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const courseList = await storage.getCourses(undefined, "PUBLISHED");
       res.json(courseList.slice(0, 6));
     } catch (error) {
-      console.error("Error fetching featured courses:", error);
       res.status(500).json({ message: "Failed to fetch featured courses" });
     }
   });
@@ -278,24 +265,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const course = await storage.getCourseById(id);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
+      if (!course) return res.status(404).json({ message: "Course not found" });
       res.json(course);
     } catch (error) {
-      console.error("Error fetching course:", error);
       res.status(500).json({ message: "Failed to fetch course" });
     }
   });
 
+  // 🔥 [NEW] Unified Create Course Endpoint
+  // Handles both Admin (Instant Publish) and Instructor (Pending Approval)
   app.post("/api/courses", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
-        return res.status(403).json({ message: "Only admins can create courses" });
+      const { title, description, price, collegeId, teacherId } = req.body;
+
+      if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+      // 1. Block Students and Accountants
+      if (user.role === "student" || user.role === "accountant") {
+        return res.status(403).json({ message: "Not authorized to create courses" });
       }
-      const data = insertCourseSchema.parse({ ...req.body, teacherId: req.body.teacherId || userId });
+
+      // 2. Determine Status and Owner based on Role
+      let status = "PENDING_APPROVAL"; // Default for instructors
+      let assignedTeacherId = userId; // Default owner is self
+      let assignedCollegeId = user.collegeId;
+
+      // Admin/Super Admin Logic
+      if (user.role === "admin" || user.role === "super_admin") {
+        status = "PUBLISHED"; // Admins publish instantly
+        if (teacherId) assignedTeacherId = teacherId; // Can assign to other instructors
+        if (collegeId) assignedCollegeId = collegeId; // Can override college
+      }
+
+      // Instructor Logic (Must have a college)
+      if (user.role === "instructor" && !assignedCollegeId) {
+        return res.status(400).json({ message: "Instructor must belong to a college to create courses" });
+      }
+
+      const data = insertCourseSchema.parse({
+        title,
+        description,
+        price: (user.role === "admin" || user.role === "super_admin") ? price : 0, // Instructors cannot set price
+        collegeId: assignedCollegeId,
+        teacherId: assignedTeacherId,
+        status,
+      });
+
       const course = await storage.createCourse(data);
       res.status(201).json(course);
     } catch (error) {
@@ -304,44 +321,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // 🔥 [NEW] Protected Update Course Endpoint
   app.patch("/api/courses/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       const id = parseInt(req.params.id);
       const course = await storage.getCourseById(id);
-      
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
+
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
       const isAdmin = user?.role === "admin" || user?.role === "super_admin";
-      const isTeacher = user?.role === "instructor";
       const isOwner = course.teacherId === userId;
-      
-      // Teachers can only update their own courses
-      if (isTeacher && !isOwner) {
-        return res.status(403).json({ message: "You can only update your own courses" });
-      }
-      
-      // Only Admin/SuperAdmin can update courses they don't own
+
+      // Strict Authorization check
       if (!isAdmin && !isOwner) {
-        return res.status(403).json({ message: "Not allowed for your role" });
+        return res.status(403).json({ message: "Not authorized to update this course" });
       }
-      
+
       let data = insertCourseSchema.partial().parse(req.body);
-      
-      // RBAC: Only Admin/SuperAdmin can change price
-      if (data.price !== undefined && !isAdmin) {
-        console.log(`[RBAC] Blocked price update attempt by user ${userId} (role: ${user?.role})`);
+
+      // ⛔ Security: Instructors cannot change Price or Status directly
+      if (!isAdmin) {
         delete (data as any).price;
+        delete (data as any).status; 
       }
-      
-      // Log sensitive action: price change
-      if (data.price !== undefined && isAdmin) {
-        console.log(`[RBAC LOG] Price updated on course ${id} by ${userId} (${user?.role}): ${course.price} -> ${data.price}`);
-      }
-      
+
       const updated = await storage.updateCourse(id, data);
       res.json(updated);
     } catch (error) {
@@ -356,71 +361,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       const id = parseInt(req.params.id);
       const course = await storage.getCourseById(id);
-      
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
+
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
       const isAdmin = user?.role === "admin" || user?.role === "super_admin";
-      
+
       if (!isAdmin) {
         return res.status(403).json({ message: "Only admins can delete courses" });
       }
-      
+
       await storage.deleteCourse(id);
       res.status(204).send();
     } catch (error) {
-      console.error("Error deleting course:", error);
       res.status(500).json({ message: "Failed to delete course" });
     }
   });
 
-  app.post("/api/courses/:id/submit", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const id = parseInt(req.params.id);
-      const course = await storage.getCourseById(id);
-      
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      if (course.teacherId !== userId) {
-        return res.status(403).json({ message: "Only the course owner can submit for approval" });
-      }
-      
-      if (course.status !== "DRAFT" && course.status !== "REJECTED") {
-        return res.status(400).json({ message: "Course is not in a submittable state" });
-      }
-      
-      const updated = await storage.updateCourse(id, { status: "PENDING_APPROVAL" });
-      res.json(updated);
-    } catch (error) {
-      console.error("Error submitting course:", error);
-      res.status(500).json({ message: "Failed to submit course" });
-    }
-  });
-
+  // Approval Endpoints (Admin Only)
   app.post("/api/courses/:id/approve", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      
       if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can approve courses" });
       }
-      
       const id = parseInt(req.params.id);
-      const course = await storage.getCourseById(id);
-      
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      if (course.status !== "PENDING_APPROVAL") {
-        return res.status(400).json({ message: "Course is not pending approval" });
-      }
-      
       const updated = await storage.updateCourse(id, { status: "PUBLISHED" });
       await storage.createCourseApprovalLog({
         courseId: id,
@@ -430,7 +395,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(updated);
     } catch (error) {
-      console.error("Error approving course:", error);
       res.status(500).json({ message: "Failed to approve course" });
     }
   });
@@ -439,22 +403,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      
       if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can reject courses" });
       }
-      
       const id = parseInt(req.params.id);
-      const course = await storage.getCourseById(id);
-      
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      if (course.status !== "PENDING_APPROVAL") {
-        return res.status(400).json({ message: "Course is not pending approval" });
-      }
-      
       const updated = await storage.updateCourse(id, { status: "REJECTED" });
       await storage.createCourseApprovalLog({
         courseId: id,
@@ -464,10 +416,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(updated);
     } catch (error) {
-      console.error("Error rejecting course:", error);
       res.status(500).json({ message: "Failed to reject course" });
     }
   });
+
+  // ==================== LESSONS ====================
 
   app.get("/api/courses/:id/lessons", async (req, res) => {
     try {
@@ -475,7 +428,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lessonList = await storage.getLessonsByCourse(courseId);
       res.json(lessonList);
     } catch (error) {
-      console.error("Error fetching lessons:", error);
       res.status(500).json({ message: "Failed to fetch lessons" });
     }
   });
@@ -485,97 +437,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const courseId = parseInt(req.params.id);
       const course = await storage.getCourseById(courseId);
-      
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      if (course.teacherId !== userId) {
-        return res.status(403).json({ message: "Only the course owner can add lessons" });
-      }
-      
+      if (!course) return res.status(404).json({ message: "Course not found" });
+      if (course.teacherId !== userId) return res.status(403).json({ message: "Only the course owner can add lessons" });
       const data = insertLessonSchema.parse({ ...req.body, courseId });
       const lesson = await storage.createLesson(data);
       res.status(201).json(lesson);
     } catch (error) {
-      console.error("Error creating lesson:", error);
       res.status(500).json({ message: "Failed to create lesson" });
     }
   });
 
+  // 🔥 [NEW] Secure Lesson Access Endpoint (The Accountant Block)
   app.get("/api/lessons/:id", isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const userId = req.user.id;
-      
-      const lesson = await storage.getLessonById(id);
-      if (!lesson) {
-        return res.status(404).json({ message: "Lesson not found" });
-      }
-      
-      // Get course to check access
-      const course = await storage.getCourseById(lesson.courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      // Check if user has access to content
       const user = await storage.getUser(userId);
+
+      if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+      // 1. ⛔ BLOCK ACCOUNTANTS
+      if (user.role === "accountant") {
+        return res.status(403).json({ message: "Accountants cannot view course content" });
+      }
+
+      const lesson = await storage.getLessonById(id);
+      if (!lesson) return res.status(404).json({ message: "Lesson not found" });
+
+      // 2. ✅ SUPER ADMIN (God Mode)
+      if (user.role === "super_admin") {
+        return res.json(lesson);
+      }
+
+      const course = await storage.getCourseById(lesson.courseId);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+
+      // 3. Check specific role access
       let hasAccess = false;
       let isCourseLocked = false;
-      
-      console.log("[Lesson Access Debug]", {
-        lessonId: id,
-        userId,
-        userRole: user?.role,
-        courseTeacherId: course.teacherId,
-        courseIsLocked: course.isLocked,
-        lessonContent: lesson.content?.substring(0, 100),
-        lessonContentType: lesson.contentType,
-      });
-      
-      if (user) {
-        if (user.role === "super_admin") {
-          // Super admins have access to all content
-          hasAccess = true;
-        } else if (user.role === "accountant") {
-          // Accountants cannot view course content - only stats
-          hasAccess = false;
-        } else if (user.role === "admin") {
-          // Admins have access to content in their college
-          hasAccess = user.collegeId === course.collegeId;
-        } else if (user.role === "instructor") {
-          // Teachers have access to their own courses
-          hasAccess = course.teacherId === userId;
+
+      if (user.role === "admin") {
+        hasAccess = user.collegeId === course.collegeId;
+      } else if (user.role === "instructor") {
+        hasAccess = course.teacherId === userId;
+      } else if (user.role === "student") {
+        const enrolled = await storage.isEnrolled(userId, lesson.courseId);
+        if (enrolled && course.isLocked) {
+           isCourseLocked = true;
+           hasAccess = false;
         } else {
-          // Students need to be enrolled AND course not locked
-          const enrolled = await storage.isEnrolled(userId, lesson.courseId);
-          console.log("[Lesson Access Debug] Student enrollment check:", { userId, courseId: lesson.courseId, enrolled });
-          if (enrolled && course.isLocked) {
-            // Enrolled but course is locked by teacher
-            isCourseLocked = true;
-            hasAccess = false;
-          } else {
-            hasAccess = enrolled;
-          }
+           hasAccess = enrolled;
         }
       }
-      
-      console.log("[Lesson Access Debug] Final access decision:", { hasAccess, isCourseLocked });
-      
-      // If course is locked for this enrolled student
+
       if (isCourseLocked) {
-        const { content, ...lessonWithoutContent } = lesson;
-        return res.json({ ...lessonWithoutContent, content: null, locked: true, courseLocked: true });
+        const { content, ...rest } = lesson;
+        return res.json({ ...rest, content: null, locked: true, courseLocked: true });
       }
-      
-      // If no access, return lesson without content (for metadata/navigation)
+
       if (!hasAccess) {
-        const { content, ...lessonWithoutContent } = lesson;
-        return res.json({ ...lessonWithoutContent, content: null, locked: true });
+        const { content, ...rest } = lesson;
+        return res.json({ ...rest, content: null, locked: true });
       }
-      
-      console.log("[Lesson Access Debug] Returning full lesson with content:", { lessonId: id, contentLength: lesson.content?.length });
+
       res.json(lesson);
     } catch (error) {
       console.error("Error fetching lesson:", error);
@@ -588,21 +512,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const id = parseInt(req.params.id);
       const lesson = await storage.getLessonById(id);
-      
-      if (!lesson) {
-        return res.status(404).json({ message: "Lesson not found" });
-      }
-      
+      if (!lesson) return res.status(404).json({ message: "Lesson not found" });
       const course = await storage.getCourseById(lesson.courseId);
-      if (!course || course.teacherId !== userId) {
-        return res.status(403).json({ message: "Only the course owner can update lessons" });
-      }
-      
+      if (!course || course.teacherId !== userId) return res.status(403).json({ message: "Only the course owner can update lessons" });
       const data = insertLessonSchema.partial().parse(req.body);
       const updated = await storage.updateLesson(id, data);
       res.json(updated);
     } catch (error) {
-      console.error("Error updating lesson:", error);
       res.status(500).json({ message: "Failed to update lesson" });
     }
   });
@@ -612,23 +528,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const id = parseInt(req.params.id);
       const lesson = await storage.getLessonById(id);
-      
-      if (!lesson) {
-        return res.status(404).json({ message: "Lesson not found" });
-      }
-      
+      if (!lesson) return res.status(404).json({ message: "Lesson not found" });
       const course = await storage.getCourseById(lesson.courseId);
-      if (!course || course.teacherId !== userId) {
-        return res.status(403).json({ message: "Only the course owner can delete lessons" });
-      }
-      
+      if (!course || course.teacherId !== userId) return res.status(403).json({ message: "Only the course owner can delete lessons" });
       await storage.deleteLesson(id);
       res.status(204).send();
     } catch (error) {
-      console.error("Error deleting lesson:", error);
       res.status(500).json({ message: "Failed to delete lesson" });
     }
   });
+
+  // ==================== ENROLLMENTS ====================
 
   app.get("/api/courses/:id/enrollments", isAuthenticated, async (req: any, res) => {
     try {
@@ -636,22 +546,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       const courseId = parseInt(req.params.id);
       const course = await storage.getCourseById(courseId);
-      
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
+      if (!course) return res.status(404).json({ message: "Course not found" });
       const isOwner = course.teacherId === userId;
       const isAdmin = user?.role === "admin" || user?.role === "super_admin";
-      
-      if (!isOwner && !isAdmin) {
-        return res.status(403).json({ message: "Not authorized to view enrollments" });
-      }
-      
+      if (!isOwner && !isAdmin) return res.status(403).json({ message: "Not authorized to view enrollments" });
       const enrollmentList = await storage.getEnrollmentsByCourse(courseId);
       res.json(enrollmentList);
     } catch (error) {
-      console.error("Error fetching enrollments:", error);
       res.status(500).json({ message: "Failed to fetch enrollments" });
     }
   });
@@ -662,34 +563,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       const courseId = parseInt(req.params.id);
       const course = await storage.getCourseById(courseId);
-      
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
+      if (!course) return res.status(404).json({ message: "Course not found" });
       const isOwner = course.teacherId === userId;
       const isAdmin = user?.role === "admin" || user?.role === "super_admin";
-      
-      if (!isOwner && !isAdmin) {
-        return res.status(403).json({ message: "Only teachers and admins can enroll students" });
-      }
-      
+      if (!isOwner && !isAdmin) return res.status(403).json({ message: "Only teachers and admins can enroll students" });
       const { studentId } = req.body;
-      
-      // Validate studentId exists and is a student
       const studentUser = await storage.getUser(studentId);
-      if (!studentUser) {
-        return res.status(404).json({ message: "Student not found" });
-      }
-      if (studentUser.role !== "student") {
-        return res.status(400).json({ message: "This user is not a student account" });
-      }
-      
+      if (!studentUser) return res.status(404).json({ message: "Student not found" });
+      if (studentUser.role !== "student") return res.status(400).json({ message: "This user is not a student account" });
       const alreadyEnrolled = await storage.isEnrolled(studentId, courseId);
-      if (alreadyEnrolled) {
-        return res.status(400).json({ message: "Student is already enrolled" });
-      }
-      
+      if (alreadyEnrolled) return res.status(400).json({ message: "Student is already enrolled" });
       const enrollment = await storage.createEnrollment({
         courseId,
         studentId,
@@ -697,86 +580,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.status(201).json(enrollment);
     } catch (error) {
-      console.error("Error creating enrollment:", error);
       res.status(500).json({ message: "Failed to create enrollment" });
     }
   });
 
-  // Teacher can remove students from their own courses
   app.delete("/api/courses/:courseId/enrollments/:studentId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       const courseId = parseInt(req.params.courseId);
       const studentId = req.params.studentId;
-      
-      // Check course exists
       const course = await storage.getCourseById(courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      // Check authorization: teacher owns course OR is admin
+      if (!course) return res.status(404).json({ message: "Course not found" });
       const isOwner = course.teacherId === userId;
       const isAdmin = user?.role === "admin" || user?.role === "super_admin";
-      
-      if (!isOwner && !isAdmin) {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-      
-      // Check student exists and is a student
+      if (!isOwner && !isAdmin) return res.status(403).json({ message: "Unauthorized" });
       const studentUser = await storage.getUser(studentId);
-      if (!studentUser) {
-        return res.status(404).json({ message: "Student not found" });
-      }
-      if (studentUser.role !== "student") {
-        return res.status(400).json({ message: "User is not a student" });
-      }
-      
-      // Check enrollment exists
+      if (!studentUser) return res.status(404).json({ message: "Student not found" });
       const isEnrolled = await storage.isEnrolled(studentId, courseId);
-      if (!isEnrolled) {
-        return res.status(404).json({ message: "Student not enrolled" });
-      }
-      
-      // Delete enrollment by student and course
+      if (!isEnrolled) return res.status(404).json({ message: "Student not enrolled" });
       await storage.deleteEnrollmentByStudentAndCourse(studentId, courseId);
       res.status(200).json({ message: "Student removed successfully" });
     } catch (error) {
-      console.error("Error removing student from course:", error);
       res.status(500).json({ message: "Failed to remove student" });
-    }
-  });
-
-  app.delete("/api/enrollments/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      const id = parseInt(req.params.id);
-      
-      const canDelete = user?.role === "admin" || user?.role === "super_admin";
-      
-      if (!canDelete) {
-        return res.status(403).json({ message: "Only admins can remove enrollments" });
-      }
-      
-      await storage.deleteEnrollment(id);
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting enrollment:", error);
-      res.status(500).json({ message: "Failed to delete enrollment" });
-    }
-  });
-
-  app.get("/api/enrollments/check/:courseId", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const courseId = parseInt(req.params.courseId);
-      const enrolled = await storage.isEnrolled(userId, courseId);
-      res.json({ enrolled });
-    } catch (error) {
-      console.error("Error checking enrollment:", error);
-      res.status(500).json({ message: "Failed to check enrollment" });
     }
   });
 
@@ -786,22 +612,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enrollmentList = await storage.getEnrollmentsByStudent(userId);
       res.json(enrollmentList);
     } catch (error) {
-      console.error("Error fetching my enrollments:", error);
       res.status(500).json({ message: "Failed to fetch enrollments" });
     }
   });
 
-  app.get("/api/enrollments/my-courses", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const enrollmentList = await storage.getEnrollmentsByStudent(userId);
-      const courseList = enrollmentList.map(e => e.course);
-      res.json(courseList);
-    } catch (error) {
-      console.error("Error fetching my courses:", error);
-      res.status(500).json({ message: "Failed to fetch courses" });
-    }
-  });
+  // ==================== TEACHER ENDPOINTS ====================
 
   app.get("/api/teacher/courses", isAuthenticated, async (req: any, res) => {
     try {
@@ -809,7 +624,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const courseList = await storage.getCoursesByTeacher(userId);
       res.json(courseList);
     } catch (error) {
-      console.error("Error fetching teacher courses:", error);
       res.status(500).json({ message: "Failed to fetch courses" });
     }
   });
@@ -820,108 +634,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stats = await storage.getTeacherStats(userId);
       res.json(stats);
     } catch (error) {
-      console.error("Error fetching teacher stats:", error);
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
 
-  // Teacher request to add a new course (PENDING_APPROVAL by default)
-  app.post("/api/teacher/courses/request", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== "instructor") {
-        return res.status(403).json({ message: "Only instructors can request to add courses" });
-      }
-      
-      const { title, description } = req.body;
-      
-      if (!title) {
-        return res.status(400).json({ message: "Course title is required" });
-      }
-      
-      // RBAC: Teacher can only create courses for their own college
-      if (!user.collegeId) {
-        return res.status(403).json({ message: "Instructor must be assigned to a college to create courses" });
-      }
-      
-      // Validate with schema
-      const courseData = insertCourseSchema.parse({
-        title,
-        description: description || "",
-        collegeId: user.collegeId, // Force to teacher's college (RBAC)
-        teacherId: userId,
-        status: "PENDING_APPROVAL",
-        price: 0, // Only Admin can set price
-      });
-      
-      // Create course with PENDING_APPROVAL status (requires Admin approval)
-      const course = await storage.createCourse(courseData);
-      
-      console.log(`[RBAC LOG] Course creation request by instructor ${userId}: course ${course.id} "${title}" - status: PENDING_APPROVAL`);
-      
-      res.status(201).json(course);
-    } catch (error) {
-      console.error("Error creating course request:", error);
-      res.status(500).json({ message: "Failed to create course request" });
-    }
-  });
-
-  // Teacher toggle course lock
   app.patch("/api/teacher/courses/:courseId/lock", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       const courseId = parseInt(req.params.courseId);
       const { isLocked } = req.body;
-      
-      if (typeof isLocked !== "boolean") {
-        return res.status(400).json({ message: "isLocked must be a boolean" });
-      }
-      
-      // Check course exists
       const course = await storage.getCourseById(courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      // Only PUBLISHED courses can be locked
-      if (course.status !== "PUBLISHED") {
-        return res.status(400).json({ message: "Only published courses can be locked/unlocked" });
-      }
-      
-      // Check authorization: teacher owns course or is admin
+      if (!course) return res.status(404).json({ message: "Course not found" });
+      if (course.status !== "PUBLISHED") return res.status(400).json({ message: "Only published courses can be locked" });
       const isOwner = course.teacherId === userId;
       const isAdmin = user?.role === "admin" || user?.role === "super_admin";
-      
-      if (!isOwner && !isAdmin) {
-        return res.status(403).json({ message: "You can only lock/unlock your own courses" });
-      }
-      
-      // Update course lock status
+      if (!isOwner && !isAdmin) return res.status(403).json({ message: "You can only lock/unlock your own courses" });
       const updated = await storage.updateCourseLockStatus(courseId, isLocked);
       res.json(updated);
     } catch (error) {
-      console.error("Error toggling course lock:", error);
       res.status(500).json({ message: "Failed to update course lock status" });
     }
   });
+
+  // ==================== ADMIN ENDPOINTS ====================
 
   app.get("/api/admin/stats", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      
       if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can view stats" });
       }
-      
       const collegeId = user.role === "admin" ? user.collegeId || undefined : undefined;
       const stats = await storage.getAdminStats(collegeId);
       res.json(stats);
     } catch (error) {
-      console.error("Error fetching admin stats:", error);
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
@@ -930,16 +678,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      
       if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can view pending courses" });
       }
-      
       const collegeId = user.role === "admin" ? user.collegeId || undefined : undefined;
       const pending = await storage.getPendingCourses(collegeId);
       res.json(pending);
     } catch (error) {
-      console.error("Error fetching pending courses:", error);
       res.status(500).json({ message: "Failed to fetch pending courses" });
     }
   });
@@ -948,40 +693,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      
       if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can view teachers" });
       }
-      
       const collegeId = user.role === "admin" ? user.collegeId || undefined : undefined;
       const teachers = await storage.getTeachersWithStats(collegeId);
       res.json(teachers);
     } catch (error) {
-      console.error("Error fetching teachers:", error);
       res.status(500).json({ message: "Failed to fetch teachers" });
     }
   });
 
-  // Get users who can be assigned as course instructors (for Admin/Super Admin)
   app.get("/api/admin/instructors", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      
       if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Only admins can view potential instructors" });
       }
-      
-      // Get all users (for Super Admin) or users in same college (for Admin)
       const allUsers = await storage.getAllUsers();
       let instructors = allUsers;
-      
-      // For Admin, filter to users in same college
       if (user.role === "admin" && user.collegeId) {
         instructors = allUsers.filter(u => u.collegeId === user.collegeId);
       }
-      
-      // Return only essential info for selector
       res.json(instructors.map(u => ({
         id: u.id,
         firstName: u.firstName,
@@ -991,7 +725,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         collegeId: u.collegeId,
       })));
     } catch (error) {
-      console.error("Error fetching instructors:", error);
       res.status(500).json({ message: "Failed to fetch instructors" });
     }
   });
@@ -1000,15 +733,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      
       if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can view all users" });
       }
-      
       const userList = await storage.getAllUsers();
       res.json(userList);
     } catch (error) {
-      console.error("Error fetching users:", error);
       res.status(500).json({ message: "Failed to fetch users" });
     }
   });
@@ -1017,26 +747,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      
       if (!user || user.role !== "super_admin") {
         return res.status(403).json({ message: "Only super admins can change user roles" });
       }
-      
       const targetId = req.params.id;
       const { role, collegeId } = req.body;
-      
-      console.log("[ROLE UPDATE] Target:", targetId, "New role:", role, "CollegeId:", collegeId);
-      
       const updated = await storage.updateUserRole(targetId, role, collegeId);
-      if (!updated) {
-        console.log("[ROLE UPDATE] User not found:", targetId);
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      console.log("[ROLE UPDATE] Success - Updated role:", updated.role);
+      if (!updated) return res.status(404).json({ message: "User not found" });
       res.json(updated);
     } catch (error) {
-      console.error("Error updating user role:", error);
       res.status(500).json({ message: "Failed to update user role" });
     }
   });
@@ -1045,1200 +764,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
-      
       if (!user || (user.role !== "instructor" && user.role !== "admin" && user.role !== "super_admin")) {
         return res.status(403).json({ message: "Not authorized" });
       }
-      
       const allUsers = await storage.getAllUsers();
       const students = allUsers.filter(u => u.role === "student");
       res.json(students);
     } catch (error) {
-      console.error("Error fetching students:", error);
       res.status(500).json({ message: "Failed to fetch students" });
     }
   });
 
-  // User search endpoint for enrollment
   app.get("/api/users/search", isAuthenticated, async (req: any, res) => {
     try {
       const query = req.query.query as string;
       const user = req.user;
-      
-      if (!query || query.trim().length === 0) {
-        return res.json([]);
-      }
-      
-      // Only teachers, admins, and super admins can search
+      if (!query || query.trim().length === 0) return res.json([]);
       if (!["instructor", "admin", "super_admin"].includes(user.role)) {
         return res.status(403).json({ message: "Not authorized" });
       }
-      
       const results = await storage.searchUsers(query.trim(), user.role, 5);
       res.json(results);
     } catch (error) {
-      console.error("Error searching users:", error);
       res.status(500).json({ message: "Failed to search users" });
     }
   });
 
-  // Featured Profiles - Public endpoint (active only)
-  app.get("/api/featured-profiles", async (_req, res) => {
-    try {
-      const profiles = await storage.getFeaturedProfiles(true);
-      res.json(profiles);
-    } catch (error) {
-      console.error("Error fetching featured profiles:", error);
-      res.status(500).json({ message: "Failed to fetch featured profiles" });
-    }
-  });
-
-  // Featured Profiles - Admin endpoints (super_admin only)
-  app.get("/api/admin/featured-profiles", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== "super_admin") {
-        return res.status(403).json({ message: "Only super admins can manage featured profiles" });
-      }
-      
-      const profiles = await storage.getFeaturedProfiles(false);
-      res.json(profiles);
-    } catch (error) {
-      console.error("Error fetching featured profiles:", error);
-      res.status(500).json({ message: "Failed to fetch featured profiles" });
-    }
-  });
-
-  app.post("/api/admin/featured-profiles", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== "super_admin") {
-        return res.status(403).json({ message: "Only super admins can create featured profiles" });
-      }
-      
-      const data = insertFeaturedProfileSchema.parse({
-        ...req.body,
-        createdByUserId: userId,
-        updatedByUserId: userId,
-      });
-      const profile = await storage.createFeaturedProfile(data);
-      res.status(201).json(profile);
-    } catch (error) {
-      console.error("Error creating featured profile:", error);
-      res.status(500).json({ message: "Failed to create featured profile" });
-    }
-  });
-
-  app.patch("/api/admin/featured-profiles/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== "super_admin") {
-        return res.status(403).json({ message: "Only super admins can update featured profiles" });
-      }
-      
-      const id = parseInt(req.params.id);
-      const data = insertFeaturedProfileSchema.partial().parse({
-        ...req.body,
-        updatedByUserId: userId,
-      });
-      const profile = await storage.updateFeaturedProfile(id, data);
-      
-      if (!profile) {
-        return res.status(404).json({ message: "Featured profile not found" });
-      }
-      
-      res.json(profile);
-    } catch (error) {
-      console.error("Error updating featured profile:", error);
-      res.status(500).json({ message: "Failed to update featured profile" });
-    }
-  });
-
-  app.delete("/api/admin/featured-profiles/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== "super_admin") {
-        return res.status(403).json({ message: "Only super admins can delete featured profiles" });
-      }
-      
-      const id = parseInt(req.params.id);
-      await storage.deleteFeaturedProfile(id);
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting featured profile:", error);
-      res.status(500).json({ message: "Failed to delete featured profile" });
-    }
-  });
-
-  // Home Stats - Public endpoint (returns stats or defaults)
-  app.get("/api/home-stats", async (_req, res) => {
-    try {
-      const stats = await storage.getOrCreateHomeStats();
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching home stats:", error);
-      res.status(500).json({ message: "Failed to fetch home stats" });
-    }
-  });
-
-  // Home Stats - Admin endpoint (super_admin only)
-  app.patch("/api/admin/home-stats", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== "super_admin") {
-        return res.status(403).json({ message: "Only super admins can update home stats" });
-      }
-      
-      const parseResult = updateHomeStatsSchema.safeParse(req.body);
-      if (!parseResult.success) {
-        return res.status(400).json({ 
-          message: "Validation failed", 
-          errors: parseResult.error.flatten().fieldErrors 
-        });
-      }
-      
-      const stats = await storage.updateHomeStats(parseResult.data, userId);
-      res.json(stats);
-    } catch (error) {
-      console.error("Error updating home stats:", error);
-      res.status(500).json({ message: "Failed to update home stats" });
-    }
-  });
-
-  // Admin Dashboard Stats - returns stats based on config mode (AUTO or MANUAL)
-  app.get("/api/admin/dashboard/stats", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
-        return res.status(403).json({ message: "Only admins can view dashboard stats" });
-      }
-      
-      const config = await storage.getOrCreateAdminDashboardStatsConfig();
-      const collegeId = user.role === "admin" ? user.collegeId || undefined : undefined;
-      const computedStats = await storage.getAdminStats(collegeId);
-      
-      if (config.mode === "MANUAL") {
-        res.json({
-          mode: "MANUAL",
-          pendingApprovals: config.pendingApprovalsValue,
-          totalTeachers: config.totalTeachersValue,
-          publishedCourses: config.publishedCoursesValue,
-          totalStudents: config.totalStudentsValue,
-          config,
-        });
-      } else {
-        res.json({
-          mode: "AUTO",
-          pendingApprovals: String(computedStats.pendingApprovals),
-          totalTeachers: String(computedStats.totalTeachers),
-          publishedCourses: String(computedStats.totalCourses),
-          totalStudents: String(computedStats.totalStudents),
-          config,
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching admin dashboard stats:", error);
-      res.status(500).json({ message: "Failed to fetch dashboard stats" });
-    }
-  });
-
-  // Admin Dashboard Stats Config - super_admin only update
-  app.patch("/api/super-admin/admin-dashboard-stats", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== "super_admin") {
-        return res.status(403).json({ message: "Only super admins can update dashboard stats config" });
-      }
-      
-      const parseResult = updateAdminDashboardStatsConfigSchema.safeParse(req.body);
-      if (!parseResult.success) {
-        return res.status(400).json({ 
-          message: "Validation failed", 
-          errors: parseResult.error.flatten().fieldErrors 
-        });
-      }
-      
-      const config = await storage.updateAdminDashboardStatsConfig(parseResult.data, userId);
-      res.json(config);
-    } catch (error) {
-      console.error("Error updating admin dashboard stats config:", error);
-      res.status(500).json({ message: "Failed to update dashboard stats config" });
-    }
-  });
-
-  // Cloudflare Stream - Direct Creator Upload
-  // Creates a direct upload URL for teachers to upload videos directly to Cloudflare
-  app.post("/api/stream/create-upload", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || (user.role !== "instructor" && user.role !== "super_admin")) {
-        return res.status(403).json({ message: "Only teachers and super admins can upload videos" });
-      }
-      
-      const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-      const apiToken = process.env.CLOUDFLARE_STREAM_TOKEN;
-      
-      if (!accountId || !apiToken) {
-        console.error("Missing Cloudflare Stream configuration: CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_STREAM_TOKEN not set");
-        return res.status(500).json({ message: "Video upload service is not configured" });
-      }
-      
-      const cloudflareUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/direct_upload`;
-      
-      const cfResponse = await fetch(cloudflareUrl, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          maxDurationSeconds: 3600,
-          creator: user.email || userId,
-          meta: {
-            uploadedBy: userId,
-            uploadedByEmail: user.email,
-            uploadedAt: new Date().toISOString(),
-          },
-        }),
-      });
-      
-      if (!cfResponse.ok) {
-        const errorData = await cfResponse.json().catch(() => ({}));
-        console.error("Cloudflare Stream API error:", cfResponse.status, errorData);
-        return res.status(502).json({ 
-          message: "Failed to create upload URL from video service",
-          details: errorData.errors?.[0]?.message || "Unknown error"
-        });
-      }
-      
-      const data = await cfResponse.json();
-      
-      if (!data.success || !data.result) {
-        console.error("Cloudflare Stream API returned unexpected response:", data);
-        return res.status(502).json({ message: "Video service returned an unexpected response" });
-      }
-      
-      res.json({
-        uploadURL: data.result.uploadURL,
-        uid: data.result.uid,
-      });
-    } catch (error) {
-      console.error("Error creating Cloudflare Stream upload:", error);
-      res.status(500).json({ message: "Failed to create video upload" });
-    }
-  });
-
-  // Backblaze B2 - Presigned URL for video upload (served via Cloudflare CDN)
-  app.post("/api/b2/video/presign", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || (user.role !== "instructor" && user.role !== "super_admin")) {
-        return res.status(403).json({ message: "Only teachers and super admins can upload videos" });
-      }
-      
-      const { fileName, contentType, courseId, fileSize } = req.body;
-      
-      if (!fileName || !contentType || !courseId) {
-        return res.status(400).json({ message: "fileName, contentType, and courseId are required" });
-      }
-      
-      // Validate video content type
-      const allowedVideoTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"];
-      if (!allowedVideoTypes.includes(contentType)) {
-        return res.status(400).json({ message: "Only video files (mp4, webm, mov, avi) are allowed" });
-      }
-      
-      // Validate file size (1GB max for videos)
-      const maxVideoSize = 1024 * 1024 * 1024;
-      if (fileSize && fileSize > maxVideoSize) {
-        return res.status(400).json({ message: "Video size exceeds 1GB limit" });
-      }
-      
-      // Verify teacher owns this course or is super admin
-      if (user.role === "instructor") {
-        const course = await storage.getCourseById(courseId);
-        if (!course || course.teacherId !== userId) {
-          return res.status(403).json({ message: "You can only upload videos to your own courses" });
-        }
-      }
-      
-      console.log("[B2 Presign] Env check:", {
-        B2_KEY_ID: !!B2_KEY_ID,
-        B2_APP_KEY: !!B2_APP_KEY,
-        B2_BUCKET_NAME: !!B2_BUCKET_NAME,
-        B2_ENDPOINT: !!B2_ENDPOINT_RAW,
-        B2_REGION: B2_REGION,
-        CDN_BASE_URL: !!CDN_BASE_URL,
-      });
-
-      const b2Client = getB2Client();
-      if (!b2Client || !B2_BUCKET_NAME) {
-        console.log("[B2 Presign] Storage not configured");
-        return res.status(503).json({ message: "Video storage not configured", errorCode: "B2_NOT_CONFIGURED" });
-      }
-      
-      // Use SINGLE SOURCE OF TRUTH for object key generation
-      const timestamp = Date.now();
-      const objectKey = buildVideoObjectKey(courseId, fileName, timestamp);
-      const cdnUrl = getVideoCdnUrl(objectKey);
-      
-      console.log("[B2 Presign] Generating URL for:", {
-        bucket: B2_BUCKET_NAME,
-        objectKey,
-        cdnUrl,
-        endpoint: B2_ENDPOINT,
-        region: B2_REGION,
-        contentType,
-      });
-
-      // Generate presigned PUT URL (30 minute expiry for large videos)
-      const command = new PutObjectCommand({
-        Bucket: B2_BUCKET_NAME,
-        Key: objectKey,
-        ContentType: contentType,
-      });
-      
-      const uploadUrl = await getSignedUrl(b2Client, command, { expiresIn: 1800 });
-      
-      console.log("[B2 Presign] Success - objectKey:", objectKey, "cdnUrl:", cdnUrl);
-      
-      // Return objectKey so client can verify after upload
-      res.json({
-        uploadUrl,
-        cdnUrl,
-        objectKey,
-      });
-    } catch (error: any) {
-      console.error("[B2 Presign] Error:", error?.message || error);
-      console.error("[B2 Presign] Stack:", error?.stack);
-      res.status(500).json({ 
-        message: "Failed to create video upload URL", 
-        errorCode: "B2_PRESIGN_FAILED",
-        details: error?.message || "Unknown error"
-      });
-    }
-  });
-
-  // Backblaze B2 - Backend proxy upload (fallback for CORS issues)
-  const videoUpload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 1024 * 1024 * 1024 }, // 1GB
-    fileFilter: (req, file, cb) => {
-      const allowedTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"];
-      if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error("Only video files are allowed"));
-      }
-    },
-  });
-
-  app.post("/api/b2/video/upload", isAuthenticated, videoUpload.single("video"), async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-
-      if (!user || (user.role !== "instructor" && user.role !== "super_admin")) {
-        return res.status(403).json({ message: "Only teachers and super admins can upload videos" });
-      }
-
-      const courseId = req.body.courseId;
-      if (!courseId) {
-        return res.status(400).json({ message: "courseId is required" });
-      }
-
-      if (!req.file) {
-        return res.status(400).json({ message: "No video file provided" });
-      }
-
-      // Verify teacher owns this course or is super admin
-      if (user.role === "instructor") {
-        const course = await storage.getCourseById(parseInt(courseId));
-        if (!course || course.teacherId !== userId) {
-          return res.status(403).json({ message: "You can only upload videos to your own courses" });
-        }
-      }
-
-      const b2Client = getB2Client();
-      if (!b2Client || !B2_BUCKET_NAME) {
-        return res.status(503).json({ message: "Video storage not configured" });
-      }
-
-      // Use SINGLE SOURCE OF TRUTH for object key generation
-      const timestamp = Date.now();
-      const objectKey = buildVideoObjectKey(courseId, req.file.originalname, timestamp);
-      const cdnUrl = getVideoCdnUrl(objectKey);
-
-      console.log("[B2 Proxy Upload] Starting upload", {
-        objectKey,
-        cdnUrl,
-        size: req.file.size,
-        contentType: req.file.mimetype,
-      });
-
-      const command = new PutObjectCommand({
-        Bucket: B2_BUCKET_NAME,
-        Key: objectKey,
-        Body: req.file.buffer,
-        ContentType: req.file.mimetype,
-      });
-
-      await b2Client.send(command);
-      console.log("[B2 Proxy Upload] PutObject completed, verifying...");
-
-      // VERIFY object exists in B2 before returning success
-      const objectExists = await verifyObjectExistsInB2(b2Client, objectKey);
-      if (!objectExists) {
-        console.error("[B2 Proxy Upload] VERIFICATION FAILED - object not found after upload:", objectKey);
-        return res.status(500).json({ 
-          message: "Upload verification failed - file not found in storage",
-          errorCode: "B2_VERIFY_FAILED"
-        });
-      }
-
-      // Also verify CDN URL is accessible (may take a moment for propagation)
-      const cdnAccessible = await verifyCdnUrlAccessible(cdnUrl);
-      if (!cdnAccessible) {
-        console.warn("[B2 Proxy Upload] CDN not immediately accessible, but B2 verified:", cdnUrl);
-        // Don't fail - B2 verified, CDN may need propagation time
-      }
-
-      console.log("[B2 Proxy Upload] Success - verified", { objectKey, cdnUrl, objectExists, cdnAccessible });
-
-      res.json({ cdnUrl, objectKey, verified: true });
-    } catch (error: any) {
-      console.error("[B2 Proxy Upload] Error:", error?.message || error);
-      res.status(500).json({ message: "Failed to upload video", details: error?.message });
-    }
-  });
-
-  // Backblaze B2 - Verify upload completed successfully (for direct uploads)
-  app.post("/api/b2/video/verify", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-
-      if (!user || (user.role !== "instructor" && user.role !== "super_admin")) {
-        return res.status(403).json({ message: "Only teachers and super admins can verify uploads" });
-      }
-
-      const { objectKey, cdnUrl } = req.body;
-      if (!objectKey) {
-        return res.status(400).json({ message: "objectKey is required" });
-      }
-
-      const b2Client = getB2Client();
-      if (!b2Client || !B2_BUCKET_NAME) {
-        return res.status(503).json({ message: "Video storage not configured" });
-      }
-
-      console.log("[B2 Verify] Checking object:", objectKey);
-
-      // Verify object exists in B2
-      const objectExists = await verifyObjectExistsInB2(b2Client, objectKey);
-      if (!objectExists) {
-        console.log("[B2 Verify] Object NOT found:", objectKey);
-        return res.status(404).json({ 
-          message: "Video file not found in storage",
-          errorCode: "B2_OBJECT_NOT_FOUND",
-          verified: false 
-        });
-      }
-
-      // Also verify CDN URL is accessible
-      const computedCdnUrl = cdnUrl || getVideoCdnUrl(objectKey);
-      const cdnAccessible = await verifyCdnUrlAccessible(computedCdnUrl);
-      
-      console.log("[B2 Verify] Result:", { objectKey, objectExists, cdnAccessible, cdnUrl: computedCdnUrl });
-
-      res.json({ 
-        verified: true, 
-        objectExists, 
-        cdnAccessible,
-        cdnUrl: computedCdnUrl 
-      });
-    } catch (error: any) {
-      console.error("[B2 Verify] Error:", error?.message || error);
-      res.status(500).json({ message: "Failed to verify upload", details: error?.message });
-    }
-  });
-
-  // Cloudflare R2 - Presigned URL for file upload
-  app.post("/api/r2/presign", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user || (user.role !== "instructor" && user.role !== "super_admin")) {
-        return res.status(403).json({ message: "Only teachers and super admins can upload files" });
-      }
-      
-      const { fileName, contentType, courseId, fileSize } = req.body;
-      
-      if (!fileName || !contentType || !courseId) {
-        return res.status(400).json({ message: "fileName, contentType, and courseId are required" });
-      }
-      
-      // Validate file extension
-      const ext = fileName.split(".").pop()?.toLowerCase();
-      if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
-        return res.status(400).json({ 
-          message: `File type not allowed. Allowed: ${ALLOWED_EXTENSIONS.join(", ")}` 
-        });
-      }
-      
-      // Validate content type
-      if (!ALLOWED_FILE_TYPES.includes(contentType)) {
-        return res.status(400).json({ message: "Content type not allowed" });
-      }
-      
-      // Validate file size
-      if (fileSize && fileSize > MAX_FILE_SIZE) {
-        return res.status(400).json({ message: "File size exceeds 100MB limit" });
-      }
-      
-      // Verify course exists and user has access to upload
-      const course = await storage.getCourseById(courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      // Teachers can only upload to their own courses
-      // Super admins can upload to any course (by design - full system access)
-      if (user.role === "instructor" && course.teacherId !== userId) {
-        console.warn(`[R2 UPLOAD DENIED] Teacher ${userId} attempted to upload to course ${courseId} owned by ${course.teacherId}`);
-        return res.status(403).json({ message: "You can only upload files to your own courses" });
-      }
-      
-      // Audit log for uploads
-      console.log(`[R2 UPLOAD] User ${userId} (${user.role}) uploading file "${fileName}" to course ${courseId}`);
-      
-      const r2Client = getR2Client();
-      if (!r2Client || !R2_BUCKET_NAME) {
-        console.error("R2 configuration missing");
-        return res.status(500).json({ message: "File storage service is not configured" });
-      }
-      
-      // Create safe object key: courses/<courseId>/<timestamp>-<safeFileName>
-      const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const timestamp = Date.now();
-      const objectKey = `courses/${courseId}/${timestamp}-${safeFileName}`;
-      
-      // Generate presigned PUT URL (10 minute expiry)
-      const command = new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: objectKey,
-        ContentType: contentType,
-      });
-      
-      const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 600 });
-      
-      // Use secure download endpoint instead of direct public URL
-      const fileUrl = `/api/r2/download?key=${encodeURIComponent(objectKey)}`;
-      
-      res.json({
-        uploadUrl,
-        objectKey,
-        fileUrl,
-        fileName: safeFileName,
-      });
-    } catch (error) {
-      console.error("Error creating R2 presigned URL:", error);
-      res.status(500).json({ message: "Failed to create upload URL" });
-    }
-  });
-
-  // Cloudflare R2 - Secure file download
-  app.get("/api/r2/download", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      const key = req.query.key as string;
-      if (!key) {
-        return res.status(400).json({ message: "File key is required" });
-      }
-      
-      // Validate key format strictly: courses/<courseId>/<timestamp>-<fileName>
-      // Key must match the exact pattern we generate in presign
-      const keyPattern = /^courses\/(\d+)\/\d+-[a-zA-Z0-9._-]+$/;
-      const keyMatch = key.match(keyPattern);
-      
-      if (!keyMatch) {
-        return res.status(400).json({ message: "Invalid file key format" });
-      }
-      
-      const courseId = parseInt(keyMatch[1]);
-      if (isNaN(courseId) || courseId <= 0) {
-        return res.status(400).json({ message: "Invalid course ID in file key" });
-      }
-      
-      // Check access: must be teacher of the course, enrolled student, admin, or super admin
-      const course = await storage.getCourseById(courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      const isTeacher = user.role === "instructor" && course.teacherId === userId;
-      const isSuperAdmin = user.role === "super_admin";
-      const isAdmin = user.role === "admin";
-      
-      let isEnrolledStudent = false;
-      if (user.role === "student") {
-        const enrollments = await storage.getEnrollmentsByStudent(userId);
-        isEnrolledStudent = enrollments.some(e => e.courseId === courseId);
-      }
-      
-      if (!isTeacher && !isSuperAdmin && !isAdmin && !isEnrolledStudent) {
-        return res.status(403).json({ message: "You don't have access to this file" });
-      }
-      
-      // Check if course is locked for enrolled students
-      if (isEnrolledStudent && course.isLocked) {
-        return res.status(403).json({ message: "Course is currently locked by the instructor" });
-      }
-      
-      const r2Client = getR2Client();
-      if (!r2Client || !R2_BUCKET_NAME) {
-        return res.status(500).json({ message: "File storage service is not configured" });
-      }
-      
-      const command = new GetObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: key,
-      });
-      
-      const response = await r2Client.send(command);
-      
-      if (!response.Body) {
-        return res.status(404).json({ message: "File not found" });
-      }
-      
-      // Extract filename from key (format: courses/<courseId>/<timestamp>-<fileName>)
-      const keyParts = key.split("/");
-      const fileName = keyParts[keyParts.length - 1].replace(/^\d+-/, "");
-      
-      res.setHeader("Content-Type", response.ContentType || "application/octet-stream");
-      res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
-      if (response.ContentLength) {
-        res.setHeader("Content-Length", response.ContentLength);
-      }
-      
-      // Stream the file to response
-      const stream = response.Body as NodeJS.ReadableStream;
-      stream.pipe(res);
-    } catch (error: any) {
-      if (error.name === "NoSuchKey") {
-        return res.status(404).json({ message: "File not found" });
-      }
-      console.error("Error downloading R2 file:", error);
-      res.status(500).json({ message: "Failed to download file" });
-    }
-  });
-
-  // Profile - Avatar presign endpoint
-  const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
-  app.post("/api/profile/avatar/presign", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { fileName, contentType, fileSize } = req.body;
-      
-      if (!fileName || !contentType) {
-        return res.status(400).json({ message: "fileName and contentType are required" });
-      }
-      
-      // Validate image type
-      const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-      if (!allowedTypes.includes(contentType)) {
-        return res.status(400).json({ message: "Only PNG, JPG, JPEG, and WebP files are allowed" });
-      }
-      
-      // Validate file size on server
-      if (fileSize && fileSize > MAX_AVATAR_SIZE) {
-        return res.status(400).json({ message: "Avatar must be under 2MB" });
-      }
-      
-      const r2Client = getR2Client();
-      if (!r2Client || !R2_BUCKET_NAME) {
-        console.error("R2 configuration missing for avatar upload");
-        return res.status(500).json({ message: "File storage service is not configured" });
-      }
-      
-      // Create safe object key: avatars/<userId>/<timestamp>-<safeFileName>
-      const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const timestamp = Date.now();
-      const objectKey = `avatars/${userId}/${timestamp}-${safeFileName}`;
-      
-      // Generate presigned PUT URL (10 minute expiry)
-      const command = new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: objectKey,
-        ContentType: contentType,
-      });
-      
-      const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 600 });
-      
-      // For avatars, we'll generate a presigned GET URL that lasts longer
-      const getCommand = new GetObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: objectKey,
-      });
-      const fileUrl = await getSignedUrl(r2Client, getCommand, { expiresIn: 86400 * 7 }); // 7 days
-      
-      res.json({
-        uploadUrl,
-        objectKey,
-        fileUrl,
-      });
-    } catch (error) {
-      console.error("Error creating avatar presigned URL:", error);
-      res.status(500).json({ message: "Failed to create upload URL" });
-    }
-  });
-
-  // Profile - Avatar confirm endpoint
-  app.post("/api/profile/avatar/confirm", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { fileUrl } = req.body;
-      
-      if (!fileUrl) {
-        console.log("[Avatar Confirm] Missing fileUrl in request body");
-        return res.status(400).json({ message: "fileUrl is required" });
-      }
-      
-      console.log(`[Avatar Confirm] Updating profile image for user ${userId}, URL length: ${fileUrl.length}`);
-      
-      // Update user's profile image URL
-      const updatedUser = await storage.updateUserProfileImage(userId, fileUrl);
-      
-      if (!updatedUser) {
-        console.error(`[Avatar Confirm] User ${userId} not found`);
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      console.log(`[Avatar Confirm] Successfully updated profile image for user ${userId}`);
-      res.json({ success: true, user: updatedUser });
-    } catch (error: any) {
-      console.error("[Avatar Confirm] Error:", error?.message || error);
-      console.error("[Avatar Confirm] Full error:", error);
-      res.status(500).json({ message: error?.message || "Failed to update profile image" });
-    }
-  });
-
-  // Profile - Change password endpoint
-  app.post("/api/profile/change-password", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { newPassword, confirmPassword } = req.body;
-      
-      if (!newPassword || !confirmPassword) {
-        return res.status(400).json({ message: "New password and confirmation are required" });
-      }
-      
-      if (newPassword !== confirmPassword) {
-        return res.status(400).json({ message: "Passwords do not match" });
-      }
-      
-      if (newPassword.length < 8) {
-        return res.status(400).json({ message: "Password must be at least 8 characters" });
-      }
-      
-      // Hash the new password
-      const passwordHash = await bcrypt.hash(newPassword, 10);
-      
-      // Update user's password
-      await storage.updateUserPassword(userId, passwordHash);
-      
-      res.json({ success: true, message: "Password updated successfully" });
-    } catch (error) {
-      console.error("Error changing password:", error);
-      res.status(500).json({ message: "Failed to change password" });
-    }
-  });
-
-  // ============ JOIN REQUESTS ============
-  
-  // Multer config for receipt uploads (memory storage, 2MB max)
-  const receiptUpload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
-    fileFilter: (_req, file, cb) => {
-      const allowedReceipt = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-      if (allowedReceipt.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error("Only PNG, JPG, JPEG, and WebP images are allowed"));
-      }
-    },
-  });
-
-  // Student - Check join request status for a course
-  app.get("/api/courses/:courseId/join-request/status", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const courseId = parseInt(req.params.courseId);
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== "student") {
-        return res.status(403).json({ message: "Only students can check join request status" });
-      }
-      
-      const hasPending = await storage.hasPendingJoinRequest(userId, courseId);
-      const hasApproved = await storage.hasApprovedJoinRequest(userId, courseId);
-      const isEnrolled = await storage.isEnrolled(userId, courseId);
-      
-      res.json({ hasPending, hasApproved, isEnrolled });
-    } catch (error) {
-      console.error("Error checking join request status:", error);
-      res.status(500).json({ message: "Failed to check join request status" });
-    }
-  });
-
-  // Student - Submit join request with receipt
-  app.post("/api/courses/:courseId/join-request", isAuthenticated, receiptUpload.single("receipt"), async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const courseId = parseInt(req.params.courseId);
-      const user = await storage.getUser(userId);
-      
-      if (!user || user.role !== "student") {
-        return res.status(403).json({ message: "Only students can submit join requests" });
-      }
-      
-      // Check if course exists and is published
-      const course = await storage.getCourseById(courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      if (course.status !== "PUBLISHED") {
-        return res.status(400).json({ message: "Course is not available for enrollment" });
-      }
-      
-      // Check if already enrolled
-      const isEnrolled = await storage.isEnrolled(userId, courseId);
-      if (isEnrolled) {
-        return res.status(400).json({ message: "You are already enrolled in this course" });
-      }
-      
-      // Check for pending request
-      const hasPending = await storage.hasPendingJoinRequest(userId, courseId);
-      if (hasPending) {
-        return res.status(400).json({ message: "Your request is already pending" });
-      }
-      
-      // Check for approved request (shouldn't happen but just in case)
-      const hasApproved = await storage.hasApprovedJoinRequest(userId, courseId);
-      if (hasApproved) {
-        return res.status(400).json({ message: "Your request was already approved" });
-      }
-      
-      // Validate receipt file
-      if (!req.file) {
-        return res.status(400).json({ message: "Payment receipt is required" });
-      }
-      
-      // Upload receipt to R2 (private)
-      const r2Client = getR2Client();
-      if (!r2Client || !R2_BUCKET_NAME) {
-        return res.status(500).json({ message: "File storage service is not configured" });
-      }
-      
-      const timestamp = Date.now();
-      const safeFileName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const receiptKey = `receipts/${courseId}/${userId}/${timestamp}-${safeFileName}`;
-      
-      const uploadCommand = new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: receiptKey,
-        Body: req.file.buffer,
-        ContentType: req.file.mimetype,
-      });
-      
-      await r2Client.send(uploadCommand);
-      
-      // Create join request record
-      const joinRequest = await storage.createJoinRequest({
-        courseId,
-        studentId: userId,
-        message: req.body.message || null,
-        receiptKey,
-        receiptMime: req.file.mimetype,
-        receiptSize: req.file.size,
-        status: "PENDING",
-      });
-      
-      res.status(201).json({ 
-        success: true, 
-        message: "Request submitted. Wait for teacher approval.",
-        requestId: joinRequest.id,
-      });
-    } catch (error: any) {
-      console.error("Error submitting join request:", error);
-      if (error.message?.includes("Only PNG")) {
-        return res.status(400).json({ message: error.message });
-      }
-      res.status(500).json({ message: "Failed to submit join request" });
-    }
-  });
-
-  // Teacher/Admin - Get all join requests for their courses/college
-  app.get("/api/teacher/join-requests", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      
-      const allowedRoles = ["instructor", "admin", "super_admin"];
-      if (!user || !allowedRoles.includes(user.role)) {
-        return res.status(403).json({ message: "Only teachers and admins can view join requests" });
-      }
-      
-      let requests;
-      if (user.role === "super_admin") {
-        // Super Admin sees all join requests
-        requests = await storage.getAllJoinRequests();
-      } else if (user.role === "admin") {
-        // Admin sees join requests for courses in their college
-        if (!user.collegeId) {
-          return res.status(400).json({ message: "Admin must be assigned to a college" });
-        }
-        requests = await storage.getJoinRequestsByCollege(user.collegeId);
-      } else {
-        // Teacher sees only their own courses' join requests
-        requests = await storage.getJoinRequestsByTeacher(userId);
-      }
-      
-      res.json(requests);
-    } catch (error) {
-      console.error("Error fetching join requests:", error);
-      res.status(500).json({ message: "Failed to fetch join requests" });
-    }
-  });
-
-  // Teacher/Admin - Approve join request
-  app.post("/api/teacher/join-requests/:id/approve", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const requestId = parseInt(req.params.id);
-      const user = await storage.getUser(userId);
-      
-      const allowedRoles = ["instructor", "admin", "super_admin"];
-      if (!user || !allowedRoles.includes(user.role)) {
-        return res.status(403).json({ message: "Only teachers and admins can approve join requests" });
-      }
-      
-      // Get join request with course info
-      const joinRequest = await storage.getJoinRequestById(requestId);
-      if (!joinRequest) {
-        return res.status(404).json({ message: "Join request not found" });
-      }
-      
-      // Verify access to the course
-      const course = await storage.getCourseById(joinRequest.courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      // Check access: Teacher must own course, Admin must be in same college, Super Admin has full access
-      const isTeacher = course.teacherId === userId;
-      const isAdminInCollege = user.role === "admin" && user.collegeId === course.collegeId;
-      const isSuperAdmin = user.role === "super_admin";
-      
-      if (!isTeacher && !isAdminInCollege && !isSuperAdmin) {
-        return res.status(403).json({ message: "You don't have permission to approve this request" });
-      }
-      
-      // Check if request is still pending
-      if (joinRequest.status !== "PENDING") {
-        return res.status(400).json({ message: "This request has already been processed" });
-      }
-      
-      // Create enrollment
-      await storage.createEnrollment({
-        courseId: joinRequest.courseId,
-        studentId: joinRequest.studentId,
-        createdByUserId: userId,
-      });
-      
-      // Update join request status
-      await storage.updateJoinRequestStatus(requestId, "APPROVED");
-      
-      res.json({ success: true, message: "Request approved and student enrolled" });
-    } catch (error) {
-      console.error("Error approving join request:", error);
-      res.status(500).json({ message: "Failed to approve join request" });
-    }
-  });
-
-  // Teacher/Admin - Reject join request
-  app.post("/api/teacher/join-requests/:id/reject", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const requestId = parseInt(req.params.id);
-      const user = await storage.getUser(userId);
-      
-      const allowedRoles = ["instructor", "admin", "super_admin"];
-      if (!user || !allowedRoles.includes(user.role)) {
-        return res.status(403).json({ message: "Only teachers and admins can reject join requests" });
-      }
-      
-      // Get join request with course info
-      const joinRequest = await storage.getJoinRequestById(requestId);
-      if (!joinRequest) {
-        return res.status(404).json({ message: "Join request not found" });
-      }
-      
-      // Verify access to the course
-      const course = await storage.getCourseById(joinRequest.courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      // Check access: Teacher must own course, Admin must be in same college, Super Admin has full access
-      const isTeacher = course.teacherId === userId;
-      const isAdminInCollege = user.role === "admin" && user.collegeId === course.collegeId;
-      const isSuperAdmin = user.role === "super_admin";
-      
-      if (!isTeacher && !isAdminInCollege && !isSuperAdmin) {
-        return res.status(403).json({ message: "You don't have permission to reject this request" });
-      }
-      
-      // Check if request is still pending
-      if (joinRequest.status !== "PENDING") {
-        return res.status(400).json({ message: "This request has already been processed" });
-      }
-      
-      // Update join request status
-      await storage.updateJoinRequestStatus(requestId, "REJECTED");
-      
-      res.json({ success: true, message: "Request rejected" });
-    } catch (error) {
-      console.error("Error rejecting join request:", error);
-      res.status(500).json({ message: "Failed to reject join request" });
-    }
-  });
-
-  // Teacher/Admin - Get receipt signed URL
-  app.get("/api/teacher/join-requests/:id/receipt", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const requestId = parseInt(req.params.id);
-      const user = await storage.getUser(userId);
-      
-      const allowedRoles = ["instructor", "admin", "super_admin"];
-      if (!user || !allowedRoles.includes(user.role)) {
-        return res.status(403).json({ message: "Only teachers and admins can view receipts" });
-      }
-      
-      // Get join request with course info
-      const joinRequest = await storage.getJoinRequestById(requestId);
-      if (!joinRequest) {
-        return res.status(404).json({ message: "Join request not found" });
-      }
-      
-      // Verify access to the course
-      const course = await storage.getCourseById(joinRequest.courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
-      
-      // Check access: Teacher must own course, Admin must be in same college, Super Admin has full access
-      const isTeacher = course.teacherId === userId;
-      const isAdminInCollege = user.role === "admin" && user.collegeId === course.collegeId;
-      const isSuperAdmin = user.role === "super_admin";
-      
-      if (!isTeacher && !isAdminInCollege && !isSuperAdmin) {
-        return res.status(403).json({ message: "You don't have permission to view this receipt" });
-      }
-      
-      // Generate signed URL (60 seconds)
-      const r2Client = getR2Client();
-      if (!r2Client || !R2_BUCKET_NAME) {
-        return res.status(500).json({ message: "File storage service is not configured" });
-      }
-      
-      const getCommand = new GetObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: joinRequest.receiptKey,
-      });
-      
-      const signedUrl = await getSignedUrl(r2Client, getCommand, { expiresIn: 60 });
-      
-      res.json({ 
-        url: signedUrl, 
-        mimeType: joinRequest.receiptMime,
-        expiresIn: 60,
-      });
-    } catch (error) {
-      console.error("Error getting receipt URL:", error);
-      res.status(500).json({ message: "Failed to get receipt URL" });
-    }
-  });
-
-  // ==================== ACCOUNTANT ENDPOINTS ====================
-  
-  // Get enrollment statistics grouped by college
+  // ==================== ACCOUNTANT ====================
+  // 🔥 [NEW] Accountant Specific Stats Endpoint (View Only)
   app.get("/api/accountant/enrollments", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
-      // Get all colleges
       const allColleges = await storage.getColleges();
-      
-      // Get all published courses with enrollment counts (getCourses already includes _count)
       const allCourses = await storage.getCourses();
-      
-      // Get all users to map teacher IDs to names
       const allUsers = await storage.getAllUsers();
       const userMap = new Map(allUsers.map(u => [u.id, u]));
-      
-      // Build grouped structure
+
       let totalEnrollments = 0;
       let totalCourses = 0;
       let totalStudents = new Set<string>();
-      
-      // Get all enrollments to count unique students
+
       const allEnrollments = await storage.getEnrollments();
       allEnrollments.forEach(e => totalStudents.add(e.studentId));
-      
+
       const colleges = allColleges.map(college => {
-        // Get courses for this college (published only)
-        const collegeCourses = allCourses.filter(
-          c => c.collegeId === college.id && c.status === "PUBLISHED"
-        );
-        
-        // Group by college (no subject/tab since schema doesn't have it)
+        const collegeCourses = allCourses.filter(c => c.collegeId === college.id && c.status === "PUBLISHED");
         const courses = collegeCourses.map(course => {
           const enrollmentCount = course._count?.enrollments || 0;
           totalEnrollments += enrollmentCount;
           totalCourses++;
-          
-          // Get instructor name
           const teacher = userMap.get(course.teacherId);
           const instructorName = teacher 
             ? `${teacher.firstName || ""} ${teacher.lastName || ""}`.trim() || teacher.email || "Unknown"
             : "Unknown";
-          
           return {
             id: course.id,
             title: course.title,
@@ -2247,14 +824,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             price: (course as any).price || 0,
           };
         });
-        
-        return {
-          id: college.id,
-          name: college.name,
-          courses,
-        };
+        return { id: college.id, name: college.name, courses };
       }).filter(college => college.courses.length > 0);
-      
+
       res.json({
         totals: {
           totalEnrollments,
@@ -2265,233 +837,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
         colleges,
       });
     } catch (error) {
-      console.error("Error fetching accountant enrollments:", error);
       res.status(500).json({ message: "Failed to fetch enrollment data" });
     }
   });
-  
-  // Generate PDF enrollment report
-  app.get("/api/accountant/enrollments.pdf", requireRole("accountant", "super_admin"), async (req: any, res) => {
-    try {
-      // Get all colleges
-      const allColleges = await storage.getColleges();
-      
-      // Get all published courses with enrollment counts (getCourses already includes _count)
-      const allCourses = await storage.getCourses();
-      
-      // Build data
-      let totalEnrollments = 0;
-      let totalCourses = 0;
-      
-      const colleges = allColleges.map(college => {
-        const collegeCourses = allCourses.filter(
-          c => c.collegeId === college.id && c.status === "PUBLISHED"
-        );
-        
-        const courses = collegeCourses.map(course => {
-          const enrollmentCount = course._count?.enrollments || 0;
-          totalEnrollments += enrollmentCount;
-          totalCourses++;
-          return {
-            id: course.id,
-            title: course.title,
-            enrollments: enrollmentCount,
-          };
-        });
-        
-        return {
-          id: college.id,
-          name: college.name,
-          courses,
-        };
-      }).filter(college => college.courses.length > 0);
-      
-      // Generate PDF
-      const doc = new PDFDocument({ margin: 50 });
-      
-      // Set response headers
-      const dateStr = new Date().toISOString().split("T")[0];
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="enrollment-report-${dateStr}.pdf"`);
-      
-      doc.pipe(res);
-      
-      // Title
-      doc.fontSize(24).font("Helvetica-Bold").text("Enrollment Report", { align: "center" });
-      doc.moveDown(0.5);
-      
-      // Generated date
-      doc.fontSize(10).font("Helvetica").fillColor("#666666")
-        .text(`Generated at: ${new Date().toLocaleString("en-US")}`, { align: "center" });
-      doc.moveDown(1.5);
-      
-      // Summary section
-      doc.fontSize(14).font("Helvetica-Bold").fillColor("#000000").text("Summary");
-      doc.moveDown(0.3);
-      doc.fontSize(11).font("Helvetica")
-        .text(`Total Enrollments: ${totalEnrollments}`)
-        .text(`Total Courses: ${totalCourses}`)
-        .text(`Total Colleges: ${colleges.length}`);
-      doc.moveDown(1.5);
-      
-      // Divider
-      doc.strokeColor("#cccccc").lineWidth(1)
-        .moveTo(50, doc.y).lineTo(545, doc.y).stroke();
-      doc.moveDown(1);
-      
-      // College sections
-      for (const college of colleges) {
-        // Check if we need a new page
-        if (doc.y > 700) {
-          doc.addPage();
-        }
-        
-        // College name
-        doc.fontSize(14).font("Helvetica-Bold").fillColor("#2563eb").text(college.name);
-        doc.moveDown(0.3);
-        
-        // Courses table header
-        doc.fontSize(10).font("Helvetica-Bold").fillColor("#000000");
-        const headerY = doc.y;
-        doc.text("Course Title", 50, headerY);
-        doc.text("Enrollments", 450, headerY, { width: 80, align: "right" });
-        doc.moveDown(0.3);
-        
-        // Underline
-        doc.strokeColor("#dddddd").lineWidth(0.5)
-          .moveTo(50, doc.y).lineTo(545, doc.y).stroke();
-        doc.moveDown(0.3);
-        
-        // Course rows
-        doc.fontSize(10).font("Helvetica").fillColor("#333333");
-        for (const course of college.courses) {
-          if (doc.y > 720) {
-            doc.addPage();
-          }
-          const rowY = doc.y;
-          // Truncate long titles
-          const maxTitleWidth = 380;
-          doc.text(course.title, 50, rowY, { width: maxTitleWidth, ellipsis: true });
-          doc.text(String(course.enrollments), 450, rowY, { width: 80, align: "right" });
-          doc.moveDown(0.5);
-        }
-        
-        // College total
-        const collegeTotal = college.courses.reduce((sum, c) => sum + c.enrollments, 0);
-        doc.fontSize(10).font("Helvetica-Bold").fillColor("#000000");
-        const totalY = doc.y;
-        doc.text("College Total:", 50, totalY);
-        doc.text(String(collegeTotal), 450, totalY, { width: 80, align: "right" });
-        doc.moveDown(1.5);
-      }
-      
-      // Footer
-      doc.moveDown(2);
-      doc.fontSize(8).font("Helvetica").fillColor("#999999")
-        .text("This report is confidential and intended for authorized personnel only.", { align: "center" });
-      
-      doc.end();
-    } catch (error) {
-      console.error("Error generating PDF report:", error);
-      res.status(500).json({ message: "Failed to generate PDF report" });
-    }
-  });
 
-  // ==================== DISCOUNT COUPONS ENDPOINTS ====================
-  
-  // Get all discount coupons
+  // ==================== COUPONS ====================
+
   app.get("/api/coupons", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
       const coupons = await storage.getDiscountCoupons();
       res.json(coupons);
     } catch (error) {
-      console.error("Error fetching coupons:", error);
       res.status(500).json({ message: "Failed to fetch coupons" });
     }
   });
 
-  // Get single coupon by ID
   app.get("/api/coupons/:id", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
       const coupon = await storage.getDiscountCouponById(parseInt(req.params.id));
-      if (!coupon) {
-        return res.status(404).json({ message: "Coupon not found" });
-      }
+      if (!coupon) return res.status(404).json({ message: "Coupon not found" });
       res.json(coupon);
     } catch (error) {
-      console.error("Error fetching coupon:", error);
       res.status(500).json({ message: "Failed to fetch coupon" });
     }
   });
 
-  // Create new coupon
   app.post("/api/coupons", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
       const data = insertDiscountCouponSchema.parse(req.body);
-      
-      // Check if code already exists
       const existing = await storage.getDiscountCouponByCode(data.code);
-      if (existing) {
-        return res.status(400).json({ message: "Coupon code already exists" });
-      }
-      
+      if (existing) return res.status(400).json({ message: "Coupon code already exists" });
       const coupon = await storage.createDiscountCoupon({
         ...data,
         createdByUserId: req.user.id,
       });
       res.status(201).json(coupon);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors[0].message });
-      }
-      console.error("Error creating coupon:", error);
       res.status(500).json({ message: "Failed to create coupon" });
     }
   });
 
-  // Update coupon
   app.patch("/api/coupons/:id", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
       const couponId = parseInt(req.params.id);
       const existing = await storage.getDiscountCouponById(couponId);
-      if (!existing) {
-        return res.status(404).json({ message: "Coupon not found" });
-      }
-      
+      if (!existing) return res.status(404).json({ message: "Coupon not found" });
       const data = updateDiscountCouponSchema.parse(req.body);
-      
-      // Check if new code conflicts with another coupon
       if (data.code && data.code.toUpperCase() !== existing.code) {
         const codeConflict = await storage.getDiscountCouponByCode(data.code);
-        if (codeConflict) {
-          return res.status(400).json({ message: "Coupon code already exists" });
-        }
+        if (codeConflict) return res.status(400).json({ message: "Coupon code already exists" });
       }
-      
       const updated = await storage.updateDiscountCoupon(couponId, data);
       res.json(updated);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors[0].message });
-      }
-      console.error("Error updating coupon:", error);
       res.status(500).json({ message: "Failed to update coupon" });
     }
   });
 
-  // Delete coupon
   app.delete("/api/coupons/:id", requireRole("accountant", "super_admin"), async (req: any, res) => {
     try {
       const couponId = parseInt(req.params.id);
       const existing = await storage.getDiscountCouponById(couponId);
-      if (!existing) {
-        return res.status(404).json({ message: "Coupon not found" });
-      }
-      
+      if (!existing) return res.status(404).json({ message: "Coupon not found" });
       await storage.deleteDiscountCoupon(couponId);
       res.json({ message: "Coupon deleted successfully" });
     } catch (error) {
-      console.error("Error deleting coupon:", error);
       res.status(500).json({ message: "Failed to delete coupon" });
     }
   });
