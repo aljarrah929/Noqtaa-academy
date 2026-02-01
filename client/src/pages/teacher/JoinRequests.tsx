@@ -41,26 +41,27 @@ export default function TeacherJoinRequests() {
   const { toast } = useToast();
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
+  const [receiptMimeType, setReceiptMimeType] = useState<string>("image/jpeg");
   const [receiptLoading, setReceiptLoading] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ id: number; action: "approve" | "reject"; studentName: string } | null>(null);
 
   const { data: requests, isLoading } = useQuery<JoinRequestWithRelations[]>({
-    queryKey: ["/api/teacher/join-requests"],
+    queryKey: ["/api/join-requests"],
     staleTime: 0,
     refetchOnMount: "always",
   });
 
   const approveMutation = useMutation({
     mutationFn: async (requestId: number) => {
-      await apiRequest("POST", `/api/teacher/join-requests/${requestId}/approve`, {});
+      await apiRequest("POST", `/api/join-requests/${requestId}/approve`, {});
     },
     onSuccess: () => {
       toast({
         title: "Request Approved",
         description: "Student has been enrolled in the course.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/teacher/join-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/join-requests"] });
     },
     onError: (error: Error) => {
       toast({
@@ -73,14 +74,14 @@ export default function TeacherJoinRequests() {
 
   const rejectMutation = useMutation({
     mutationFn: async (requestId: number) => {
-      await apiRequest("POST", `/api/teacher/join-requests/${requestId}/reject`, {});
+      await apiRequest("POST", `/api/join-requests/${requestId}/reject`, {});
     },
     onSuccess: () => {
       toast({
         title: "Request Rejected",
         description: "The enrollment request has been rejected.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/teacher/join-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/join-requests"] });
     },
     onError: (error: Error) => {
       toast({
@@ -91,18 +92,19 @@ export default function TeacherJoinRequests() {
     },
   });
 
-  const viewReceipt = async (requestId: number) => {
+  const viewReceipt = async (requestId: number, mimeType?: string) => {
     setReceiptLoading(true);
     setReceiptDialogOpen(true);
     try {
-      const response = await fetch(`/api/teacher/join-requests/${requestId}/receipt`, {
+      const response = await fetch(`/api/join-requests/${requestId}/receipt`, {
         credentials: "include",
       });
       if (!response.ok) {
         throw new Error("Failed to load receipt");
       }
       const data = await response.json();
-      setReceiptUrl(data.url);
+      setReceiptUrl(data.downloadUrl);
+      setReceiptMimeType(data.mimeType || mimeType || "image/jpeg");
     } catch (error) {
       toast({
         title: "Error",
@@ -118,6 +120,7 @@ export default function TeacherJoinRequests() {
   const closeReceiptDialog = () => {
     setReceiptDialogOpen(false);
     setReceiptUrl(null);
+    setReceiptMimeType("image/jpeg");
   };
 
   const handleAction = (id: number, action: "approve" | "reject", studentName: string) => {
@@ -239,7 +242,7 @@ export default function TeacherJoinRequests() {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => viewReceipt(request.id)}
+                              onClick={() => viewReceipt(request.id, request.receiptMime || undefined)}
                               data-testid={`button-view-receipt-${request.id}`}
                             >
                               <Eye className="w-4 h-4 mr-1" />
@@ -346,12 +349,24 @@ export default function TeacherJoinRequests() {
                 <p className="text-sm text-muted-foreground">Loading receipt...</p>
               </div>
             ) : receiptUrl ? (
-              <img 
-                src={receiptUrl} 
-                alt="Payment Receipt" 
-                className="max-w-full max-h-[60vh] rounded-lg object-contain"
-                data-testid="img-receipt"
-              />
+              receiptMimeType === "application/pdf" ? (
+                <div className="flex flex-col items-center gap-4">
+                  <FileImage className="w-16 h-16 text-primary" />
+                  <p className="text-muted-foreground">PDF Receipt</p>
+                  <Button asChild>
+                    <a href={receiptUrl} target="_blank" rel="noopener noreferrer" data-testid="link-view-pdf">
+                      Open PDF
+                    </a>
+                  </Button>
+                </div>
+              ) : (
+                <img 
+                  src={receiptUrl} 
+                  alt="Payment Receipt" 
+                  className="max-w-full max-h-[60vh] rounded-lg object-contain"
+                  data-testid="img-receipt"
+                />
+              )
             ) : (
               <div className="flex flex-col items-center gap-3 py-8">
                 <FileImage className="w-12 h-12 text-muted-foreground" />
