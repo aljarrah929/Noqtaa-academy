@@ -38,13 +38,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Plus, Trash2, Save, ArrowLeft, ShieldAlert } from "lucide-react";
 import { Link } from "wouter";
-import type { CourseWithRelations, College, Lesson } from "@shared/schema";
+import type { CourseWithRelations, College, Lesson, User } from "@shared/schema";
 import { B2VideoUploader } from "@/components/B2VideoUploader";
 
 const courseFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().optional(),
   collegeId: z.string().min(1, "College is required"),
+  teacherId: z.string().min(1, "Teacher is required"),
+  price: z.string().min(1, "Price is required"),
 });
 
 const lessonFormSchema = z.object({
@@ -79,12 +81,19 @@ export default function CourseEditor() {
     queryKey: ["/api/colleges"],
   });
 
+  const { data: teachers } = useQuery<User[]>({
+    queryKey: ["/api/admin/teachers"],
+    enabled: isAdmin,
+  });
+
   const courseForm = useForm<CourseFormValues>({
     resolver: zodResolver(courseFormSchema),
     defaultValues: {
       title: "",
       description: "",
       collegeId: "",
+      teacherId: "",
+      price: "0",
     },
   });
 
@@ -103,6 +112,8 @@ export default function CourseEditor() {
         title: course.title,
         description: course.description || "",
         collegeId: String(course.collegeId),
+        teacherId: course.teacherId || "",
+        price: String(course.price || 0),
       });
     }
   }, [course, courseForm]);
@@ -112,6 +123,7 @@ export default function CourseEditor() {
       const res = await apiRequest("POST", "/api/courses", {
         ...data,
         collegeId: Number(data.collegeId),
+        price: Number(data.price),
       });
       return res.json();
     },
@@ -130,6 +142,7 @@ export default function CourseEditor() {
       await apiRequest("PATCH", `/api/courses/${courseId}`, {
         ...data,
         collegeId: Number(data.collegeId),
+        price: Number(data.price),
       });
     },
     onSuccess: () => {
@@ -312,6 +325,51 @@ export default function CourseEditor() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={courseForm.control}
+                    name="teacherId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Teacher</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-teacher">
+                              <SelectValue placeholder="Select a teacher" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {teachers?.map((teacher) => (
+                              <SelectItem key={teacher.id} value={teacher.id}>
+                                {teacher.firstName} {teacher.lastName} ({teacher.email})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={courseForm.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Price (EGP)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0"
+                            placeholder="0" 
+                            {...field} 
+                            data-testid="input-price"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

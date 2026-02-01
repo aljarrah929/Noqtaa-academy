@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { FileCheck, Users, BookOpen, ArrowRight, Clock, Settings } from "lucide-react";
+import { FileCheck, Users, BookOpen, ArrowRight, Clock, Settings, Plus } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -215,7 +215,26 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="hover-elevate">
+            <Link href="/admin/courses/new">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-full">
+                    <Plus className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Create Course</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Add new course
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 text-muted-foreground" />
+              </CardHeader>
+            </Link>
+          </Card>
+
           <Card className="hover-elevate">
             <Link href="/admin/approvals">
               <CardHeader className="flex flex-row items-center justify-between">
