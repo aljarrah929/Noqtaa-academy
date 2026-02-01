@@ -87,7 +87,8 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const teacherMenuItems = [
     { href: "/teacher", label: "Dashboard", icon: LayoutDashboard },
     { href: "/teacher/courses", label: "My Courses", icon: BookOpen },
-    { href: "/teacher/join-requests", label: "Join Requests", icon: UserPlus },
+    // JoinRequests feature temporarily disabled
+    // { href: "/teacher/join-requests", label: "Join Requests", icon: UserPlus },
     { href: "/teacher/upload-video", label: "Upload Videos", icon: Video },
     { href: "/teacher/upload-file", label: "Add File", icon: FileUp },
   ];
