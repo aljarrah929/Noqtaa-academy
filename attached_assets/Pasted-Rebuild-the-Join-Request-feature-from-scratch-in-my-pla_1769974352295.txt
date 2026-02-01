@@ -1,0 +1,74 @@
+Rebuild the "Join Request" feature from scratch in my platform, cleanly and reliably, in the SAME UI location as before (the course page where a student tries to join a course). The goal is to avoid the previous bugs and make it production-safe.
+
+REQUIREMENTS:
+A) Frontend (Student):
+1) On a course page, if the student is NOT enrolled:
+   - Show a clear card/button: "Request to Join".
+2) Clicking it opens a modal with:
+   - Payment receipt upload (image/pdf)
+   - Optional message
+   - Submit button
+3) Show states:
+   - "Pending approval" if a request exists
+   - "Approved" -> auto-enrolled OR show “You are enrolled” state
+   - "Rejected" -> allow re-submit
+4) File upload constraints:
+   - Max file size: 10 MB (configurable)
+   - Accept: JPG/PNG/PDF
+   - Frontend must validate and show friendly errors.
+
+B) Backend/API:
+Create robust endpoints:
+- POST /api/join-requests (create request)
+- GET /api/join-requests/me?courseId= (fetch my request status)
+- (Admin/Teacher) GET /api/join-requests?courseId= (list requests)
+- (Admin/Teacher) POST /api/join-requests/:id/approve
+- (Admin/Teacher) POST /api/join-requests/:id/reject
+All endpoints must:
+- Return consistent JSON error messages
+- Include server-side validation (course exists, user exists, role checks)
+- Log errors with clear tags: [JoinRequest]
+
+C) Storage for receipt files:
+- Use Cloudflare R2 (preferred) OR existing storage in the app, but it must work in production.
+- Ensure uploaded receipt URL is stored in DB.
+- Ensure CORS and permissions are correct so admins can view/download the receipt.
+- Add a health check endpoint:
+  GET /api/admin/health/storage
+  Returns { "status": "OK" } when storage credentials are valid, otherwise { "status":"ERROR", "details": ... }
+
+D) Database:
+- Create a clean model/table: join_requests
+Fields:
+- id
+- userId
+- courseId
+- receiptUrl
+- message (nullable)
+- status: PENDING | APPROVED | REJECTED
+- createdAt, updatedAt
+Constraints:
+- Unique(userId, courseId) so only one active request per course per user.
+- If rejected, allow replacing the receipt/message and setting back to PENDING.
+
+E) Enrollment logic:
+- Approving a join request should enroll the student (create enrollment record).
+- Course content locking should depend ONLY on enrollment, not on join request existence.
+
+F) Admin/Teacher UI:
+- Add a simple page/table in the Teacher/Admin dashboard:
+  - Filter by course
+  - View requests
+  - Open receipt
+  - Approve/Reject
+  - See timestamps and student info
+
+G) QA:
+- Confirm it works after publish (production environment).
+- Add detailed server logs for failures.
+- Provide a list of files changed and how to test end-to-end.
+
+IMPORTANT:
+- Keep existing video/media features untouched.
+- Keep code organized and remove any legacy join request leftovers.
+Proceed with implementation now.
