@@ -72,6 +72,14 @@ Preferred communication style: Simple, everyday language.
 - `GET /api/accountant/enrollments` - Returns enrollment stats grouped by college (requires ACCOUNTANT or SUPER_ADMIN role)
 - `GET /api/accountant/enrollments.pdf` - Generates English PDF enrollment report (requires ACCOUNTANT or SUPER_ADMIN role)
 
+### Discount Coupons API Endpoints
+- `GET /api/coupons` - List all discount coupons (requires ACCOUNTANT or SUPER_ADMIN role)
+- `POST /api/coupons` - Create a new discount coupon (requires ACCOUNTANT or SUPER_ADMIN role)
+- `PATCH /api/coupons/:id` - Update a discount coupon (requires ACCOUNTANT or SUPER_ADMIN role)
+- `DELETE /api/coupons/:id` - Delete a discount coupon (requires ACCOUNTANT or SUPER_ADMIN role)
+
+**Coupon Fields**: code (unique), discountPercent (1-100), maxUses (optional), usedCount, validFrom/validUntil (optional dates), isActive, description, createdByUserId
+
 ### Client-Server Communication
 - **Data Fetching**: TanStack Query with automatic caching and refetching
 - **API Client**: Custom `apiRequest` utility with credentials and error handling
