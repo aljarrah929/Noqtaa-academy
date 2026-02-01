@@ -222,7 +222,7 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
                     <Upload className="w-10 h-10 text-muted-foreground" />
                     <span className="font-medium">Click to upload receipt</span>
                     <span className="text-xs text-muted-foreground">
-                      PNG, JPG, or WebP (max 2MB)
+                      PNG, JPG, or WebP (max 5MB)
                     </span>
                   </div>
                 )}

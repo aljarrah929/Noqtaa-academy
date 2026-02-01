@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated, requireRole, seedSuperAdmin } from "./auth";
 import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema, updateAdminDashboardStatsConfigSchema } from "@shared/schema";
 import { z } from "zod";
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import bcrypt from "bcryptjs";
 import multer from "multer";
@@ -1813,6 +1813,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log(`[R2 Config] SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY ? 'SET' : 'NOT SET'}`);
   console.log(`[R2 Config] BUCKET_NAME: ${R2_BUCKET_NAME || 'NOT SET'}`);
 
+  // R2 Health Check - Admin only endpoint to verify R2 connectivity
+  app.get("/api/admin/health/r2", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const r2Client = getR2Client();
+      if (!r2Client) {
+        return res.status(500).json({ 
+          status: "ERROR",
+          message: "R2 client not configured",
+          details: {
+            ACCOUNT_ID: R2_ACCOUNT_ID ? "SET" : "NOT SET",
+            ACCESS_KEY_ID: R2_ACCESS_KEY_ID ? "SET" : "NOT SET",
+            SECRET_ACCESS_KEY: R2_SECRET_ACCESS_KEY ? "SET" : "NOT SET",
+            BUCKET_NAME: R2_BUCKET_NAME || "NOT SET"
+          }
+        });
+      }
+      
+      if (!R2_BUCKET_NAME) {
+        return res.status(500).json({ 
+          status: "ERROR",
+          message: "R2_BUCKET_NAME not configured"
+        });
+      }
+      
+      // Try to put and delete a test object to verify permissions
+      const testKey = `health-check/${Date.now()}.txt`;
+      const testContent = "R2 health check - this file can be safely deleted";
+      
+      try {
+        // Test PUT
+        await r2Client.send(new PutObjectCommand({
+          Bucket: R2_BUCKET_NAME,
+          Key: testKey,
+          Body: testContent,
+          ContentType: "text/plain"
+        }));
+        
+        // Test DELETE (cleanup)
+        await r2Client.send(new DeleteObjectCommand({
+          Bucket: R2_BUCKET_NAME,
+          Key: testKey
+        }));
+        
+        return res.json({ 
+          status: "OK",
+          message: "R2 connectivity verified",
+          bucket: R2_BUCKET_NAME,
+          permissions: ["PUT", "DELETE"]
+        });
+      } catch (uploadError: any) {
+        console.error("[R2 Health] Upload test failed:", uploadError.message);
+        return res.status(500).json({
+          status: "ERROR",
+          message: "R2 upload test failed",
+          error: uploadError.message,
+          code: uploadError.Code || uploadError.name
+        });
+      }
+    } catch (error: any) {
+      console.error("[R2 Health] Error:", error);
+      return res.status(500).json({ status: "ERROR", message: error.message });
+    }
+  });
+
   // Student - Check join request status for a course
   app.get("/api/courses/:courseId/join-request/status", isAuthenticated, async (req: any, res) => {
     try {
@@ -1929,7 +1998,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ 
           message: "Failed to upload receipt file", 
           code: "R2_UPLOAD_FAILED",
-          detail: uploadError.message 
+          ...(process.env.NODE_ENV !== 'production' && { detail: uploadError.message })
         });
       }
       
@@ -1956,7 +2025,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error.message?.includes("Only PNG")) {
         return res.status(400).json({ message: error.message, code: "INVALID_FILE_TYPE" });
       }
-      res.status(500).json({ message: "Failed to submit join request", code: "INTERNAL_ERROR", detail: error.message });
+      res.status(500).json({ 
+        message: "Failed to submit join request", 
+        code: "INTERNAL_ERROR",
+        ...(process.env.NODE_ENV !== 'production' && { detail: error.message })
+      });
     }
   });
 
