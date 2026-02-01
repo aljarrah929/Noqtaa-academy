@@ -41,6 +41,7 @@ Preferred communication style: Simple, everyday language.
 - `/api/courses/*` - Course management with approval workflow
 - `/api/lessons/*` - Lesson content management
 - `/api/enrollments/*` - Student enrollment management
+- `/api/join-requests/*` - Join request management (student enrollment requests)
 - `/api/users/*` - User management (admin only)
 - `/api/stream/*` - Cloudflare Stream video upload integration
 
@@ -58,6 +59,9 @@ Preferred communication style: Simple, everyday language.
 - `courses` - Courses with status workflow (DRAFT → PENDING_APPROVAL → PUBLISHED/REJECTED)
 - `lessons` - Course content with ordering and content types (video, text, link, file)
 - `enrollments` - Student-course relationships
+- `joinRequests` - Student enrollment requests with payment receipt uploads
+  - Status workflow: PENDING → APPROVED/REJECTED
+  - Stores receipt file metadata (receiptKey, receiptMime, receiptSize)
 - `courseApprovalLogs` - Audit trail for course approval decisions
 - `sessions` - PostgreSQL-backed session storage
 
@@ -71,6 +75,26 @@ Preferred communication style: Simple, everyday language.
 ### Accountant API Endpoints
 - `GET /api/accountant/enrollments` - Returns enrollment stats grouped by college (requires ACCOUNTANT or SUPER_ADMIN role)
 - `GET /api/accountant/enrollments.pdf` - Generates English PDF enrollment report (requires ACCOUNTANT or SUPER_ADMIN role)
+
+### Join Request API Endpoints
+Student endpoints:
+- `GET /api/join-requests/me?courseId=X` - Get student's join request status for a course
+- `POST /api/join-requests/presign-receipt` - Get presigned R2 URL for receipt upload (requires STUDENT role)
+- `POST /api/join-requests` - Create new join request with receipt metadata (requires STUDENT role)
+
+Teacher/Admin endpoints:
+- `GET /api/join-requests` - List all join requests (teachers see own courses, admins see all)
+- `POST /api/join-requests/:id/approve` - Approve request and enroll student (teachers only for own courses)
+- `POST /api/join-requests/:id/reject` - Reject request (teachers only for own courses)
+- `GET /api/join-requests/:id/receipt` - Get presigned download URL for receipt image/PDF
+
+Join Request Flow:
+1. Student visits course detail page and clicks "Request to Join"
+2. Student uploads payment receipt (JPG, PNG, or PDF, max 10MB) via presigned R2 URL
+3. Student submits request with optional message
+4. Teacher views pending requests at `/teacher/join-requests`
+5. Teacher reviews receipt and approves or rejects
+6. On approval, student is automatically enrolled in the course
 
 ### Client-Server Communication
 - **Data Fetching**: TanStack Query with automatic caching and refetching
