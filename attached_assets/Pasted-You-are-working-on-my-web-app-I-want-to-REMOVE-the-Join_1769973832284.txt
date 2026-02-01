@@ -1,0 +1,40 @@
+You are working on my web app. I want to REMOVE the "Join Request" feature completely from the platform (temporary removal to reset it later). Do this in a clean, safe way.
+
+GOALS (must all be done):
+1) Frontend:
+   - Remove/hide any UI related to Join Request:
+     * "Request to Join" button
+     * Join Request modal
+     * Payment receipt upload UI
+     * Any “pending request” states/messages
+   - Remove the "Contact Teacher" / "Request to Join" entry points if they depend on Join Request flow.
+   - Ensure course pages don’t show locked content prompts that refer to Join Requests.
+   - Remove any client code calling join-request endpoints.
+
+2) Backend/API:
+   - Remove or disable all endpoints related to Join Requests (create/list/approve/reject/upload receipt).
+   - If removing routes breaks imports, replace them with stubs that return 404 and a clear JSON message:
+     { "error": "JOIN_REQUEST_DISABLED" }
+   - Remove any server-side logic that checks for join requests during enrollment gating.
+
+3) Database:
+   - Identify Join Request tables/collections/models.
+   - I do NOT want to lose production data accidentally:
+     * If migrations exist, create a migration that drops join_request tables ONLY if a flag is set (e.g. DROP_JOIN_REQUEST=1).
+     * Otherwise, keep the tables but stop writing/reading them, and remove references in code.
+   - Update schema/types so the app compiles without join request models.
+
+4) Authorization / Roles:
+   - Remove any admin/teacher workflows that approve join requests.
+   - Ensure enrollment logic still works for already-enrolled students without Join Requests.
+
+5) QA checklist:
+   - Build passes with no TypeScript errors.
+   - Clicking any old Join Request links should show a safe “Not Found / Disabled” message.
+   - No console errors on course pages.
+   - Add a brief summary of files changed and what was removed.
+
+IMPORTANT:
+- Do not touch video upload or media/CDN features.
+- Keep the rest of the platform functioning normally.
+Proceed now, make changes, and show me the list of modified files and what you removed.
