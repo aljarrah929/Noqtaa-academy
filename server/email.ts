@@ -20,16 +20,8 @@ interface SendEmailOptions {
 }
 
 export function getAppUrl(): string {
-  if (process.env.APP_URL) {
-    return process.env.APP_URL.replace(/\/$/, "");
-  }
-  if (process.env.REPLIT_DEV_DOMAIN) {
-    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
-  }
-  if (process.env.REPLIT_DOMAINS) {
-    return `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`;
-  }
-  return "http://localhost:5000";
+  // إجبار النظام على استخدام الدومين الرسمي دائماً
+  return "https://noqtaa.cloud";
 }
 
 export function verifyEmailConnection(): boolean {
