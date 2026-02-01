@@ -118,6 +118,7 @@ export interface IStorage {
   deleteLesson(id: number): Promise<void>;
   getEnrollmentsByCourse(courseId: number): Promise<(Enrollment & { student: User })[]>;
   getEnrollmentsByStudent(studentId: string): Promise<(Enrollment & { course: CourseWithRelations })[]>;
+  getEnrollments(): Promise<Enrollment[]>;
   isEnrolled(studentId: string, courseId: number): Promise<boolean>;
   createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment>;
   deleteEnrollment(id: number): Promise<void>;
@@ -148,6 +149,8 @@ export interface IStorage {
   getJoinRequestById(id: number): Promise<JoinRequestWithRelations | undefined>;
   getJoinRequestsByCourse(courseId: number): Promise<JoinRequestWithRelations[]>;
   getJoinRequestsByTeacher(teacherId: string): Promise<JoinRequestWithRelations[]>;
+  getJoinRequestsByCollege(collegeId: number): Promise<JoinRequestWithRelations[]>;
+  getAllJoinRequests(): Promise<JoinRequestWithRelations[]>;
   getStudentJoinRequestForCourse(studentId: string, courseId: number): Promise<JoinRequest | undefined>;
   hasPendingJoinRequest(studentId: string, courseId: number): Promise<boolean>;
   hasApprovedJoinRequest(studentId: string, courseId: number): Promise<boolean>;
@@ -579,6 +582,10 @@ export class DatabaseStorage implements IStorage {
     return !!enrollment;
   }
 
+  async getEnrollments(): Promise<Enrollment[]> {
+    return await db.select().from(enrollments);
+  }
+
   async createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment> {
     const [created] = await db.insert(enrollments).values(enrollment).returning();
     return created;
@@ -841,6 +848,39 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(joinRequests.studentId, users.id))
       .leftJoin(colleges, eq(users.collegeId, colleges.id))
       .where(eq(courses.teacherId, teacherId))
+      .orderBy(desc(joinRequests.createdAt));
+    
+    return result.map(row => ({
+      ...row.join_requests,
+      student: row.users ? { ...row.users, college: row.colleges || undefined } : undefined,
+      course: row.courses || undefined,
+    }));
+  }
+
+  async getJoinRequestsByCollege(collegeId: number): Promise<JoinRequestWithRelations[]> {
+    const result = await db
+      .select()
+      .from(joinRequests)
+      .innerJoin(courses, eq(joinRequests.courseId, courses.id))
+      .leftJoin(users, eq(joinRequests.studentId, users.id))
+      .leftJoin(colleges, eq(users.collegeId, colleges.id))
+      .where(eq(courses.collegeId, collegeId))
+      .orderBy(desc(joinRequests.createdAt));
+    
+    return result.map(row => ({
+      ...row.join_requests,
+      student: row.users ? { ...row.users, college: row.colleges || undefined } : undefined,
+      course: row.courses || undefined,
+    }));
+  }
+
+  async getAllJoinRequests(): Promise<JoinRequestWithRelations[]> {
+    const result = await db
+      .select()
+      .from(joinRequests)
+      .innerJoin(courses, eq(joinRequests.courseId, courses.id))
+      .leftJoin(users, eq(joinRequests.studentId, users.id))
+      .leftJoin(colleges, eq(users.collegeId, colleges.id))
       .orderBy(desc(joinRequests.createdAt));
     
     return result.map(row => ({

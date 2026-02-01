@@ -518,6 +518,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (user.role === "SUPER_ADMIN") {
           // Super admins have access to all content
           hasAccess = true;
+        } else if (user.role === "ACCOUNTANT") {
+          // Accountants cannot view course content - only stats
+          hasAccess = false;
         } else if (user.role === "ADMIN") {
           // Admins have access to content in their college
           hasAccess = user.collegeId === course.collegeId;
@@ -1938,17 +1941,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Teacher - Get all join requests for their courses
+  // Teacher/Admin - Get all join requests for their courses/college
   app.get("/api/teacher/join-requests", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
-        return res.status(403).json({ message: "Only teachers can view join requests" });
+      const allowedRoles = ["TEACHER", "ADMIN", "SUPER_ADMIN"];
+      if (!user || !allowedRoles.includes(user.role)) {
+        return res.status(403).json({ message: "Only teachers and admins can view join requests" });
       }
       
-      const requests = await storage.getJoinRequestsByTeacher(userId);
+      let requests;
+      if (user.role === "SUPER_ADMIN") {
+        // Super Admin sees all join requests
+        requests = await storage.getAllJoinRequests();
+      } else if (user.role === "ADMIN") {
+        // Admin sees join requests for courses in their college
+        if (!user.collegeId) {
+          return res.status(400).json({ message: "Admin must be assigned to a college" });
+        }
+        requests = await storage.getJoinRequestsByCollege(user.collegeId);
+      } else {
+        // Teacher sees only their own courses' join requests
+        requests = await storage.getJoinRequestsByTeacher(userId);
+      }
+      
       res.json(requests);
     } catch (error) {
       console.error("Error fetching join requests:", error);
@@ -1956,15 +1974,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Teacher - Approve join request
+  // Teacher/Admin - Approve join request
   app.post("/api/teacher/join-requests/:id/approve", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const requestId = parseInt(req.params.id);
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
-        return res.status(403).json({ message: "Only teachers can approve join requests" });
+      const allowedRoles = ["TEACHER", "ADMIN", "SUPER_ADMIN"];
+      if (!user || !allowedRoles.includes(user.role)) {
+        return res.status(403).json({ message: "Only teachers and admins can approve join requests" });
       }
       
       // Get join request with course info
@@ -1973,13 +1992,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Join request not found" });
       }
       
-      // Verify teacher owns the course
+      // Verify access to the course
       const course = await storage.getCourseById(joinRequest.courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
-      if (course.teacherId !== userId && user.role !== "SUPER_ADMIN") {
-        return res.status(403).json({ message: "You can only approve requests for your own courses" });
+      
+      // Check access: Teacher must own course, Admin must be in same college, Super Admin has full access
+      const isTeacher = course.teacherId === userId;
+      const isAdminInCollege = user.role === "ADMIN" && user.collegeId === course.collegeId;
+      const isSuperAdmin = user.role === "SUPER_ADMIN";
+      
+      if (!isTeacher && !isAdminInCollege && !isSuperAdmin) {
+        return res.status(403).json({ message: "You don't have permission to approve this request" });
       }
       
       // Check if request is still pending
@@ -2004,15 +2029,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Teacher - Reject join request
+  // Teacher/Admin - Reject join request
   app.post("/api/teacher/join-requests/:id/reject", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const requestId = parseInt(req.params.id);
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
-        return res.status(403).json({ message: "Only teachers can reject join requests" });
+      const allowedRoles = ["TEACHER", "ADMIN", "SUPER_ADMIN"];
+      if (!user || !allowedRoles.includes(user.role)) {
+        return res.status(403).json({ message: "Only teachers and admins can reject join requests" });
       }
       
       // Get join request with course info
@@ -2021,13 +2047,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Join request not found" });
       }
       
-      // Verify teacher owns the course
+      // Verify access to the course
       const course = await storage.getCourseById(joinRequest.courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
-      if (course.teacherId !== userId && user.role !== "SUPER_ADMIN") {
-        return res.status(403).json({ message: "You can only reject requests for your own courses" });
+      
+      // Check access: Teacher must own course, Admin must be in same college, Super Admin has full access
+      const isTeacher = course.teacherId === userId;
+      const isAdminInCollege = user.role === "ADMIN" && user.collegeId === course.collegeId;
+      const isSuperAdmin = user.role === "SUPER_ADMIN";
+      
+      if (!isTeacher && !isAdminInCollege && !isSuperAdmin) {
+        return res.status(403).json({ message: "You don't have permission to reject this request" });
       }
       
       // Check if request is still pending
@@ -2045,15 +2077,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Teacher - Get receipt signed URL
+  // Teacher/Admin - Get receipt signed URL
   app.get("/api/teacher/join-requests/:id/receipt", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const requestId = parseInt(req.params.id);
       const user = await storage.getUser(userId);
       
-      if (!user || (user.role !== "TEACHER" && user.role !== "SUPER_ADMIN")) {
-        return res.status(403).json({ message: "Only teachers can view receipts" });
+      const allowedRoles = ["TEACHER", "ADMIN", "SUPER_ADMIN"];
+      if (!user || !allowedRoles.includes(user.role)) {
+        return res.status(403).json({ message: "Only teachers and admins can view receipts" });
       }
       
       // Get join request with course info
@@ -2062,13 +2095,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Join request not found" });
       }
       
-      // Verify teacher owns the course
+      // Verify access to the course
       const course = await storage.getCourseById(joinRequest.courseId);
       if (!course) {
         return res.status(404).json({ message: "Course not found" });
       }
-      if (course.teacherId !== userId && user.role !== "SUPER_ADMIN") {
-        return res.status(403).json({ message: "You can only view receipts for your own courses" });
+      
+      // Check access: Teacher must own course, Admin must be in same college, Super Admin has full access
+      const isTeacher = course.teacherId === userId;
+      const isAdminInCollege = user.role === "ADMIN" && user.collegeId === course.collegeId;
+      const isSuperAdmin = user.role === "SUPER_ADMIN";
+      
+      if (!isTeacher && !isAdminInCollege && !isSuperAdmin) {
+        return res.status(403).json({ message: "You don't have permission to view this receipt" });
       }
       
       // Generate signed URL (60 seconds)
@@ -2106,9 +2145,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all published courses with enrollment counts (getCourses already includes _count)
       const allCourses = await storage.getCourses();
       
+      // Get all users to map teacher IDs to names
+      const allUsers = await storage.getAllUsers();
+      const userMap = new Map(allUsers.map(u => [u.id, u]));
+      
       // Build grouped structure
       let totalEnrollments = 0;
       let totalCourses = 0;
+      let totalStudents = new Set<string>();
+      
+      // Get all enrollments to count unique students
+      const allEnrollments = await storage.getEnrollments();
+      allEnrollments.forEach(e => totalStudents.add(e.studentId));
       
       const colleges = allColleges.map(college => {
         // Get courses for this college (published only)
@@ -2121,10 +2169,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const enrollmentCount = course._count?.enrollments || 0;
           totalEnrollments += enrollmentCount;
           totalCourses++;
+          
+          // Get instructor name
+          const teacher = userMap.get(course.teacherId);
+          const instructorName = teacher 
+            ? `${teacher.firstName || ""} ${teacher.lastName || ""}`.trim() || teacher.email || "Unknown"
+            : "Unknown";
+          
           return {
             id: course.id,
             title: course.title,
             enrollments: enrollmentCount,
+            instructorName,
+            price: (course as any).price || 0,
           };
         });
         
@@ -2140,6 +2197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalEnrollments,
           totalCourses,
           totalColleges: colleges.length,
+          totalStudents: totalStudents.size,
         },
         colleges,
       });

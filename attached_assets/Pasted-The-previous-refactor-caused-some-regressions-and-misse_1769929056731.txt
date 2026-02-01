@@ -1,0 +1,27 @@
+The previous refactor caused some regressions and missed specific requirements. Please implement the following fixes and features immediately:
+
+1. **FIX: Student Management (Admin & Instructor)**
+   - The features to "Add Student by ID" and "Accept Join Requests" are currently broken or missing permissions.
+   - **Requirement:** Ensure that both 'Admin' and 'Instructor' (if applicable) roles have permission to access the "Manage Students" page.
+   - They must be able to approve join requests and manually add a student to a course using the Student's ID/Email.
+
+2. **FEATURE: Admin Assigning Courses**
+   - Currently, creating a course assigns it to the logged-in user.
+   - **Update:** In the "Create Course" form, if the logged-in user is an **Admin** or **Super Admin**, show a dropdown menu to select the "Instructor" for this course from the list of registered teachers.
+   - **Backend:** Update the `POST /api/courses` endpoint to accept an `instructorId` field from Admins, overriding the default behavior.
+
+3. **FEATURE: Accountant Dashboard (Stats View)**
+   - The Accountant needs a specific view that shows STATISTICS without CONTENT access.
+   - Create a table/view for the Accountant that displays:
+     - Course Name.
+     - Assigned Instructor Name.
+     - **Enrollment Count** (How many students in this specific course).
+     - Price/Revenue.
+   - **Global Stats:** Show a widget for "Total Students" across the platform.
+   - **RESTRICTION:** The Accountant MUST NOT be able to view the actual course content (videos/lessons). If they click a course, it should show financial details, not the player.
+
+4. **FEATURE: Super Admin (The Ultimate Role)**
+   - Ensure the 'Super Admin' role inherits ALL permissions from ALL other roles (Student + Instructor + Admin + Accountant).
+   - **Content Access:** Unlike the Accountant, the Super Admin MUST be able to view course content (videos/lessons) for moderation purposes.
+
+Please update the API permissions (middleware), database queries, and Frontend components to reflect these changes accurately.

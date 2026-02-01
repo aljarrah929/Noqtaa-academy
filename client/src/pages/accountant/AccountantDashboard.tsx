@@ -23,6 +23,8 @@ interface CourseEnrollment {
   id: number;
   title: string;
   enrollments: number;
+  instructorName: string;
+  price: number;
 }
 
 interface CollegeEnrollment {
@@ -36,6 +38,7 @@ interface EnrollmentData {
     totalEnrollments: number;
     totalCourses: number;
     totalColleges: number;
+    totalStudents: number;
   };
   colleges: CollegeEnrollment[];
 }
@@ -81,6 +84,7 @@ export default function AccountantDashboard() {
     }
 
     const filteredTotals = {
+      totalStudents: data.totals.totalStudents,
       totalEnrollments: colleges.reduce(
         (sum, college) => sum + college.courses.reduce((s, c) => s + c.enrollments, 0),
         0
@@ -146,7 +150,26 @@ export default function AccountantDashboard() {
   return (
     <DashboardLayout title="Enrollment Statistics">
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card data-testid="card-total-students">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                <div className="text-2xl font-bold" data-testid="text-total-students">
+                  {filteredData?.totals.totalStudents?.toLocaleString() || 0}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Unique students on platform
+              </p>
+            </CardContent>
+          </Card>
+
           <Card data-testid="card-total-enrollments">
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Enrollments</CardTitle>
@@ -157,11 +180,11 @@ export default function AccountantDashboard() {
                 <Skeleton className="h-8 w-20" />
               ) : (
                 <div className="text-2xl font-bold" data-testid="text-total-enrollments">
-                  {data?.totals.totalEnrollments.toLocaleString() || 0}
+                  {filteredData?.totals.totalEnrollments.toLocaleString() || 0}
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                Students enrolled in all courses
+                Enrollments across all courses
               </p>
             </CardContent>
           </Card>
@@ -176,11 +199,11 @@ export default function AccountantDashboard() {
                 <Skeleton className="h-8 w-20" />
               ) : (
                 <div className="text-2xl font-bold" data-testid="text-total-courses">
-                  {data?.totals.totalCourses.toLocaleString() || 0}
+                  {filteredData?.totals.totalCourses.toLocaleString() || 0}
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                Published courses with enrollments
+                Published courses
               </p>
             </CardContent>
           </Card>
@@ -195,7 +218,7 @@ export default function AccountantDashboard() {
                 <Skeleton className="h-8 w-20" />
               ) : (
                 <div className="text-2xl font-bold" data-testid="text-total-colleges">
-                  {data?.totals.totalColleges.toLocaleString() || 0}
+                  {filteredData?.totals.totalColleges.toLocaleString() || 0}
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
@@ -271,12 +294,14 @@ export default function AccountantDashboard() {
                         {college.courses.reduce((sum, c) => sum + c.enrollments, 0)} total enrollments
                       </Badge>
                     </div>
-                    <div className="rounded-lg border">
+                    <div className="rounded-lg border overflow-x-auto">
                       <table className="w-full">
                         <thead className="bg-muted/50">
                           <tr>
                             <th className="text-left py-2 px-4 font-medium text-sm">Course Title</th>
-                            <th className="text-right py-2 px-4 font-medium text-sm w-32">Enrollments</th>
+                            <th className="text-left py-2 px-4 font-medium text-sm">Instructor</th>
+                            <th className="text-right py-2 px-4 font-medium text-sm w-24">Price</th>
+                            <th className="text-right py-2 px-4 font-medium text-sm w-28">Enrollments</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -287,6 +312,10 @@ export default function AccountantDashboard() {
                               data-testid={`course-row-${course.id}`}
                             >
                               <td className="py-2 px-4 text-sm">{course.title}</td>
+                              <td className="py-2 px-4 text-sm text-muted-foreground">{course.instructorName}</td>
+                              <td className="py-2 px-4 text-sm text-right">
+                                {course.price > 0 ? `$${course.price.toLocaleString()}` : "Free"}
+                              </td>
                               <td className="py-2 px-4 text-sm text-right font-medium">
                                 {course.enrollments.toLocaleString()}
                               </td>

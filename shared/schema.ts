@@ -68,6 +68,7 @@ export const courses = pgTable("courses", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   coverImageUrl: varchar("cover_image_url", { length: 500 }),
+  price: integer("price").notNull().default(0),
   status: courseStatusEnum("status").notNull().default("DRAFT"),
   isLocked: boolean("is_locked").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),

@@ -46,6 +46,7 @@ const courseFormSchema = z.object({
   description: z.string().optional(),
   collegeId: z.string().min(1, "College is required"),
   teacherId: z.string().optional(),
+  price: z.string().optional().default("0"),
 });
 
 interface InstructorOption {
@@ -101,6 +102,7 @@ export default function CourseEditor() {
       description: "",
       collegeId: "",
       teacherId: user?.id || "",
+      price: "0",
     },
   });
 
@@ -120,6 +122,7 @@ export default function CourseEditor() {
         description: course.description || "",
         collegeId: String(course.collegeId),
         teacherId: course.teacherId,
+        price: String((course as any).price || 0),
       });
     }
   }, [course, courseForm]);
@@ -130,6 +133,7 @@ export default function CourseEditor() {
         ...data,
         collegeId: Number(data.collegeId),
         teacherId: data.teacherId || user?.id,
+        price: Number(data.price) || 0,
       });
       return res.json();
     },
@@ -148,6 +152,7 @@ export default function CourseEditor() {
       await apiRequest("PATCH", `/api/courses/${courseId}`, {
         ...data,
         collegeId: Number(data.collegeId),
+        price: Number(data.price) || 0,
       });
     },
     onSuccess: () => {
@@ -369,6 +374,26 @@ export default function CourseEditor() {
                       )}
                     />
                   )}
+
+                  <FormField
+                    control={courseForm.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Price ($)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0"
+                            placeholder="0" 
+                            {...field} 
+                            data-testid="input-price"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <FormField
                     control={courseForm.control}

@@ -96,6 +96,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/approvals", label: "Approvals", icon: FileCheck },
     { href: "/admin/teachers", label: "Teachers", icon: Users },
+    { href: "/teacher/join-requests", label: "Join Requests", icon: UserPlus },
   ];
 
   const superAdminMenuItems = [
