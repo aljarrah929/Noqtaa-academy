@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const FROM_EMAIL = "Noqtaa Academy <onboarding@resend.dev>";
+const FROM_EMAIL = "Noqtaa Academy Support <support@noqtaa.cloud>";
 
 function getResendApiKey(): string {
   const apiKey = process.env.RESEND_API_KEY;
