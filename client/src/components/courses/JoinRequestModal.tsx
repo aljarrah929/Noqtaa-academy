@@ -72,33 +72,28 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
       setUploadError(null);
       
       try {
-        // Step 1: Get presigned URL
-        console.log("[JoinRequest] Getting presigned URL for file:", file.name);
-        const presignRes = await apiRequest("POST", "/api/join-requests/presign-receipt", {
-          fileName: file.name,
-          contentType: file.type,
-          courseId,
-        });
+        // Step 1: Upload file via proxy endpoint (avoids CORS issues)
+        console.log("[JoinRequest] Uploading file via proxy:", file.name);
         
-        const presignData = await presignRes.json();
-        const { uploadUrl, objectKey } = presignData;
-        console.log("[JoinRequest] Got presigned URL, objectKey:", objectKey);
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("courseId", String(courseId));
         
-        // Step 2: Upload file directly to R2
-        const uploadRes = await fetch(uploadUrl, {
-          method: "PUT",
-          headers: {
-            "Content-Type": file.type,
-          },
-          body: file,
+        const uploadRes = await fetch("/api/join-requests/upload-receipt", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
         });
         
         if (!uploadRes.ok) {
-          console.error("[JoinRequest] R2 upload failed:", uploadRes.status);
-          throw new Error("Failed to upload file to storage");
+          const errorData = await uploadRes.json().catch(() => ({}));
+          console.error("[JoinRequest] Proxy upload failed:", uploadRes.status, errorData);
+          throw new Error(errorData.message || "Failed to upload file");
         }
         
-        console.log("[JoinRequest] File uploaded, creating join request with receiptKey:", objectKey);
+        const uploadData = await uploadRes.json();
+        const objectKey = uploadData.objectKey;
+        console.log("[JoinRequest] File uploaded, objectKey:", objectKey);
         
         // Step 3: Create join request with receipt metadata
         const createRes = await apiRequest("POST", "/api/join-requests", {

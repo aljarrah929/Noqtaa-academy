@@ -1793,16 +1793,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ JOIN REQUESTS ============
   
-  // Multer config for receipt uploads (memory storage, 5MB max)
-  const receiptUpload = multer({
+  // Multer config for join request receipt uploads (memory storage, 10MB max)
+  const joinRequestReceiptUpload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
     fileFilter: (_req, file, cb) => {
-      const allowedReceipt = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+      const allowedReceipt = ["image/png", "image/jpeg", "application/pdf"];
       if (allowedReceipt.includes(file.mimetype)) {
         cb(null, true);
       } else {
-        cb(new Error("Only PNG, JPG, JPEG, and WebP images are allowed"));
+        cb(new Error("Only PNG, JPG, and PDF files are allowed"));
       }
     },
   });
@@ -2046,6 +2046,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("[JoinRequest] Error generating presigned URL:", error);
       res.status(500).json({ message: "Failed to generate upload URL" });
+    }
+  });
+  
+  // Student - Proxy upload receipt (fallback for CORS issues)
+  app.post("/api/join-requests/upload-receipt", isAuthenticated, joinRequestReceiptUpload.single("file"), async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || user.role !== "STUDENT") {
+        return res.status(403).json({ message: "Only students can upload receipts" });
+      }
+      
+      const file = req.file;
+      const { courseId } = req.body;
+      
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      if (!courseId) {
+        return res.status(400).json({ message: "courseId is required" });
+      }
+      
+      if (!JOIN_REQUEST_ALLOWED_TYPES.includes(file.mimetype)) {
+        return res.status(400).json({ message: "Invalid file type. Allowed: JPG, PNG, PDF" });
+      }
+      
+      if (file.size > JOIN_REQUEST_MAX_FILE_SIZE) {
+        return res.status(400).json({ message: "File too large. Maximum size is 10 MB" });
+      }
+      
+      const r2Client = getR2Client();
+      if (!r2Client || !R2_BUCKET_NAME) {
+        console.error("[JoinRequest] R2 not configured for proxy upload");
+        return res.status(500).json({ message: "File storage service is not configured" });
+      }
+      
+      // Generate unique key
+      const timestamp = Date.now();
+      const safeFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const objectKey = `join-requests/${courseId}/${userId}/${timestamp}-${safeFileName}`;
+      
+      // Upload to R2 via backend
+      const command = new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: objectKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      });
+      
+      await r2Client.send(command);
+      
+      console.log("[JoinRequest] Receipt uploaded via proxy:", objectKey);
+      
+      res.json({
+        objectKey,
+        contentType: file.mimetype,
+        size: file.size,
+      });
+    } catch (error) {
+      console.error("[JoinRequest] Error uploading receipt via proxy:", error);
+      res.status(500).json({ message: "Failed to upload receipt" });
     }
   });
   
