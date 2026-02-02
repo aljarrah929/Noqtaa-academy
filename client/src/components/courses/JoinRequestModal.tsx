@@ -80,8 +80,9 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
           courseId,
         });
         
-        const { uploadUrl, objectKey } = presignRes;
-        console.log("[JoinRequest] Got presigned URL, uploading to R2...");
+        const presignData = await presignRes.json();
+        const { uploadUrl, objectKey } = presignData;
+        console.log("[JoinRequest] Got presigned URL, objectKey:", objectKey);
         
         // Step 2: Upload file directly to R2
         const uploadRes = await fetch(uploadUrl, {
@@ -97,10 +98,10 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
           throw new Error("Failed to upload file to storage");
         }
         
-        console.log("[JoinRequest] File uploaded, creating join request...");
+        console.log("[JoinRequest] File uploaded, creating join request with receiptKey:", objectKey);
         
         // Step 3: Create join request with receipt metadata
-        const result = await apiRequest("POST", "/api/join-requests", {
+        const createRes = await apiRequest("POST", "/api/join-requests", {
           courseId,
           message: message.trim() || null,
           receiptKey: objectKey,
@@ -108,6 +109,8 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
           receiptSize: file.size,
         });
         
+        const result = await createRes.json();
+        console.log("[JoinRequest] Join request created:", result);
         return result;
       } finally {
         setIsUploading(false);
