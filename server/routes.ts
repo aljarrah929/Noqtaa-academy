@@ -2017,9 +2017,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid file type. Allowed: JPG, PNG, PDF" });
       }
       
-      const r2Client = getR2Client();
-      if (!r2Client || !R2_BUCKET_NAME) {
-        console.error("[JoinRequest] R2 not configured");
+      const b2Client = getB2Client();
+      if (!b2Client || !B2_BUCKET_NAME) {
+        console.error("[JoinRequest] B2 not configured");
         return res.status(500).json({ message: "File storage service is not configured" });
       }
       
@@ -2030,14 +2030,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate presigned PUT URL (10 minute expiry)
       const command = new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: B2_BUCKET_NAME,
         Key: objectKey,
         ContentType: contentType,
       });
       
-      const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 600 });
+      const uploadUrl = await getSignedUrl(b2Client, command, { expiresIn: 600 });
       
-      console.log("[JoinRequest] Generated presigned URL for receipt:", objectKey);
+      console.log("[JoinRequest] Generated presigned URL for receipt (B2):", objectKey);
       
       res.json({
         uploadUrl,
@@ -2078,9 +2078,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "File too large. Maximum size is 10 MB" });
       }
       
-      const r2Client = getR2Client();
-      if (!r2Client || !R2_BUCKET_NAME) {
-        console.error("[JoinRequest] R2 not configured for proxy upload");
+      const b2Client = getB2Client();
+      if (!b2Client || !B2_BUCKET_NAME) {
+        console.error("[JoinRequest] B2 not configured for proxy upload");
         return res.status(500).json({ message: "File storage service is not configured" });
       }
       
@@ -2089,17 +2089,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const safeFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
       const objectKey = `join-requests/${courseId}/${userId}/${timestamp}-${safeFileName}`;
       
-      // Upload to R2 via backend
+      // Upload to B2 via backend
       const command = new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: B2_BUCKET_NAME,
         Key: objectKey,
         Body: file.buffer,
         ContentType: file.mimetype,
       });
       
-      await r2Client.send(command);
+      await b2Client.send(command);
       
-      console.log("[JoinRequest] Receipt uploaded via proxy:", objectKey);
+      console.log("[JoinRequest] Receipt uploaded via proxy (B2):", objectKey);
       
       res.json({
         objectKey,
@@ -2278,20 +2278,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const r2Client = getR2Client();
-      if (!r2Client || !R2_BUCKET_NAME) {
+      const b2Client = getB2Client();
+      if (!b2Client || !B2_BUCKET_NAME) {
         return res.status(500).json({ message: "File storage service is not configured" });
       }
       
       // Generate presigned GET URL (1 hour expiry)
       const command = new GetObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: B2_BUCKET_NAME,
         Key: joinRequest.receiptKey,
       });
       
-      const downloadUrl = await getSignedUrl(r2Client, command, { expiresIn: 3600 });
+      const downloadUrl = await getSignedUrl(b2Client, command, { expiresIn: 3600 });
       
-      console.log("[JoinRequest] Generated receipt URL for request:", requestId);
+      console.log("[JoinRequest] Generated receipt URL for request (B2):", requestId);
       
       res.json({
         downloadUrl,
