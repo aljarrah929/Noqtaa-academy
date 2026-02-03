@@ -17,7 +17,7 @@ import { useState } from "react";
 import { BRAND_NAME } from "@/lib/branding";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import cpeIconUrl from "@assets/Untitled_(1)_1765745611438.png";
+import logoUrl from "@/assets/logo.jpeg";
 
 function BrandIcon({ className, isCollegeThemed }: { className?: string; isCollegeThemed?: boolean }) {
   const [hasError, setHasError] = useState(false);
@@ -28,7 +28,7 @@ function BrandIcon({ className, isCollegeThemed }: { className?: string; isColle
   
   return (
     <img 
-      src={cpeIconUrl} 
+      src={logoUrl} 
       alt="Noqtaa Academy" 
       className={className}
       onError={() => setHasError(true)}
