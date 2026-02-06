@@ -98,10 +98,10 @@ export function Header() {
       style={headerStyle}
     >
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between h-16 gap-4">
+        <div className="flex items-center justify-between h-20 gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className={`p-1.5 rounded-md flex items-center justify-center ${isCollegeThemed ? 'bg-white/20' : 'bg-primary/10'}`} style={{ width: '36px', height: '36px' }}>
-              <BrandIcon className="h-7 w-auto object-contain" isCollegeThemed={isCollegeThemed} />
+            <div className={`p-1 rounded-md flex items-center justify-center ${isCollegeThemed ? 'bg-white/20' : 'bg-primary/10'}`} style={{ width: '56px', height: '56px' }}>
+              <BrandIcon className="h-12 w-auto object-contain" isCollegeThemed={isCollegeThemed} />
             </div>
             <span className={`font-semibold text-lg hidden sm:block ${isCollegeThemed ? 'text-white' : 'text-foreground'}`} data-testid="text-logo">
               {BRAND_NAME}
