@@ -54,6 +54,7 @@ export const users = pgTable("users", {
   role: userRoleEnum("role").notNull().default("STUDENT"),
   collegeId: integer("college_id").references(() => colleges.id),
   isActive: boolean("is_active").notNull().default(true),
+  phoneNumber: varchar("phone_number", { length: 20 }),
   publicId: varchar("public_id", { length: 8 }).unique(),
   passwordResetLastSentAt: timestamp("password_reset_last_sent_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -271,10 +272,22 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export const signupSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+  confirmPassword: z.string(),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
+  phoneNumber: z.string()
+    .min(10, "Phone number must be at least 10 digits")
+    .regex(/^\+?[0-9]+$/, "Invalid phone number format"),
   collegeId: z.number().int().positive("Please select a college"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
 export const loginSchema = z.object({

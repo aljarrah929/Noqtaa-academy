@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { GraduationCap, Loader2 } from "lucide-react";
+import { GraduationCap, Loader2, Phone } from "lucide-react";
 import { BRAND_NAME } from "@/lib/branding";
 
 export default function Signup() {
@@ -40,8 +40,10 @@ export default function Signup() {
     defaultValues: {
       email: "",
       password: "",
+      confirmPassword: "",
       firstName: "",
       lastName: "",
+      phoneNumber: "",
       collegeId: 0,
     },
   });
@@ -150,6 +152,25 @@ export default function Signup() {
 
                 <FormField
                   control={form.control}
+                  name="phoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number *</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="tel"
+                          placeholder="+962XXXXXXXXX"
+                          {...field}
+                          data-testid="input-phone-number"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="password"
                   render={({ field }) => (
                     <FormItem>
@@ -157,9 +178,28 @@ export default function Signup() {
                       <FormControl>
                         <Input
                           type="password"
-                          placeholder="At least 6 characters"
+                          placeholder="Min 8 chars, upper, lower, number, special"
                           {...field}
                           data-testid="input-password"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Re-enter your password"
+                          {...field}
+                          data-testid="input-confirm-password"
                         />
                       </FormControl>
                       <FormMessage />

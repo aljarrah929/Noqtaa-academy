@@ -84,7 +84,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByPublicId(publicId: string): Promise<User | undefined>;
   searchUsers(query: string, searcherRole: User["role"], limit?: number): Promise<UserWithCollege[]>;
-  createUserWithPassword(data: { email: string; passwordHash: string; firstName: string; lastName: string; collegeId: number; role?: User["role"] }): Promise<User>;
+  createUserWithPassword(data: { email: string; passwordHash: string; firstName: string; lastName: string; phoneNumber?: string; collegeId: number; role?: User["role"] }): Promise<User>;
   migrateUsersWithoutPublicId(): Promise<number>;
   upsertUser(user: UpsertUser): Promise<User>;
   getUserWithCollege(id: string): Promise<UserWithCollege | undefined>;
@@ -161,7 +161,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUserWithPassword(data: { email: string; passwordHash: string; firstName: string; lastName: string; collegeId: number; role?: User["role"] }): Promise<User> {
+  async createUserWithPassword(data: { email: string; passwordHash: string; firstName: string; lastName: string; phoneNumber?: string; collegeId: number; role?: User["role"] }): Promise<User> {
     // Generate public ID for the new user
     const publicId = await generatePublicId(data.collegeId);
     
@@ -170,6 +170,7 @@ export class DatabaseStorage implements IStorage {
       passwordHash: data.passwordHash,
       firstName: data.firstName,
       lastName: data.lastName,
+      phoneNumber: data.phoneNumber || null,
       collegeId: data.collegeId,
       role: data.role || "STUDENT",
       publicId,

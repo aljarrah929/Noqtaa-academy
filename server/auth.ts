@@ -68,6 +68,7 @@ export async function setupAuth(app: Express) {
         passwordHash,
         firstName: data.firstName,
         lastName: data.lastName,
+        phoneNumber: data.phoneNumber,
         collegeId: data.collegeId,
         role: "STUDENT",
       });
