@@ -7,7 +7,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
-import { apiRequest } from "@/lib/queryClient";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
@@ -79,87 +78,63 @@ function Router() {
 
 function AppContent() {
   const { user } = useAuth();
-  const [isViolator, setIsViolator] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showWarning, setShowWarning] = useState(false);
+  const userIdRef = useRef<string | undefined>(undefined);
+
+  userIdRef.current = user?.id;
 
   useEffect(() => {
-    const handleKeyUp = (e: KeyboardEvent) => {
+    function onKeyUp(e: KeyboardEvent) {
       if (e.key === "PrintScreen") {
-        console.log("[Security] PrintScreen detected globally");
+        setShowWarning(true);
 
-        setIsViolator(true);
-
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => {
-          setIsViolator(false);
-          timerRef.current = null;
+        setTimeout(() => {
+          setShowWarning(false);
         }, 10000);
 
-        if (user?.id) {
-          console.log("[Security] Reporting screenshot for user:", user.id);
-          apiRequest("POST", "/api/security/report-screenshot", {
-            userId: user.id,
-          }).catch((err) => {
-            console.error("[Security] Report failed:", err);
-          });
+        const uid = userIdRef.current;
+        if (uid) {
+          fetch("/api/security/report-screenshot", {
+            method: "POST",
+            body: JSON.stringify({ userId: uid }),
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+          }).catch(() => {});
         }
       }
-    };
+    }
 
-    window.addEventListener("keyup", handleKeyUp);
-    return () => {
-      window.removeEventListener("keyup", handleKeyUp);
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [user?.id]);
+    window.addEventListener("keyup", onKeyUp);
+    return () => window.removeEventListener("keyup", onKeyUp);
+  }, []);
 
   return (
     <>
-      {isViolator && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "black",
-            zIndex: 99999999,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "red",
-            fontSize: "24px",
-            textAlign: "center",
-            padding: "20px",
-          }}
-          data-testid="security-warning-overlay"
-        >
-          <h1 style={{ fontSize: "32px", marginBottom: "16px" }}>
-            SECURITY ALERT
-          </h1>
-          <p>Screenshot detected. This incident has been reported.</p>
-          <p style={{ marginTop: "8px" }}>
-            Your account ID and Phone Number have been sent to the admin.
-          </p>
-          <button
-            onClick={() => setIsViolator(false)}
-            style={{
-              marginTop: "24px",
-              padding: "12px 24px",
-              backgroundColor: "#dc2626",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "16px",
-            }}
-            data-testid="button-dismiss-warning"
-          >
-            I Understand
-          </button>
-        </div>
-      )}
       <Router />
       <SupportWidget />
+      {showWarning && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: "rgba(0,0,0,0.95)",
+          zIndex: 999999999,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          color: "red",
+          flexDirection: "column",
+        }}
+        data-testid="security-warning-overlay"
+        >
+          <h1 style={{ fontSize: "3rem", fontWeight: "bold" }}>SECURITY ALERT</h1>
+          <p style={{ fontSize: "1.5rem", color: "white" }}>Screen capture detected.</p>
+          <p style={{ color: "white" }}>Your ID and Phone have been reported to Admin.</p>
+          <p style={{ marginTop: "20px", color: "#888" }}>This window will close in 10 seconds...</p>
+        </div>
+      )}
     </>
   );
 }
