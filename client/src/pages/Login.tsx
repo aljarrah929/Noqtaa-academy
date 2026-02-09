@@ -41,6 +41,8 @@ export default function Login() {
 
   const otpForm = useForm<VerifyOtpInput>({
     resolver: zodResolver(verifyOtpSchema),
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
     defaultValues: {
       userId: "",
       otp: "",
@@ -224,13 +226,21 @@ export default function Login() {
                         <FormLabel>Verification Code</FormLabel>
                         <FormControl>
                           <Input
-                            type="text"
+                            type="tel"
                             inputMode="numeric"
                             maxLength={6}
                             placeholder="Enter 6-digit code"
                             autoFocus
                             className="text-center text-lg tracking-widest"
-                            {...field}
+                            value={field.value}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+                              field.onChange(val);
+                              otpForm.clearErrors("otp");
+                            }}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                             data-testid="input-otp"
                           />
                         </FormControl>
