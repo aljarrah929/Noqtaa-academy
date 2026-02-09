@@ -9,6 +9,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import PDFDocument from "pdfkit";
+import { sendEmailInBackground } from "./email";
 
 // Cloudflare R2 configuration
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -2538,6 +2539,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating PDF report:", error);
       res.status(500).json({ message: "Failed to generate PDF report" });
+    }
+  });
+
+  app.post("/api/report-violation", isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId, violationType } = req.body;
+      if (!userId || !violationType) {
+        return res.status(400).json({ message: "userId and violationType are required" });
+      }
+
+      const user = await storage.getUser(String(userId));
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown";
+      const phone = user.phoneNumber || "N/A";
+      const email = user.email || "N/A";
+      const time = new Date().toISOString();
+
+      sendEmailInBackground({
+        to: "support@noqtaa.cloud",
+        subject: "Security Alert: Screenshot Attempt Detected",
+        text: `User ${name} (Phone: ${phone}, Email: ${email}) attempted to take a screenshot at ${time}.`,
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2 style="color: #ef4444;">Security Alert: Screenshot Attempt</h2>
+            <p><strong>User:</strong> ${name}</p>
+            <p><strong>Phone:</strong> ${phone}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Violation:</strong> ${violationType}</p>
+            <p><strong>Time:</strong> ${time}</p>
+          </div>
+        `,
+      });
+
+      res.json({ message: "Violation reported" });
+    } catch (error) {
+      console.error("Error reporting violation:", error);
+      res.status(500).json({ message: "Failed to report violation" });
     }
   });
 

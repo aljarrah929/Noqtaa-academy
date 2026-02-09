@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { LockedContentMessage } from "@/components/courses/LessonList";
 import { ProtectedVideo } from "@/components/ProtectedVideo";
 import { WatermarkOverlay } from "@/components/WatermarkOverlay";
-import { BlackoutShield } from "@/components/BlackoutShield";
 import { useContentProtection } from "@/hooks/useContentProtection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +35,7 @@ export default function LessonDetail() {
   const lessonId = params?.lessonId;
   const { user, isAuthenticated } = useAuth();
   const [videoError, setVideoError] = useState<string | null>(null);
-  useContentProtection();
+  useContentProtection(user?.id);
 
   const { data: course, isLoading: courseLoading } = useQuery<CourseWithRelations>({
     queryKey: ["/api/courses", courseId],
@@ -318,7 +317,6 @@ export default function LessonDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <BlackoutShield />
       <Header />
       
       <div className="max-w-4xl mx-auto px-4 py-8">

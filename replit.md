@@ -128,11 +128,11 @@ Join Request Flow:
 - **Tailwind CSS**: Utility-first CSS framework
 
 ### Content Protection
-- **WatermarkOverlay** (`client/src/components/WatermarkOverlay.tsx`): Single moving text element showing user phone/email + publicId, opacity 0.25, white with text shadow, repositions randomly every 5s; switches to `position: fixed` with z-index 999999 during fullscreen to prevent bypass
-- **BlackoutShield** (`client/src/components/BlackoutShield.tsx`): Full-screen black overlay (z-index 9999999) with red warning text, triggered by PrintScreen (15s), window blur (Alt+Tab), or mouse leaving viewport; clears on focus return or mouse re-enter
-- **useContentProtection** (`client/src/hooks/useContentProtection.ts`): Hook that disables right-click, blocks Ctrl+S/P shortcuts; applies anti-copy CSS class
+- **WatermarkOverlay** (`client/src/components/WatermarkOverlay.tsx`): Single moving text element showing user phone/email + publicId, opacity 0.4, white with text shadow, repositions randomly every 5s
+- **useContentProtection** (`client/src/hooks/useContentProtection.ts`): Hook that disables right-click, blocks Ctrl+S/P shortcuts; detects PrintScreen (keyup) and blurs page for 10s with warning toast; reports violation to backend via `POST /api/report-violation`; applies anti-copy CSS class
 - **Anti-Copy CSS** (`client/src/index.css`): `body.content-protected` class disables text selection and image dragging; applied via hook on LessonDetail page
-- **Integration**: BlackoutShield + Watermark applied on LessonDetail page; watermark also inside ProtectedVideo component and iframe video containers (Cloudflare/YouTube)
+- **Violation Reporting**: `POST /api/report-violation` endpoint accepts `{ userId, violationType }`, looks up user details, and sends email alert to `support@noqtaa.cloud` via Resend
+- **Integration**: Watermark applied on LessonDetail page and inside ProtectedVideo component and iframe video containers (Cloudflare/YouTube)
 
 ### Video Hosting
 **Option 1: Cloudflare Stream** (managed video encoding)
