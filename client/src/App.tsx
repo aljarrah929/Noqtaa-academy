@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -5,6 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useAuth } from "@/hooks/useAuth";
+import { apiRequest } from "@/lib/queryClient";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
@@ -74,6 +77,93 @@ function Router() {
   );
 }
 
+function AppContent() {
+  const { user } = useAuth();
+  const [isViolator, setIsViolator] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "PrintScreen") {
+        console.log("[Security] PrintScreen detected globally");
+
+        setIsViolator(true);
+
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+          setIsViolator(false);
+          timerRef.current = null;
+        }, 10000);
+
+        if (user?.id) {
+          console.log("[Security] Reporting screenshot for user:", user.id);
+          apiRequest("POST", "/api/security/report-screenshot", {
+            userId: user.id,
+          }).catch((err) => {
+            console.error("[Security] Report failed:", err);
+          });
+        }
+      }
+    };
+
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keyup", handleKeyUp);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [user?.id]);
+
+  return (
+    <>
+      {isViolator && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "black",
+            zIndex: 99999999,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "red",
+            fontSize: "24px",
+            textAlign: "center",
+            padding: "20px",
+          }}
+          data-testid="security-warning-overlay"
+        >
+          <h1 style={{ fontSize: "32px", marginBottom: "16px" }}>
+            SECURITY ALERT
+          </h1>
+          <p>Screenshot detected. This incident has been reported.</p>
+          <p style={{ marginTop: "8px" }}>
+            Your account ID and Phone Number have been sent to the admin.
+          </p>
+          <button
+            onClick={() => setIsViolator(false)}
+            style={{
+              marginTop: "24px",
+              padding: "12px 24px",
+              backgroundColor: "#dc2626",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "16px",
+            }}
+            data-testid="button-dismiss-warning"
+          >
+            I Understand
+          </button>
+        </div>
+      )}
+      <Router />
+      <SupportWidget />
+    </>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -81,8 +171,7 @@ function App() {
         <ThemeProvider>
           <TooltipProvider>
             <Toaster />
-            <Router />
-            <SupportWidget />
+            <AppContent />
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>

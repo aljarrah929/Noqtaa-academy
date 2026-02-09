@@ -1,0 +1,44 @@
+The previous implementation FAILED because the listener was never attached to the active window. The user lost money because of this.
+
+We need a GUARANTEED, FAIL-SAFE implementation rooted in the main `App` component.
+
+Please modify `client/src/App.tsx` directly to implement the Security System globally:
+
+1.  **Global Event Listener (In `App.tsx`):**
+    -   Inside the main `App` function, add a `useEffect` that attaches a `keyup` listener to the `window`.
+    -   **Condition:** If `e.key === 'PrintScreen'`:
+        1.  Set a global state `isViolator` to `true`.
+        2.  Trigger the API call to `/api/security/report-screenshot` immediately.
+
+2.  **The "Violator" Overlay (In `App.tsx`):**
+    -   Inside the `return` of `App`, add a conditional render:
+        ```jsx
+        {isViolator && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'black',
+            zIndex: 99999999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'red',
+            fontSize: '24px',
+            textAlign: 'center'
+          }}>
+            <h1>⚠️ SECURITY ALERT ⚠️</h1>
+            <p>Screenshot detected. This incident has been reported.</p>
+            <p>Your account ID and Phone Number have been sent to the admin.</p>
+            <button onClick={() => setIsViolator(false)} style={{marginTop: '20px', padding: '10px'}}>
+              I Understand (Close in 10s)
+            </button>
+          </div>
+        )}
+        ```
+    -   *Logic:* Make it stay for 10 seconds automatically using a `setTimeout` inside the effect.
+
+3.  **Backend Verification:**
+    -   Ensure the route `/api/security/report-screenshot` is actually registered in `server/routes.ts` and logs to the console when hit.
+
+**Crucial:** Do NOT create a separate hook file. Put the logic DIRECTLY inside `App.tsx` so it cannot fail to load.

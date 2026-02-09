@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoute, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
@@ -6,8 +6,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { LockedContentMessage } from "@/components/courses/LessonList";
 import { ProtectedVideo } from "@/components/ProtectedVideo";
 import { WatermarkOverlay } from "@/components/WatermarkOverlay";
-import { SecurityWarning } from "@/components/SecurityWarning";
-import { useContentProtection } from "@/hooks/useContentProtection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +34,23 @@ export default function LessonDetail() {
   const lessonId = params?.lessonId;
   const { user, isAuthenticated } = useAuth();
   const [videoError, setVideoError] = useState<string | null>(null);
-  const { showWarning } = useContentProtection(user?.id);
+
+  useEffect(() => {
+    document.body.classList.add("content-protected");
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && ["s", "p", "S", "P"].includes(e.key)) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.classList.remove("content-protected");
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const { data: course, isLoading: courseLoading } = useQuery<CourseWithRelations>({
     queryKey: ["/api/courses", courseId],
@@ -318,7 +332,6 @@ export default function LessonDetail() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SecurityWarning open={showWarning} />
       <Header />
       
       <div className="max-w-4xl mx-auto px-4 py-8">
