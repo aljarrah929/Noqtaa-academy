@@ -128,8 +128,8 @@ Join Request Flow:
 - **Tailwind CSS**: Utility-first CSS framework
 
 ### Content Protection
-- **WatermarkOverlay** (`client/src/components/WatermarkOverlay.tsx`): Tiled semi-transparent overlay showing user phone/email + publicId, rotated 45deg, animated position shift every 4s
-- **useContentProtection** (`client/src/hooks/useContentProtection.ts`): Hook that disables right-click, blocks Ctrl+S/P shortcuts, blurs page on PrintScreen for 5s
+- **WatermarkOverlay** (`client/src/components/WatermarkOverlay.tsx`): Single moving text element showing user phone/email + publicId, opacity 0.25, white with text shadow, repositions randomly every 5s; switches to `position: fixed` with z-index 999999 during fullscreen to prevent bypass
+- **useContentProtection** (`client/src/hooks/useContentProtection.ts`): Hook that disables right-click, blocks Ctrl+S/P shortcuts, blurs page on PrintScreen for 10s
 - **Anti-Copy CSS** (`client/src/index.css`): `body.content-protected` class disables text selection and image dragging; applied via hook on LessonDetail page
 - **Integration**: Watermark applied inside ProtectedVideo component, iframe video containers (Cloudflare/YouTube), and lesson content area
 

@@ -1,0 +1,26 @@
+The current content protection has significant UX and security flaws that need immediate fixing.
+
+Please refactor `WatermarkOverlay.tsx` and `useContentProtection.ts` to address the following user feedback:
+
+1.  **Refactor Watermark Style (Too Annoying):**
+    * **REMOVE the tiled background pattern.** The watermark should NOT cover the whole screen repeatedly.
+    * It should now be a **SINGLE text element** displaying the identifier (phone/email + ID).
+    * **Style:**
+        * Font size: Small to medium (e.g., 14px - 16px).
+        * Opacity: Low (0.2 or 0.3).
+        * Color: White or light gray with a subtle text shadow for readability against varying backgrounds.
+        * Position: `absolute`.
+        * `pointer-events: none` (Crucial).
+    * **Animation (Moving):** Implement a JavaScript interval (e.g., every 5 seconds) that randomly changes the `top` and `left` percentage positions of this single text element within its container, keeping it moving unpredictably.
+
+2.  **Fix Fullscreen Bypass (Critical Security Flaw):**
+    * The watermark currently disappears when the video player enters fullscreen mode.
+    * **Fix:** In `WatermarkOverlay.tsx`, add an event listener for fullscreen changes (`fullscreenchange`, `webkitfullscreenchange`, `mozfullscreenchange`, `MSFullscreenChange`).
+    * When fullscreen is active on the document: change the watermark container's position to `fixed`, set `inset: 0`, and ensure a very high `z-index` (e.g., `999999`) so it sits on top of *any* fullscreen element (including iframes).
+    * When exiting fullscreen, revert to the standard `absolute` positioning within its parent.
+
+3.  **Strengthen Screenshot Blocking (Blur Too Short):**
+    * In `useContentProtection.ts`, the blur duration on `PrintScreen` detection is too short, allowing users to retry quickly.
+    * **Fix:** Increase the blur timeout duration from the current value to **10000ms (10 seconds)**. Ensure the blur warning toast lasts equally long.
+
+Apply these changes to make the protection less obtrusive but more secure.

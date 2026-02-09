@@ -16,10 +16,11 @@ export function useContentProtection() {
           title: "Screenshots are prohibited",
           description: "Screen capture is not allowed on this page.",
           variant: "destructive",
+          duration: 10000,
         });
         setTimeout(() => {
           document.body.style.filter = "";
-        }, 5000);
+        }, 10000);
       }
     },
     [toast]
