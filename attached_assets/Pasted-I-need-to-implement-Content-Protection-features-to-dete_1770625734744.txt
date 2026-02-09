@@ -1,0 +1,41 @@
+I need to implement "Content Protection" features to deter screen recording and sharing of course content.
+
+Since full DRM is not feasible, please implement a robust **Dynamic Watermarking** and **Anti-Copy** system.
+
+Please perform the following changes:
+
+1.  **Create a `WatermarkOverlay` Component:**
+    -   Create `client/src/components/WatermarkOverlay.tsx`.
+    -   This component should take `user` information (email, phone, ID) as props.
+    -   **Visuals:**
+        -   Display the user's `phoneNumber` (or email if phone is missing) and `id`.
+        -   The text should be semi-transparent (opacity 0.3), rotated 45 degrees, and tiled across the entire screen (or video player container).
+        -   **Animation:** Make the text position shift slightly every few seconds to prevent easy cropping/removal.
+        -   **Pointer Events:** Set `pointer-events: none` so it doesn't interfere with clicking buttons.
+
+2.  **Global Anti-Copy CSS (`client/src/index.css`):**
+    -   Add global styles to disable text selection and image dragging:
+        ```css
+        body {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        img {
+            -webkit-user-drag: none;
+            pointer-events: none;
+        }
+        ```
+
+3.  **Script Blocking (Hook):**
+    -   Create a hook `useContentProtection.ts`.
+    -   **Disable Right Click:** Prevent the context menu (`e.preventDefault()`).
+    -   **Detect PrintScreen:** Listen for the `keyup` event for `PrintScreen`. If detected, temporarily blur the entire document body (`filter: blur(20px)`) for 5 seconds and show a toast warning: "Screenshots are prohibited."
+    -   **Keyboard Shortcuts:** Prevent common shortcuts like `Ctrl+S`, `Ctrl+P`, `Ctrl+Shift+S`.
+
+4.  **Integration:**
+    -   Apply the `WatermarkOverlay` inside the Video Player component (or globally on the Course View page).
+    -   Apply `useContentProtection()` on the Course View page.
+
+This will ensure that if a user records the screen, their personal ID is visible, discouraging distribution.

@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Lock } from "lucide-react";
+import { WatermarkOverlay } from "@/components/WatermarkOverlay";
 
 interface ProtectedVideoProps {
   src: string;
   onError?: (e: React.SyntheticEvent<HTMLVideoElement, Event>) => void;
+  watermarkEmail?: string;
+  watermarkPhone?: string | null;
+  watermarkId?: string | null;
 }
 
-export function ProtectedVideo({ src, onError }: ProtectedVideoProps) {
+export function ProtectedVideo({ src, onError, watermarkEmail, watermarkPhone, watermarkId }: ProtectedVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [blocked, setBlocked] = useState(false);
   const wasPlayingRef = useRef(false);
@@ -97,6 +101,14 @@ export function ProtectedVideo({ src, onError }: ProtectedVideoProps) {
         className="w-full h-full"
         data-testid="protected-video-element"
       />
+
+      {watermarkEmail && (
+        <WatermarkOverlay
+          email={watermarkEmail}
+          phoneNumber={watermarkPhone}
+          publicId={watermarkId}
+        />
+      )}
 
       {blocked && (
         <div

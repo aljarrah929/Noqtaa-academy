@@ -11,6 +11,7 @@ Key features:
 - College-specific theming with custom primary/secondary colors
 - Email-only communication between students and teachers (mailto links)
 - External payment handling (no in-platform payment processing)
+- Content protection: dynamic watermarking, anti-copy CSS, screenshot/shortcut blocking
 
 ## User Preferences
 
@@ -125,6 +126,12 @@ Join Request Flow:
 - **shadcn/ui**: Pre-styled component library built on Radix
 - **Lucide React**: Icon library
 - **Tailwind CSS**: Utility-first CSS framework
+
+### Content Protection
+- **WatermarkOverlay** (`client/src/components/WatermarkOverlay.tsx`): Tiled semi-transparent overlay showing user phone/email + publicId, rotated 45deg, animated position shift every 4s
+- **useContentProtection** (`client/src/hooks/useContentProtection.ts`): Hook that disables right-click, blocks Ctrl+S/P shortcuts, blurs page on PrintScreen for 5s
+- **Anti-Copy CSS** (`client/src/index.css`): `body.content-protected` class disables text selection and image dragging; applied via hook on LessonDetail page
+- **Integration**: Watermark applied inside ProtectedVideo component, iframe video containers (Cloudflare/YouTube), and lesson content area
 
 ### Video Hosting
 **Option 1: Cloudflare Stream** (managed video encoding)

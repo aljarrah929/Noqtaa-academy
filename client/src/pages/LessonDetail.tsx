@@ -5,6 +5,8 @@ import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/hooks/useAuth";
 import { LockedContentMessage } from "@/components/courses/LessonList";
 import { ProtectedVideo } from "@/components/ProtectedVideo";
+import { WatermarkOverlay } from "@/components/WatermarkOverlay";
+import { useContentProtection } from "@/hooks/useContentProtection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,7 @@ export default function LessonDetail() {
   const lessonId = params?.lessonId;
   const { user, isAuthenticated } = useAuth();
   const [videoError, setVideoError] = useState<string | null>(null);
+  useContentProtection();
 
   const { data: course, isLoading: courseLoading } = useQuery<CourseWithRelations>({
     queryKey: ["/api/courses", courseId],
@@ -95,7 +98,7 @@ export default function LessonDetail() {
         const isCloudflareStreamUid = /^[a-f0-9]{32}$/i.test(lesson.content);
         if (isCloudflareStreamUid) {
           return (
-            <div className="aspect-video rounded-lg overflow-hidden bg-black" data-testid="video-player-cloudflare">
+            <div className="relative aspect-video rounded-lg overflow-hidden bg-black" data-testid="video-player-cloudflare">
               <iframe
                 src={`https://iframe.videodelivery.net/${lesson.content}`}
                 className="w-full h-full"
@@ -103,6 +106,13 @@ export default function LessonDetail() {
                 allowFullScreen
                 title={lesson.title}
               />
+              {user && (
+                <WatermarkOverlay
+                  email={user.email}
+                  phoneNumber={user.phoneNumber}
+                  publicId={user.publicId}
+                />
+              )}
             </div>
           );
         }
@@ -110,13 +120,20 @@ export default function LessonDetail() {
         if (lesson.content.includes("youtube.com") || lesson.content.includes("youtu.be")) {
           const videoId = lesson.content.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1];
           return (
-            <div className="aspect-video rounded-lg overflow-hidden bg-black" data-testid="video-player-youtube">
+            <div className="relative aspect-video rounded-lg overflow-hidden bg-black" data-testid="video-player-youtube">
               <iframe
                 src={`https://www.youtube.com/embed/${videoId}`}
                 className="w-full h-full"
                 allowFullScreen
                 title={lesson.title}
               />
+              {user && (
+                <WatermarkOverlay
+                  email={user.email}
+                  phoneNumber={user.phoneNumber}
+                  publicId={user.publicId}
+                />
+              )}
             </div>
           );
         }
@@ -151,6 +168,9 @@ export default function LessonDetail() {
               onError={() => {
                 setVideoError("The video file could not be loaded. It may have been deleted or the link is broken.");
               }}
+              watermarkEmail={user?.email}
+              watermarkPhone={user?.phoneNumber}
+              watermarkId={user?.publicId}
             />
           </div>
         );
@@ -307,7 +327,7 @@ export default function LessonDetail() {
           </Button>
         </Link>
 
-        <Card className="mb-6">
+        <Card className="mb-6 relative">
           <CardHeader>
             <div className="flex items-center gap-2 mb-2">
               <Badge variant="outline">
@@ -322,8 +342,15 @@ export default function LessonDetail() {
               {lesson.title}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative">
             {renderContent()}
+            {user && (
+              <WatermarkOverlay
+                email={user.email}
+                phoneNumber={user.phoneNumber}
+                publicId={user.publicId}
+              />
+            )}
           </CardContent>
         </Card>
 
