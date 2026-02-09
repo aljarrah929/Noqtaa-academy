@@ -108,6 +108,43 @@ export function sendEmailInBackground(options: SendEmailOptions): void {
   });
 }
 
+export function getOtpEmailContent(otp: string): { subject: string; text: string; html: string } {
+  const subject = "Your Login Verification Code - Noqtaa Academy";
+
+  const text = `
+Your verification code is: ${otp}
+
+This code will expire in 5 minutes.
+
+If you didn't try to log in, please ignore this email and consider changing your password.
+  `.trim();
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="color: white; margin: 0;">Verification Code</h1>
+  </div>
+  <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px;">
+    <p>Use the following code to complete your login:</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <span style="background: #667eea; color: white; padding: 16px 40px; font-size: 28px; letter-spacing: 8px; font-weight: bold; border-radius: 8px; display: inline-block;">${otp}</span>
+    </div>
+    <p style="color: #666; font-size: 14px;">This code will expire in 5 minutes.</p>
+    <p style="color: #666; font-size: 14px;">If you didn't try to log in, please ignore this email and consider changing your password.</p>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  return { subject, text, html };
+}
+
 export function getPasswordResetEmailContent(resetUrl: string): { subject: string; text: string; html: string } {
   const subject = "Reset Your Password - Noqtaa Academy";
 

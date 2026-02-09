@@ -57,6 +57,8 @@ export const users = pgTable("users", {
   phoneNumber: varchar("phone_number", { length: 20 }),
   publicId: varchar("public_id", { length: 8 }).unique(),
   passwordResetLastSentAt: timestamp("password_reset_last_sent_at"),
+  loginOtp: text("login_otp"),
+  loginOtpExpiry: timestamp("login_otp_expiry"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -384,8 +386,14 @@ export type UpdateHomeStats = z.infer<typeof updateHomeStatsSchema>;
 export type HomeStats = typeof homeStats.$inferSelect;
 export type UpdateAdminDashboardStatsConfig = z.infer<typeof updateAdminDashboardStatsConfigSchema>;
 export type AdminDashboardStatsConfig = typeof adminDashboardStatsConfig.$inferSelect;
+export const verifyOtpSchema = z.object({
+  userId: z.string().min(1, "User ID is required"),
+  otp: z.string().length(6, "Verification code must be 6 digits"),
+});
+
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;

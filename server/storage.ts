@@ -92,6 +92,8 @@ export interface IStorage {
   updateUserCollege(id: string, collegeId: number): Promise<User | undefined>;
   updateUserPassword(id: string, passwordHash: string): Promise<User | undefined>;
   updatePasswordResetLastSentAt(id: string): Promise<User | undefined>;
+  setLoginOtp(id: string, otp: string, expiry: Date): Promise<void>;
+  clearLoginOtp(id: string): Promise<void>;
   updateUserProfileImage(id: string, profileImageUrl: string): Promise<User | undefined>;
   getAllUsers(): Promise<UserWithCollege[]>;
   getColleges(): Promise<College[]>;
@@ -316,6 +318,20 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async setLoginOtp(id: string, otp: string, expiry: Date): Promise<void> {
+    await db
+      .update(users)
+      .set({ loginOtp: otp, loginOtpExpiry: expiry })
+      .where(eq(users.id, id));
+  }
+
+  async clearLoginOtp(id: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ loginOtp: null, loginOtpExpiry: null })
+      .where(eq(users.id, id));
   }
 
   async updateUserProfileImage(id: string, profileImageUrl: string): Promise<User | undefined> {

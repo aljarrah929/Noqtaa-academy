@@ -4,9 +4,9 @@ import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { storage } from "./storage";
-import { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from "@shared/schema";
+import { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, verifyOtpSchema } from "@shared/schema";
 import { z } from "zod";
-import { sendEmailInBackground, getPasswordResetEmailContent, getAppUrl, verifyEmailConnection } from "./email";
+import { sendEmailInBackground, getPasswordResetEmailContent, getOtpEmailContent, getAppUrl, verifyEmailConnection } from "./email";
 
 declare module "express-session" {
   interface SessionData {
@@ -124,16 +124,61 @@ export async function setupAuth(app: Express) {
         return res.status(403).json({ message: "Account is disabled" });
       }
 
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      await storage.setLoginOtp(user.id, otp, otpExpiry);
+      console.log(`[Login] OTP generated for userId: ${user.id}`);
+
+      const emailContent = getOtpEmailContent(otp);
+      sendEmailInBackground({
+        to: user.email,
+        ...emailContent,
+      });
+
+      res.json({ requireOtp: true, userId: user.id });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      console.error("[Login] Unexpected error:", error);
+      res.status(500).json({ message: "Failed to log in" });
+    }
+  });
+
+  app.post("/api/auth/verify-otp", async (req, res) => {
+    try {
+      const data = verifyOtpSchema.parse(req.body);
+      console.log(`[OTP] Verifying OTP for userId: ${data.userId}`);
+
+      const user = await storage.getUser(data.userId);
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired code" });
+      }
+
+      if (!user.loginOtp || !user.loginOtpExpiry) {
+        return res.status(400).json({ message: "Invalid or expired code" });
+      }
+
+      if (new Date() > user.loginOtpExpiry) {
+        await storage.clearLoginOtp(user.id);
+        return res.status(400).json({ message: "Invalid or expired code" });
+      }
+
+      if (user.loginOtp !== data.otp) {
+        return res.status(400).json({ message: "Invalid or expired code" });
+      }
+
+      await storage.clearLoginOtp(user.id);
+      console.log(`[OTP] OTP verified, logging in userId: ${user.id}`);
+
       req.session.userId = user.id;
-      console.log(`[Login] Session userId set to: ${user.id}, saving session...`);
-      
       req.session.save(async (err) => {
         if (err) {
-          console.error(`[Login] Session save ERROR:`, err);
+          console.error(`[OTP] Session save ERROR:`, err);
           return res.status(500).json({ message: "Failed to save session" });
         }
-        console.log(`[Login] Session saved successfully for userId: ${user.id}`);
-        
+        console.log(`[OTP] Session saved successfully for userId: ${user.id}`);
+
         const userWithCollege = await storage.getUserWithCollege(user.id);
         res.json(userWithCollege);
       });
@@ -141,8 +186,8 @@ export async function setupAuth(app: Express) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      console.error("[Login] Unexpected error:", error);
-      res.status(500).json({ message: "Failed to log in" });
+      console.error("[OTP] Unexpected error:", error);
+      res.status(500).json({ message: "Failed to verify code" });
     }
   });
 
