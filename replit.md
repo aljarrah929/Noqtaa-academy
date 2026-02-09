@@ -35,8 +35,16 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: Replit OpenID Connect (OIDC) with Passport.js
 - **Session Management**: PostgreSQL-backed sessions via connect-pg-simple
 
+**Authentication Flow (2FA via Email)**:
+1. User submits email/password to `POST /api/auth/login`
+2. Server validates credentials, generates 6-digit OTP, saves to DB (5-min expiry), sends via Resend
+3. Server returns `{ requireOtp: true, userId }` (no session created yet)
+4. Frontend switches to OTP input step
+5. User enters code, submits to `POST /api/auth/verify-otp` with `{ userId, otp }`
+6. Server validates OTP + expiry, clears OTP fields, creates session, returns user object
+
 **Route Structure**:
-- `/api/auth/*` - Authentication endpoints
+- `/api/auth/*` - Authentication endpoints (login, signup, verify-otp, forgot-password, reset-password)
 - `/api/colleges/*` - College CRUD operations
 - `/api/courses/*` - Course management with approval workflow
 - `/api/lessons/*` - Lesson content management
