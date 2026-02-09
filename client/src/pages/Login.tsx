@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +27,7 @@ export default function Login() {
   const [otpStep, setOtpStep] = useState(false);
   const [pendingUserId, setPendingUserId] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [resendCountdown, setResendCountdown] = useState(0);
 
   const searchParams = new URLSearchParams(window.location.search);
   const nextUrl = searchParams.get("next");
@@ -111,6 +112,43 @@ export default function Login() {
     },
   });
 
+  const resendOtpMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/resend-otp", { userId: pendingUserId });
+      return response.json();
+    },
+    onSuccess: () => {
+      setResendCountdown(60);
+      toast({
+        title: "Code resent",
+        description: "A new verification code has been sent to your email",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Resend failed",
+        description: error.message || "Unable to resend code",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const startResendTimer = useCallback(() => {
+    setResendCountdown(60);
+  }, []);
+
+  useEffect(() => {
+    if (otpStep) {
+      startResendTimer();
+    }
+  }, [otpStep, startResendTimer]);
+
+  useEffect(() => {
+    if (resendCountdown <= 0) return;
+    const timer = setTimeout(() => setResendCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCountdown]);
+
   const onLoginSubmit = (data: LoginInput) => {
     loginMutation.mutate(data);
   };
@@ -123,6 +161,7 @@ export default function Login() {
     setOtpStep(false);
     setPendingUserId("");
     setUserEmail("");
+    setResendCountdown(0);
     otpForm.reset();
   };
 
@@ -231,6 +270,7 @@ export default function Login() {
                             maxLength={6}
                             placeholder="Enter 6-digit code"
                             autoFocus
+                            autoComplete="one-time-code"
                             className="text-center text-lg tracking-widest"
                             value={field.value}
                             onChange={(e) => {
@@ -239,7 +279,7 @@ export default function Login() {
                               otpForm.clearErrors("otp");
                             }}
                             onBlur={field.onBlur}
-                            name={field.name}
+                            name="otp"
                             ref={field.ref}
                             data-testid="input-otp"
                           />
@@ -264,6 +304,22 @@ export default function Login() {
                       "Verify & Sign in"
                     )}
                   </Button>
+
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      disabled={resendCountdown > 0 || resendOtpMutation.isPending}
+                      onClick={() => resendOtpMutation.mutate()}
+                      className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                      data-testid="button-resend-otp"
+                    >
+                      {resendOtpMutation.isPending
+                        ? "Sending..."
+                        : resendCountdown > 0
+                          ? `Resend code in ${resendCountdown}s`
+                          : "Resend code"}
+                    </button>
+                  </div>
 
                   <Button
                     type="button"

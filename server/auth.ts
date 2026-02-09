@@ -145,6 +145,36 @@ export async function setupAuth(app: Express) {
     }
   });
 
+  app.post("/api/auth/resend-otp", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId || typeof userId !== "string") {
+        return res.json({ success: true });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.email) {
+        return res.json({ success: true });
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      await storage.setLoginOtp(user.id, otp, otpExpiry);
+      console.log(`[Resend OTP] New OTP generated for userId: ${user.id}`);
+
+      const emailContent = getOtpEmailContent(otp);
+      sendEmailInBackground({
+        to: user.email,
+        ...emailContent,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[Resend OTP] Unexpected error:", error);
+      res.json({ success: true });
+    }
+  });
+
   app.post("/api/auth/verify-otp", async (req, res) => {
     try {
       const data = verifyOtpSchema.parse(req.body);
