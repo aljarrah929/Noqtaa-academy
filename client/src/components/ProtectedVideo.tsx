@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import { Lock, Maximize, Minimize } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Lock } from "lucide-react";
 import { WatermarkOverlay } from "@/components/WatermarkOverlay";
-import { Button } from "@/components/ui/button";
 
 interface ProtectedVideoProps {
   src: string;
@@ -13,9 +12,7 @@ interface ProtectedVideoProps {
 
 export function ProtectedVideo({ src, onError, watermarkEmail, watermarkPhone, watermarkId }: ProtectedVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const playerContainerRef = useRef<HTMLDivElement | null>(null);
   const [blocked, setBlocked] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const wasPlayingRef = useRef(false);
   const savedTimeRef = useRef(0);
   const unblockTimerRef = useRef<number | null>(null);
@@ -24,27 +21,6 @@ export function ProtectedVideo({ src, onError, watermarkEmail, watermarkPhone, w
   useEffect(() => {
     originalSrcRef.current = src;
   }, [src]);
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
-    };
-  }, []);
-
-  const toggleFullscreen = useCallback(() => {
-    if (!playerContainerRef.current) return;
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-    } else {
-      playerContainerRef.current.requestFullscreen().catch(() => {});
-    }
-  }, []);
 
   const blockNow = () => {
     if (unblockTimerRef.current) {
@@ -112,20 +88,7 @@ export function ProtectedVideo({ src, onError, watermarkEmail, watermarkPhone, w
   }, []);
 
   return (
-    <div
-      ref={playerContainerRef}
-      className="relative w-full aspect-video rounded-lg overflow-hidden bg-black"
-      data-testid="protected-video-container"
-    >
-      <style>{`
-        video.protected-player::-webkit-media-controls-fullscreen-button {
-          display: none !important;
-        }
-        video.protected-player::-webkit-media-controls-enclosure {
-          overflow: hidden !important;
-        }
-      `}</style>
-
+    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black" data-testid="protected-video-container">
       <video
         ref={videoRef}
         src={src}
@@ -135,7 +98,7 @@ export function ProtectedVideo({ src, onError, watermarkEmail, watermarkPhone, w
         playsInline
         onContextMenu={(e) => e.preventDefault()}
         onError={onError}
-        className="protected-player w-full h-full"
+        className="w-full h-full"
         data-testid="protected-video-element"
       />
 
@@ -146,17 +109,6 @@ export function ProtectedVideo({ src, onError, watermarkEmail, watermarkPhone, w
           publicId={watermarkId}
         />
       )}
-
-      <Button
-        size="icon"
-        variant="ghost"
-        onClick={toggleFullscreen}
-        className="absolute bottom-2 right-2 bg-black/50 text-white border-none"
-        style={{ zIndex: 60 }}
-        data-testid="button-custom-fullscreen"
-      >
-        {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-      </Button>
 
       {blocked && (
         <div
