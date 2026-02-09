@@ -152,7 +152,9 @@ export default function Login() {
       return;
     }
     setOtpError("");
-    verifyOtpMutation.mutate({ userId: pendingUserId, otp: otpCode });
+    const payload = { userId: String(pendingUserId), otp: String(otpCode) };
+    console.log("[OTP] Sending payload:", JSON.stringify(payload));
+    verifyOtpMutation.mutate(payload);
   };
 
   const handleBackToLogin = () => {

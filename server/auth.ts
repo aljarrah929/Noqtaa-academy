@@ -177,7 +177,14 @@ export async function setupAuth(app: Express) {
 
   app.post("/api/auth/verify-otp", async (req, res) => {
     try {
-      const data = verifyOtpSchema.parse(req.body);
+      console.log("[OTP] RAW BODY:", JSON.stringify(req.body));
+      const body = req.body || {};
+      const sanitized = {
+        userId: String(body.userId ?? ""),
+        otp: String(body.otp ?? ""),
+      };
+      console.log("[OTP] Sanitized:", JSON.stringify(sanitized));
+      const data = verifyOtpSchema.parse(sanitized);
       console.log(`[OTP] Verifying OTP for userId: ${data.userId}`);
 
       const user = await storage.getUser(data.userId);
