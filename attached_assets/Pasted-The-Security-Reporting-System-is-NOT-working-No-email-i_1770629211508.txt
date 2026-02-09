@@ -1,0 +1,31 @@
+The Security Reporting System is NOT working. No email is sent, and no warning popup appears when PrintScreen is pressed.
+
+Please IMPLEMENT a complete "Violation Reporting System" from scratch using the following strict specifications:
+
+1.  **Backend: Create Email Alert Route (`server/routes.ts`):**
+    -   Create a new route: `POST /api/security/report-screenshot`.
+    -   It must accept `{ userId }` in the body.
+    -   **Logic:**
+        1.  Fetch the user details (Name, Email, Phone) from the DB.
+        2.  Use the `mailService` (or `Resend` directly) to send an email to `support@noqtaa.cloud`.
+        3.  **Subject:** "SECURITY ALERT: Screenshot Attempt Detected".
+        4.  **Body:** "User [Name] (Phone: [Phone], Email: [Email]) attempted to take a screenshot at [Timestamp]. Please review their account."
+    -   Return `200 OK`.
+
+2.  **Frontend: Create Warning Modal (`client/src/components/SecurityWarning.tsx`):**
+    -   Create a component that renders a **Fullscreen Overlay** (`fixed inset-0 z-[99999] bg-black/95`).
+    -   **Content:** A centered red box with the text: "⚠️ Security Warning: Screen capture is prohibited. This incident has been reported to the administration. Repeated attempts will result in immediate account suspension."
+    -   This component should take an `open` prop.
+
+3.  **Frontend: Connect Logic (`client/src/hooks/use-content-protection.ts`):**
+    -   Inside the hook, listen for the `'keyup'` event for `e.key === 'PrintScreen'`.
+    -   **When detected:**
+        1.  **Immediately** set a state to show the `<SecurityWarning />` modal.
+        2.  **Keep it visible** for exactly 10 seconds, then hide it.
+        3.  **Fire and Forget:** Call `apiRequest('POST', '/api/security/report-screenshot', { userId: currentUser.id })`.
+    -   Ensure this hook is active on the Lesson View page.
+
+4.  **Integration:**
+    -   Mount the `<SecurityWarning />` component in the root of the lesson page or layout, controlled by the hook's state.
+
+Verify that pressing 'PrintScreen' triggers BOTH the popup AND the backend email.

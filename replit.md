@@ -129,9 +129,9 @@ Join Request Flow:
 
 ### Content Protection
 - **WatermarkOverlay** (`client/src/components/WatermarkOverlay.tsx`): Single moving text element showing user phone/email + publicId, opacity 0.4, white with text shadow, repositions randomly every 5s
-- **useContentProtection** (`client/src/hooks/useContentProtection.ts`): Hook that disables right-click, blocks Ctrl+S/P shortcuts; detects PrintScreen (keyup) and blurs page for 10s with warning toast; reports violation to backend via `POST /api/report-violation`; applies anti-copy CSS class
+- **useContentProtection** (`client/src/hooks/useContentProtection.ts`): Hook that disables right-click, blocks Ctrl+S/P shortcuts; detects PrintScreen (keyup) and shows fullscreen SecurityWarning overlay for 10s; reports violation to backend via `POST /api/security/report-screenshot`; applies anti-copy CSS class; returns `{ showWarning }` state
 - **Anti-Copy CSS** (`client/src/index.css`): `body.content-protected` class disables text selection and image dragging; applied via hook on LessonDetail page
-- **Violation Reporting**: `POST /api/report-violation` endpoint accepts `{ userId, violationType }`, looks up user details, and sends email alert to `support@noqtaa.cloud` via Resend
+- **Violation Reporting**: `POST /api/security/report-screenshot` endpoint accepts `{ userId }`, looks up user details, and sends email alert to `support@noqtaa.cloud` via Resend
 - **Integration**: Watermark applied on LessonDetail page and inside ProtectedVideo component and iframe video containers (Cloudflare/YouTube)
 
 ### Video Hosting

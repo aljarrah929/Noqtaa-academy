@@ -9,7 +9,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import PDFDocument from "pdfkit";
-import { sendEmailInBackground } from "./email";
+import { sendEmail } from "./email";
 
 // Cloudflare R2 configuration
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -2542,42 +2542,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/report-violation", isAuthenticated, async (req: any, res) => {
+  app.post("/api/security/report-screenshot", isAuthenticated, async (req: any, res) => {
     try {
-      const { userId, violationType } = req.body;
-      if (!userId || !violationType) {
-        return res.status(400).json({ message: "userId and violationType are required" });
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ message: "userId is required" });
       }
 
       const user = await storage.getUser(String(userId));
       if (!user) {
+        console.error(`[Security] report-screenshot: user not found for id=${userId}`);
         return res.status(404).json({ message: "User not found" });
       }
 
       const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unknown";
       const phone = user.phoneNumber || "N/A";
       const email = user.email || "N/A";
-      const time = new Date().toISOString();
+      const timestamp = new Date().toLocaleString("en-US", { timeZone: "UTC" });
 
-      sendEmailInBackground({
+      console.log(`[Security] Screenshot attempt by user: ${name} (${email}), sending alert email...`);
+
+      const emailResult = await sendEmail({
         to: "support@noqtaa.cloud",
-        subject: "Security Alert: Screenshot Attempt Detected",
-        text: `User ${name} (Phone: ${phone}, Email: ${email}) attempted to take a screenshot at ${time}.`,
+        subject: "SECURITY ALERT: Screenshot Attempt Detected",
+        text: `User ${name} (Phone: ${phone}, Email: ${email}) attempted to take a screenshot at ${timestamp}. Please review their account.`,
         html: `
-          <div style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2 style="color: #ef4444;">Security Alert: Screenshot Attempt</h2>
-            <p><strong>User:</strong> ${name}</p>
-            <p><strong>Phone:</strong> ${phone}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Violation:</strong> ${violationType}</p>
-            <p><strong>Time:</strong> ${time}</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: #dc2626; padding: 16px; border-radius: 8px 8px 0 0; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 20px;">SECURITY ALERT</h1>
+              <p style="color: #fecaca; margin: 4px 0 0;">Screenshot Attempt Detected</p>
+            </div>
+            <div style="background: #fef2f2; padding: 24px; border: 1px solid #fecaca; border-top: none; border-radius: 0 0 8px 8px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr><td style="padding: 8px 0; font-weight: bold; color: #991b1b;">User:</td><td style="padding: 8px 0;">${name}</td></tr>
+                <tr><td style="padding: 8px 0; font-weight: bold; color: #991b1b;">Phone:</td><td style="padding: 8px 0;">${phone}</td></tr>
+                <tr><td style="padding: 8px 0; font-weight: bold; color: #991b1b;">Email:</td><td style="padding: 8px 0;">${email}</td></tr>
+                <tr><td style="padding: 8px 0; font-weight: bold; color: #991b1b;">Public ID:</td><td style="padding: 8px 0;">${user.publicId || "N/A"}</td></tr>
+                <tr><td style="padding: 8px 0; font-weight: bold; color: #991b1b;">Timestamp:</td><td style="padding: 8px 0;">${timestamp}</td></tr>
+              </table>
+              <p style="margin-top: 16px; color: #7f1d1d; font-weight: bold;">Please review this user's account immediately.</p>
+            </div>
           </div>
         `,
       });
 
-      res.json({ message: "Violation reported" });
-    } catch (error) {
-      console.error("Error reporting violation:", error);
+      if (emailResult) {
+        console.log(`[Security] Alert email sent successfully for user: ${email}`);
+      } else {
+        console.error(`[Security] Failed to send alert email for user: ${email}`);
+      }
+
+      res.json({ message: "Violation reported", emailSent: emailResult });
+    } catch (error: any) {
+      console.error("[Security] Error in report-screenshot:", error.message);
       res.status(500).json({ message: "Failed to report violation" });
     }
   });

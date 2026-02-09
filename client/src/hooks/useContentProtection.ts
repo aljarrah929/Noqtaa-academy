@@ -1,9 +1,9 @@
-import { useEffect, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useEffect, useCallback, useState, useRef } from "react";
 import { apiRequest } from "@/lib/queryClient";
 
 export function useContentProtection(userId?: string) {
-  const { toast } = useToast();
+  const [showWarning, setShowWarning] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleContextMenu = useCallback((e: MouseEvent) => {
     e.preventDefault();
@@ -12,27 +12,27 @@ export function useContentProtection(userId?: string) {
   const handleKeyUp = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "PrintScreen") {
-        document.body.style.filter = "blur(20px)";
-        toast({
-          title: "Warning: Screen capture is prohibited",
-          description:
-            "Repeated attempts will result in permanent account suspension.",
-          variant: "destructive",
-          duration: 10000,
-        });
-        setTimeout(() => {
-          document.body.style.filter = "";
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+        }
+
+        setShowWarning(true);
+
+        timerRef.current = setTimeout(() => {
+          setShowWarning(false);
+          timerRef.current = null;
         }, 10000);
 
         if (userId) {
-          apiRequest("POST", "/api/report-violation", {
+          apiRequest("POST", "/api/security/report-screenshot", {
             userId,
-            violationType: "screenshot",
-          }).catch(() => {});
+          }).catch((err) => {
+            console.error("[Security] Failed to report screenshot:", err);
+          });
         }
       }
     },
-    [toast, userId]
+    [userId]
   );
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -57,7 +57,11 @@ export function useContentProtection(userId?: string) {
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("keyup", handleKeyUp);
       document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.filter = "";
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
     };
   }, [handleContextMenu, handleKeyUp, handleKeyDown]);
+
+  return { showWarning };
 }
