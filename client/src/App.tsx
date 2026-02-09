@@ -33,6 +33,7 @@ import HomeStatsManagement from "@/pages/admin/HomeStatsManagement";
 import AccountantDashboard from "@/pages/accountant/AccountantDashboard";
 import CollegeOnboarding from "@/pages/CollegeOnboarding";
 import Profile from "@/pages/Profile";
+import SupportWidget from "@/components/SupportWidget";
 
 function Router() {
   return (
@@ -81,6 +82,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
+            <SupportWidget />
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>
