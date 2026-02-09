@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { loginSchema, verifyOtpSchema, type LoginInput, type VerifyOtpInput, type UserWithCollege } from "@shared/schema";
+import { loginSchema, type LoginInput, type UserWithCollege } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/Header";
@@ -28,6 +28,8 @@ export default function Login() {
   const [pendingUserId, setPendingUserId] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpError, setOtpError] = useState("");
 
   const searchParams = new URLSearchParams(window.location.search);
   const nextUrl = searchParams.get("next");
@@ -40,16 +42,6 @@ export default function Login() {
     },
   });
 
-  const otpForm = useForm<VerifyOtpInput>({
-    resolver: zodResolver(verifyOtpSchema),
-    mode: "onSubmit",
-    reValidateMode: "onSubmit",
-    defaultValues: {
-      userId: "",
-      otp: "",
-    },
-  });
-
   const loginMutation = useMutation({
     mutationFn: async (data: LoginInput) => {
       const response = await apiRequest("POST", "/api/auth/login", data);
@@ -58,7 +50,8 @@ export default function Login() {
     onSuccess: (result) => {
       setPendingUserId(result.userId);
       setUserEmail(loginForm.getValues("email"));
-      otpForm.setValue("userId", result.userId);
+      setOtpCode("");
+      setOtpError("");
       setOtpStep(true);
       toast({
         title: "Verification code sent",
@@ -75,7 +68,7 @@ export default function Login() {
   });
 
   const verifyOtpMutation = useMutation({
-    mutationFn: async (data: VerifyOtpInput) => {
+    mutationFn: async (data: { userId: string; otp: string }) => {
       const response = await apiRequest("POST", "/api/auth/verify-otp", data);
       return response.json() as Promise<UserWithCollege>;
     },
@@ -153,8 +146,13 @@ export default function Login() {
     loginMutation.mutate(data);
   };
 
-  const onOtpSubmit = (data: VerifyOtpInput) => {
-    verifyOtpMutation.mutate(data);
+  const handleOtpSubmit = () => {
+    if (otpCode.length !== 6) {
+      setOtpError("Verification code must be 6 digits");
+      return;
+    }
+    setOtpError("");
+    verifyOtpMutation.mutate({ userId: pendingUserId, otp: otpCode });
   };
 
   const handleBackToLogin = () => {
@@ -162,7 +160,8 @@ export default function Login() {
     setPendingUserId("");
     setUserEmail("");
     setResendCountdown(0);
-    otpForm.reset();
+    setOtpCode("");
+    setOtpError("");
   };
 
   return (
@@ -255,83 +254,77 @@ export default function Login() {
                 </form>
               </Form>
             ) : (
-              <Form {...otpForm}>
-                <form onSubmit={otpForm.handleSubmit(onOtpSubmit)} className="space-y-4">
-                  <FormField
-                    control={otpForm.control}
-                    name="otp"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Verification Code</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="tel"
-                            inputMode="numeric"
-                            maxLength={6}
-                            placeholder="Enter 6-digit code"
-                            autoFocus
-                            autoComplete="one-time-code"
-                            className="text-center text-lg tracking-widest"
-                            value={field.value}
-                            onChange={(e) => {
-                              const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
-                              field.onChange(val);
-                              otpForm.clearErrors("otp");
-                            }}
-                            onBlur={field.onBlur}
-                            name="otp"
-                            ref={field.ref}
-                            data-testid="input-otp"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="otp-input-field" className="text-sm font-medium leading-none">
+                    Verification Code
+                  </label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    id="otp-input-field"
+                    name="auth_otp_field_verify_v2"
+                    autoComplete="off"
+                    maxLength={6}
+                    placeholder="Enter 6-digit code"
+                    autoFocus
+                    className="text-center text-lg tracking-widest"
+                    value={otpCode}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+                      setOtpCode(val);
+                      setOtpError("");
+                    }}
+                    data-testid="input-otp"
                   />
+                  {otpError && (
+                    <p className="text-sm font-medium text-destructive">{otpError}</p>
+                  )}
+                </div>
 
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={verifyOtpMutation.isPending}
-                    data-testid="button-verify-otp"
-                  >
-                    {verifyOtpMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Verifying...
-                      </>
-                    ) : (
-                      "Verify & Sign in"
-                    )}
-                  </Button>
+                <Button
+                  type="button"
+                  className="w-full"
+                  disabled={verifyOtpMutation.isPending}
+                  onClick={handleOtpSubmit}
+                  data-testid="button-verify-otp"
+                >
+                  {verifyOtpMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    "Verify & Sign in"
+                  )}
+                </Button>
 
-                  <div className="text-center">
-                    <button
-                      type="button"
-                      disabled={resendCountdown > 0 || resendOtpMutation.isPending}
-                      onClick={() => resendOtpMutation.mutate()}
-                      className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                      data-testid="button-resend-otp"
-                    >
-                      {resendOtpMutation.isPending
-                        ? "Sending..."
-                        : resendCountdown > 0
-                          ? `Resend code in ${resendCountdown}s`
-                          : "Resend code"}
-                    </button>
-                  </div>
-
-                  <Button
+                <div className="text-center">
+                  <button
                     type="button"
-                    variant="ghost"
-                    className="w-full"
-                    onClick={handleBackToLogin}
-                    data-testid="button-back-to-login"
+                    disabled={resendCountdown > 0 || resendOtpMutation.isPending}
+                    onClick={() => resendOtpMutation.mutate()}
+                    className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-testid="button-resend-otp"
                   >
-                    Back to login
-                  </Button>
-                </form>
-              </Form>
+                    {resendOtpMutation.isPending
+                      ? "Sending..."
+                      : resendCountdown > 0
+                        ? `Resend code in ${resendCountdown}s`
+                        : "Resend code"}
+                  </button>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={handleBackToLogin}
+                  data-testid="button-back-to-login"
+                >
+                  Back to login
+                </Button>
+              </div>
             )}
 
             {!otpStep && (
