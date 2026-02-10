@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,7 @@ export default function Profile() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
 
   const { data: user, isLoading } = useQuery<UserWithCollege>({
     queryKey: ["/api/auth/user"],
@@ -35,6 +36,31 @@ export default function Profile() {
         toast({ title: "Failed to copy", variant: "destructive" });
       }
     }
+  };
+
+  useEffect(() => {
+    if (user?.phoneNumber) {
+      setPhoneNumber(user.phoneNumber);
+    }
+  }, [user?.phoneNumber]);
+
+  const phoneMutation = useMutation({
+    mutationFn: async (data: { phoneNumber: string }) => {
+      const res = await apiRequest("PATCH", "/api/profile/phone", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({ title: "Phone Updated", description: "Your phone number has been updated." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handlePhoneUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    phoneMutation.mutate({ phoneNumber });
   };
 
   const passwordMutation = useMutation({
@@ -288,6 +314,43 @@ export default function Profile() {
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Phone Number Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Phone Number</CardTitle>
+            <CardDescription>Keep your contact information up to date</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePhoneUpdate} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone-number">Phone Number</Label>
+                <Input
+                  id="phone-number"
+                  type="tel"
+                  placeholder="+962XXXXXXXXX"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  data-testid="input-phone-number"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={phoneMutation.isPending || !phoneNumber.trim()}
+                data-testid="button-update-phone"
+              >
+                {phoneMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Phone Number"
+                )}
+              </Button>
+            </form>
           </CardContent>
         </Card>
 

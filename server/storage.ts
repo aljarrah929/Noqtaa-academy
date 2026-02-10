@@ -113,6 +113,7 @@ export interface IStorage {
   setLoginOtp(id: string, otp: string, expiry: Date): Promise<void>;
   clearLoginOtp(id: string): Promise<void>;
   updateUserProfileImage(id: string, profileImageUrl: string): Promise<User | undefined>;
+  updateUserPhoneNumber(id: string, phoneNumber: string): Promise<User | undefined>;
   getAllUsers(): Promise<UserWithCollege[]>;
   getColleges(): Promise<College[]>;
   getCollegeById(id: number): Promise<College | undefined>;
@@ -434,6 +435,15 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ profileImageUrl, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateUserPhoneNumber(id: string, phoneNumber: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ phoneNumber, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
     return user;

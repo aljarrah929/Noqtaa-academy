@@ -2061,6 +2061,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/profile/phone", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { phoneNumber } = req.body;
+
+      if (!phoneNumber || typeof phoneNumber !== "string") {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      const trimmed = phoneNumber.trim();
+      if (trimmed.length < 5) {
+        return res.status(400).json({ message: "Please enter a valid phone number" });
+      }
+
+      const updated = await storage.updateUserPhoneNumber(userId, trimmed);
+      if (!updated) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ success: true, phoneNumber: updated.phoneNumber });
+    } catch (error) {
+      console.error("Error updating phone number:", error);
+      res.status(500).json({ message: "Failed to update phone number" });
+    }
+  });
+
   // ============ JOIN REQUESTS ============
   
   // Multer config for join request receipt uploads (memory storage, 10MB max)
