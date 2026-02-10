@@ -1,112 +1,140 @@
-import { useState, useMemo } from "react";
-import { useLocation, useSearch } from "wouter";
+import { useState, useMemo, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
 import { CourseCard, CourseCardSkeleton } from "@/components/courses/CourseCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, BookOpen, X, GraduationCap } from "lucide-react";
+import { Search, BookOpen, X, GraduationCap, Landmark } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import type { CourseWithRelations, College } from "@shared/schema";
+import type { CourseWithRelations, Major } from "@shared/schema";
 
 export default function Courses() {
-  const searchParams = new URLSearchParams(useSearch());
-  const initialCollege = searchParams.get("college") || "all";
-  
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCollege, setSelectedCollege] = useState(initialCollege);
+  const [selectedMajorId, setSelectedMajorId] = useState<string>("loading");
   const [, setLocation] = useLocation();
   const { user } = useAuth();
 
+  const userUniversityId = user?.universityId;
   const userMajorId = user?.majorId;
-  const coursesQueryKey = userMajorId
-    ? ["/api/courses", { majorId: userMajorId }]
-    : ["/api/courses"];
 
-  const { data: courses, isLoading: coursesLoading } = useQuery<CourseWithRelations[]>({
-    queryKey: coursesQueryKey,
+  useEffect(() => {
+    if (selectedMajorId === "loading" && user !== undefined) {
+      setSelectedMajorId(userMajorId ? String(userMajorId) : "all");
+    }
+  }, [user, userMajorId, selectedMajorId]);
+
+  const { data: universityMajors } = useQuery<Major[]>({
+    queryKey: ["/api/majors", { universityId: userUniversityId }],
     queryFn: async () => {
-      const url = userMajorId ? `/api/courses?majorId=${userMajorId}` : "/api/courses";
+      const res = await fetch(`/api/majors?universityId=${userUniversityId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch majors");
+      return res.json();
+    },
+    enabled: !!userUniversityId,
+  });
+
+  const { data: allCourses, isLoading: coursesLoading } = useQuery<CourseWithRelations[]>({
+    queryKey: ["/api/courses", { universityId: userUniversityId }],
+    queryFn: async () => {
+      const url = userUniversityId
+        ? `/api/courses?universityId=${userUniversityId}`
+        : "/api/courses";
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch courses");
       return res.json();
     },
   });
 
-  const { data: colleges } = useQuery<College[]>({
-    queryKey: ["/api/colleges"],
-  });
-
   const filteredCourses = useMemo(() => {
-    if (!courses) return [];
-    
-    return courses.filter((course) => {
-      const matchesSearch = 
-        searchQuery === "" ||
-        course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesCollege = 
-        selectedCollege === "all" || 
-        course.college?.slug === selectedCollege;
-      
-      return matchesSearch && matchesCollege;
-    });
-  }, [courses, searchQuery, selectedCollege]);
+    if (!allCourses) return [];
 
-  const handleCollegeChange = (value: string) => {
-    setSelectedCollege(value);
-    if (value === "all") {
-      setLocation("/courses");
-    } else {
-      setLocation(`/courses?college=${value}`);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return allCourses.filter(
+        (course) =>
+          course.title.toLowerCase().includes(q) ||
+          course.description?.toLowerCase().includes(q) ||
+          course.code?.toLowerCase().includes(q) ||
+          course.instructorName?.toLowerCase().includes(q)
+      );
     }
+
+    if (selectedMajorId && selectedMajorId !== "all" && selectedMajorId !== "loading") {
+      return allCourses.filter((course) => course.majorId === Number(selectedMajorId));
+    }
+
+    return allCourses;
+  }, [allCourses, searchQuery, selectedMajorId]);
+
+  const handleMajorChange = (value: string) => {
+    setSelectedMajorId(value);
+    setSearchQuery("");
   };
 
   const clearFilters = () => {
     setSearchQuery("");
-    setSelectedCollege("all");
-    setLocation("/courses");
+    setSelectedMajorId(userMajorId ? String(userMajorId) : "all");
   };
 
-  const hasActiveFilters = searchQuery !== "" || selectedCollege !== "all";
+  const isFilteredByMajor = selectedMajorId !== "all" && selectedMajorId !== "loading" && !searchQuery.trim();
+  const hasActiveFilters =
+    searchQuery.trim() !== "" ||
+    (selectedMajorId !== "all" && selectedMajorId !== "loading" && selectedMajorId !== String(userMajorId));
 
-  const pathLabel = user?.major && user?.university
-    ? `${user.major.name} at ${user.university.name}`
-    : user?.major
-    ? user.major.name
-    : null;
+  const selectedMajorName = universityMajors?.find((m) => m.id === Number(selectedMajorId))?.name;
+  const universityName = user?.university?.name;
+
+  const sectionHeader = searchQuery.trim()
+    ? `Search results across ${universityName || "all courses"}`
+    : isFilteredByMajor && selectedMajorName
+    ? `Courses for ${selectedMajorName}`
+    : universityName
+    ? `All Courses at ${universityName}`
+    : "All Courses";
+
+  if (selectedMajorId === "loading") {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <CourseCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2" data-testid="text-page-title">
             Course Catalog
           </h1>
-          {pathLabel ? (
-            <div className="flex items-center gap-2 mt-1">
-              <GraduationCap className="w-4 h-4 text-primary" />
-              <p className="text-sm text-muted-foreground" data-testid="text-path-label">
-                Showing courses for <span className="font-medium text-foreground">{pathLabel}</span>
-              </p>
-            </div>
-          ) : (
-            <p className="text-muted-foreground">
-              Browse courses from all our colleges
+          <div className="flex items-center gap-2 mt-1">
+            {isFilteredByMajor ? (
+              <GraduationCap className="w-4 h-4 text-primary shrink-0" />
+            ) : (
+              <Landmark className="w-4 h-4 text-primary shrink-0" />
+            )}
+            <p className="text-sm text-muted-foreground" data-testid="text-section-header">
+              {sectionHeader}
             </p>
-          )}
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 mb-8">
@@ -114,49 +142,42 @@ export default function Courses() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search courses..."
+              placeholder={universityName ? `Search all courses at ${universityName}...` : "Search all courses..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
               data-testid="input-search"
             />
           </div>
-          
-          <Select value={selectedCollege} onValueChange={handleCollegeChange}>
-            <SelectTrigger className="w-full md:w-48" data-testid="select-college">
-              <SelectValue placeholder="All Colleges" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Colleges</SelectItem>
-              {colleges?.map((college) => (
-                <SelectItem key={college.id} value={college.slug}>
-                  {college.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+          {universityMajors && universityMajors.length > 0 && (
+            <Select value={searchQuery.trim() ? "all" : selectedMajorId} onValueChange={handleMajorChange} disabled={!!searchQuery.trim()}>
+              <SelectTrigger className="w-full md:w-56" data-testid="select-major-filter">
+                <SelectValue placeholder="Filter by Major" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Majors</SelectItem>
+                {universityMajors.map((major) => (
+                  <SelectItem key={major.id} value={String(major.id)}>
+                    {major.name}
+                    {major.id === userMajorId ? " (Your Major)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {hasActiveFilters && (
             <Button variant="ghost" onClick={clearFilters} data-testid="button-clear-filters">
               <X className="w-4 h-4 mr-1" />
-              Clear
+              Reset
             </Button>
           )}
         </div>
 
         <div className="flex items-center gap-2 mb-6 flex-wrap">
-          {selectedCollege !== "all" && (
-            <Badge 
-              variant="secondary" 
-              className="cursor-pointer"
-              onClick={() => handleCollegeChange("all")}
-            >
-              {colleges?.find(c => c.slug === selectedCollege)?.name}
-              <X className="w-3 h-3 ml-1" />
-            </Badge>
-          )}
           {!coursesLoading && (
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-muted-foreground" data-testid="text-course-count">
               {filteredCourses.length} course{filteredCourses.length !== 1 ? "s" : ""} found
             </span>
           )}
@@ -184,14 +205,15 @@ export default function Courses() {
               <BookOpen className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
               <h3 className="font-semibold text-xl mb-2">No courses found</h3>
               <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                {hasActiveFilters 
-                  ? "Try adjusting your filters or search query to find what you're looking for."
-                  : "There are no published courses available at the moment. Check back soon!"
-                }
+                {searchQuery.trim()
+                  ? "No courses match your search. Try different keywords."
+                  : hasActiveFilters
+                  ? "No courses available for this major. Try exploring other majors."
+                  : "There are no published courses available at the moment. Check back soon!"}
               </p>
-              {hasActiveFilters && (
-                <Button variant="outline" onClick={clearFilters}>
-                  Clear Filters
+              {(searchQuery.trim() || hasActiveFilters) && (
+                <Button variant="outline" onClick={clearFilters} data-testid="button-clear-empty">
+                  Reset Filters
                 </Button>
               )}
             </CardContent>

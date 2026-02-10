@@ -246,7 +246,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/majors", async (req, res) => {
     try {
       const collegeId = req.query.collegeId ? parseInt(req.query.collegeId as string) : undefined;
-      const majorList = await storage.getMajors(collegeId);
+      const universityId = req.query.universityId ? parseInt(req.query.universityId as string) : undefined;
+      const majorList = await storage.getMajors(collegeId, universityId);
       res.json(majorList);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch majors" });
@@ -448,12 +449,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const collegeId = req.query.collegeId ? parseInt(req.query.collegeId as string) : undefined;
       const majorId = req.query.majorId ? parseInt(req.query.majorId as string) : undefined;
+      const universityId = req.query.universityId ? parseInt(req.query.universityId as string) : undefined;
       const requestedStatus = req.query.status as any;
       
       const user = req.user;
       const isAdmin = user?.role === "SUPER_ADMIN" || user?.role === "ADMIN";
       
-      let courseList = await storage.getCourses(collegeId, undefined, majorId);
+      let courseList = await storage.getCourses(collegeId, undefined, majorId, universityId);
       
       if (isAdmin && requestedStatus) {
         courseList = courseList.filter(c => c.status === requestedStatus);

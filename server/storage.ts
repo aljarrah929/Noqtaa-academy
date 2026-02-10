@@ -103,7 +103,7 @@ export interface IStorage {
   updateUniversity(id: number, university: Partial<InsertUniversity>): Promise<University | undefined>;
   deleteUniversity(id: number): Promise<void>;
   getCollegesByUniversity(universityId: number): Promise<College[]>;
-  getMajors(collegeId?: number): Promise<Major[]>;
+  getMajors(collegeId?: number, universityId?: number): Promise<Major[]>;
   getMajorById(id: number): Promise<Major | undefined>;
   createMajor(major: InsertMajor): Promise<Major>;
   updateMajor(id: number, major: Partial<InsertMajor>): Promise<Major | undefined>;
@@ -120,7 +120,7 @@ export interface IStorage {
   createCollege(college: InsertCollege): Promise<College>;
   updateCollege(id: number, college: Partial<InsertCollege>): Promise<College | undefined>;
   deleteCollege(id: number): Promise<void>;
-  getCourses(collegeId?: number, status?: Course["status"], majorId?: number): Promise<CourseWithRelations[]>;
+  getCourses(collegeId?: number, status?: Course["status"], majorId?: number, universityId?: number): Promise<CourseWithRelations[]>;
   getCourseById(id: number): Promise<CourseWithRelations | undefined>;
   getCoursesByTeacher(teacherId: string): Promise<CourseWithRelations[]>;
   createCourse(course: InsertCourse): Promise<Course>;
@@ -361,9 +361,18 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(colleges).where(eq(colleges.universityId, universityId)).orderBy(colleges.name);
   }
 
-  async getMajors(collegeId?: number): Promise<Major[]> {
+  async getMajors(collegeId?: number, universityId?: number): Promise<Major[]> {
     if (collegeId) {
       return db.select().from(majors).where(eq(majors.collegeId, collegeId)).orderBy(majors.name);
+    }
+    if (universityId) {
+      const result = await db
+        .select({ majors })
+        .from(majors)
+        .innerJoin(colleges, eq(majors.collegeId, colleges.id))
+        .where(eq(colleges.universityId, universityId))
+        .orderBy(majors.name);
+      return result.map(r => r.majors);
     }
     return db.select().from(majors).orderBy(majors.name);
   }
@@ -473,7 +482,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(colleges).where(eq(colleges.id, id));
   }
 
-  async getCourses(collegeId?: number, status?: Course["status"], majorId?: number): Promise<CourseWithRelations[]> {
+  async getCourses(collegeId?: number, status?: Course["status"], majorId?: number, universityId?: number): Promise<CourseWithRelations[]> {
     const results = await db
       .select()
       .from(courses)
@@ -501,6 +510,9 @@ export class DatabaseStorage implements IStorage {
     }
     if (majorId) {
       filtered = filtered.filter(r => r.courses.majorId === majorId);
+    }
+    if (universityId) {
+      filtered = filtered.filter(r => r.colleges?.universityId === universityId);
     }
     if (status) {
       filtered = filtered.filter(r => r.courses.status === status);
