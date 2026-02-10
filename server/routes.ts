@@ -1106,6 +1106,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/teachers/:id/courses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only admins can view teacher courses" });
+      }
+      const teacherId = req.params.id;
+      const teacher = await storage.getUser(teacherId);
+      if (!teacher || teacher.role !== "TEACHER") {
+        return res.status(404).json({ message: "Teacher not found" });
+      }
+      if (user.role === "ADMIN" && user.collegeId && teacher.collegeId !== user.collegeId) {
+        return res.status(403).json({ message: "You can only view teachers in your college" });
+      }
+      const result = await storage.getTeacherCourses(teacherId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching teacher courses:", error);
+      res.status(500).json({ message: "Failed to fetch teacher courses" });
+    }
+  });
+
+  app.get("/api/admin/teachers/:id/students", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only admins can view teacher students" });
+      }
+      const teacherId = req.params.id;
+      const teacher = await storage.getUser(teacherId);
+      if (!teacher || teacher.role !== "TEACHER") {
+        return res.status(404).json({ message: "Teacher not found" });
+      }
+      if (user.role === "ADMIN" && user.collegeId && teacher.collegeId !== user.collegeId) {
+        return res.status(403).json({ message: "You can only view teachers in your college" });
+      }
+      const result = await storage.getTeacherStudents(teacherId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching teacher students:", error);
+      res.status(500).json({ message: "Failed to fetch teacher students" });
+    }
+  });
+
   app.get("/api/admin/users", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;

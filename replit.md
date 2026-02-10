@@ -56,6 +56,9 @@ Preferred communication style: Simple, everyday language.
 - `/api/lessons/*` - Lesson content management
 - `/api/enrollments/*` - Student enrollment management
 - `/api/join-requests/*` - Join request management (student enrollment requests)
+- `/api/admin/teachers` - List teachers with stats (ADMIN sees own college, SUPER_ADMIN sees all)
+- `/api/admin/teachers/:id/courses` - Teacher's courses with enrollment counts (college-scoped for ADMINs)
+- `/api/admin/teachers/:id/students` - Unique students enrolled in teacher's courses (college-scoped for ADMINs)
 - `/api/users/*` - User management (admin only)
 - `/api/stream/*` - Cloudflare Stream video upload integration
 

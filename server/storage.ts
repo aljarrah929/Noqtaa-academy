@@ -168,6 +168,8 @@ export interface IStorage {
   hasPendingJoinRequest(studentId: string, courseId: number): Promise<boolean>;
   hasApprovedJoinRequest(studentId: string, courseId: number): Promise<boolean>;
   updateJoinRequestStatus(id: number, status: JoinRequest["status"]): Promise<JoinRequest | undefined>;
+  getTeacherCourses(teacherId: string): Promise<{ id: number; title: string; price: number; status: string; studentsCount: number }[]>;
+  getTeacherStudents(teacherId: string): Promise<{ studentId: string; name: string; email: string; phone: string; courseName: string }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1006,6 +1008,57 @@ export class DatabaseStorage implements IStorage {
       .where(eq(joinRequests.id, id))
       .returning();
     return updated;
+  }
+
+  async getTeacherCourses(teacherId: string): Promise<{ id: number; title: string; price: number; status: string; studentsCount: number }[]> {
+    const teacherCourses = await db.select().from(courses).where(eq(courses.teacherId, teacherId));
+    const result = [];
+    for (const course of teacherCourses) {
+      const [{ count: enrollCount }] = await db.select({ count: sql`count(*)::int` }).from(enrollments).where(eq(enrollments.courseId, course.id));
+      result.push({
+        id: course.id,
+        title: course.title,
+        price: course.price,
+        status: course.status,
+        studentsCount: (enrollCount as number) || 0,
+      });
+    }
+    return result;
+  }
+
+  async getTeacherStudents(teacherId: string): Promise<{ studentId: string; name: string; email: string; phone: string; courseName: string }[]> {
+    const teacherCourses = await db.select().from(courses).where(eq(courses.teacherId, teacherId));
+    const courseMap = new Map(teacherCourses.map(c => [c.id, c.title]));
+    const courseIds = teacherCourses.map(c => c.id);
+    if (courseIds.length === 0) return [];
+    const enrollmentRows = await db.select({
+      studentId: enrollments.studentId,
+      courseId: enrollments.courseId,
+    }).from(enrollments).where(sql`${enrollments.courseId} IN ${courseIds}`);
+    const seenKey = new Set<string>();
+    const uniqueEntries: { studentId: string; courseId: number }[] = [];
+    for (const e of enrollmentRows) {
+      const key = `${e.studentId}-${e.courseId}`;
+      if (!seenKey.has(key)) {
+        seenKey.add(key);
+        uniqueEntries.push(e);
+      }
+    }
+    const studentIds = [...new Set(uniqueEntries.map(e => e.studentId))];
+    const students = studentIds.length > 0
+      ? await db.select().from(users).where(sql`${users.id} IN ${studentIds}`)
+      : [];
+    const studentMap = new Map(students.map(s => [s.id, s]));
+    return uniqueEntries.map(e => {
+      const student = studentMap.get(e.studentId);
+      return {
+        studentId: e.studentId,
+        name: student ? `${student.firstName || ""} ${student.lastName || ""}`.trim() : "Unknown",
+        email: student?.email || "",
+        phone: student?.phoneNumber || "",
+        courseName: courseMap.get(e.courseId) || "Unknown",
+      };
+    });
   }
 }
 
