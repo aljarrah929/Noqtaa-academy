@@ -2,14 +2,20 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, requireRole, seedSuperAdmin } from "./auth";
-import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertUniversitySchema, insertMajorSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema, updateAdminDashboardStatsConfigSchema } from "@shared/schema";
+import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertUniversitySchema, insertMajorSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema, updateAdminDashboardStatsConfigSchema, quizQuestions } from "@shared/schema";
 import { z } from "zod";
 import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import PDFDocument from "pdfkit";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
+import OpenAI from "openai";
 import { sendEmail } from "./email";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
 
 // Cloudflare R2 configuration
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -2789,6 +2795,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("[Security] Error in report-screenshot:", error.message);
       res.status(500).json({ message: "Failed to report violation" });
+    }
+  });
+
+  // ===== Quiz Builder / PDF-to-Quiz AI Generator =====
+
+  const openai = new OpenAI({
+    apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  });
+
+  const pdfUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 20 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      if (file.mimetype === "application/pdf") {
+        cb(null, true);
+      } else {
+        cb(new Error("Only PDF files are accepted"));
+      }
+    },
+  });
+
+  app.post("/api/admin/generate-quiz-from-pdf",
+    requireRole("ADMIN", "SUPER_ADMIN", "TEACHER"),
+    pdfUpload.single("pdfFile"),
+    async (req: any, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No PDF file uploaded" });
+        }
+
+        let pdfData;
+        try {
+          pdfData = await pdfParse(req.file.buffer);
+        } catch (parseErr) {
+          return res.status(400).json({
+            message: "Could not read text from this PDF. Please ensure the PDF is text-based, not scanned images."
+          });
+        }
+
+        const extractedText = pdfData.text?.trim();
+        if (!extractedText || extractedText.length < 50) {
+          return res.status(400).json({
+            message: "Could not extract enough text from the PDF. Please ensure the PDF is text-based and contains readable content, not scanned images."
+          });
+        }
+
+        const truncatedText = extractedText.substring(0, 15000);
+
+        const completion = await openai.chat.completions.create({
+          model: "gpt-5-mini",
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert academic quiz generator. Analyze the following academic text and generate multiple-choice questions based on the content. You MUST return a JSON object with a single key "questions" containing an array of question objects. Each question object must have:
+- "question" (string): The question text
+- "options" (array of exactly 4 strings): Four possible answers
+- "correctAnswer" (string): Must exactly match one of the options
+- "explanation" (string): A brief explanation of why the correct answer is right
+
+Example response format:
+{"questions": [{"question": "What is X?", "options": ["A", "B", "C", "D"], "correctAnswer": "A", "explanation": "Because..."}]}
+
+Generate between 5 and 20 questions depending on the content length. Focus on key concepts, definitions, and important facts.`
+            },
+            {
+              role: "user",
+              content: truncatedText
+            }
+          ],
+          response_format: { type: "json_object" },
+          max_completion_tokens: 4096,
+        });
+
+        const responseText = completion.choices[0]?.message?.content || "";
+
+        let questions;
+        try {
+          const parsed = JSON.parse(responseText);
+          questions = parsed.questions || parsed.quiz || (Array.isArray(parsed) ? parsed : []);
+        } catch {
+          return res.status(500).json({ message: "Failed to parse AI response. Please try again." });
+        }
+
+        const validQuestions = questions.filter((q: any) =>
+          q.question &&
+          Array.isArray(q.options) &&
+          q.options.length === 4 &&
+          q.correctAnswer &&
+          q.options.includes(q.correctAnswer)
+        );
+
+        if (validQuestions.length === 0) {
+          return res.status(400).json({
+            message: "The AI could not generate valid questions from this PDF content. Try a different document with clearer academic content."
+          });
+        }
+
+        res.json({ questions: validQuestions });
+      } catch (error: any) {
+        console.error("[Quiz Generator] Error:", error.message);
+        res.status(500).json({ message: "Failed to generate quiz. Please try again." });
+      }
+    }
+  );
+
+  app.get("/api/quiz-questions", requireRole("ADMIN", "SUPER_ADMIN", "TEACHER"), async (req: any, res) => {
+    try {
+      const courseId = parseInt(req.query.courseId as string);
+      if (!courseId) {
+        return res.status(400).json({ message: "courseId is required" });
+      }
+      const questions = await db.select().from(quizQuestions).where(eq(quizQuestions.courseId, courseId)).orderBy(quizQuestions.createdAt);
+      res.json(questions);
+    } catch (error: any) {
+      console.error("[Quiz] Error fetching questions:", error.message);
+      res.status(500).json({ message: "Failed to fetch quiz questions" });
+    }
+  });
+
+  app.post("/api/quiz-questions/bulk", requireRole("ADMIN", "SUPER_ADMIN", "TEACHER"), async (req: any, res) => {
+    try {
+      const { courseId, questions } = req.body;
+      if (!courseId || !Array.isArray(questions) || questions.length === 0) {
+        return res.status(400).json({ message: "courseId and questions array are required" });
+      }
+
+      const userId = req.user?.id;
+      const values = questions.map((q: any) => ({
+        courseId: parseInt(courseId),
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation || null,
+        createdByUserId: userId,
+      }));
+
+      const inserted = await db.insert(quizQuestions).values(values).returning();
+      res.json({ inserted: inserted.length, questions: inserted });
+    } catch (error: any) {
+      console.error("[Quiz] Error saving questions:", error.message);
+      res.status(500).json({ message: "Failed to save quiz questions" });
+    }
+  });
+
+  app.delete("/api/quiz-questions/:id", requireRole("ADMIN", "SUPER_ADMIN", "TEACHER"), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await db.delete(quizQuestions).where(eq(quizQuestions.id, id));
+      res.json({ message: "Question deleted" });
+    } catch (error: any) {
+      console.error("[Quiz] Error deleting question:", error.message);
+      res.status(500).json({ message: "Failed to delete question" });
     }
   });
 

@@ -36,7 +36,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Plus, Trash2, ArrowLeft, Video, FileText, Link as LinkIcon, File } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Video, FileText, Link as LinkIcon, File, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations, Lesson } from "@shared/schema";
 import { B2VideoUploader } from "@/components/B2VideoUploader";
@@ -225,6 +225,12 @@ export default function TeacherContentManagement() {
                     </Link>
                   </Button>
                 )}
+                <Button variant="outline" size="sm" asChild data-testid="button-quiz-builder">
+                  <Link href={`/admin/courses/${courseId}/quiz-builder`}>
+                    <Sparkles className="w-4 h-4 mr-1" />
+                    Quiz Builder
+                  </Link>
+                </Button>
                 <Button size="sm" onClick={() => openLessonDialog()} data-testid="button-add-lesson">
                   <Plus className="w-4 h-4 mr-1" />
                   Add Lesson

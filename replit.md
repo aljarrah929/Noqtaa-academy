@@ -12,6 +12,7 @@ Key features:
 - Email-only communication between students and teachers (mailto links)
 - External payment handling (no in-platform payment processing)
 - Content protection: dynamic watermarking, anti-copy CSS, screenshot/shortcut blocking
+- AI-powered Quiz Builder: PDF-to-Quiz generation using OpenAI (via Replit AI Integrations)
 
 ## User Preferences
 
@@ -78,6 +79,7 @@ Preferred communication style: Simple, everyday language.
   - Status workflow: PENDING → APPROVED/REJECTED
   - Stores receipt file metadata (receiptKey, receiptMime, receiptSize)
 - `courseApprovalLogs` - Audit trail for course approval decisions
+- `quizQuestions` - AI-generated quiz questions (linked to course, stores question/options/correctAnswer/explanation)
 - `sessions` - PostgreSQL-backed session storage
 
 ### Role-Based Access Control
@@ -86,6 +88,19 @@ Preferred communication style: Simple, everyday language.
 - **ADMIN**: Approve/reject courses, manage teachers within assigned college
 - **SUPER_ADMIN**: Full system access, manage all users/roles, manage colleges, upload videos
 - **ACCOUNTANT**: Read-only access to enrollment statistics grouped by college, PDF report download (`/accountant` dashboard)
+
+### Quiz Builder API Endpoints
+- `POST /api/admin/generate-quiz-from-pdf` - Upload PDF and generate quiz questions via OpenAI (requires ADMIN, SUPER_ADMIN, or TEACHER role)
+- `GET /api/quiz-questions?courseId=X` - Get saved quiz questions for a course
+- `POST /api/quiz-questions/bulk` - Bulk save generated questions to a course
+- `DELETE /api/quiz-questions/:id` - Delete a quiz question
+
+Quiz Builder Flow:
+1. Teacher/Admin navigates to `/admin/courses/:id/quiz-builder`
+2. Uploads a text-based PDF document
+3. Backend extracts text via pdf-parse, sends to OpenAI for question generation
+4. Frontend displays generated questions for review/editing
+5. Admin approves and saves questions to database
 
 ### Accountant API Endpoints
 - `GET /api/accountant/enrollments` - Returns enrollment stats grouped by college (requires ACCOUNTANT or SUPER_ADMIN role)
