@@ -9,7 +9,7 @@ import { CourseCard, CourseCardSkeleton } from "@/components/courses/CourseCard"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GraduationCap, BookOpen, Users, Award, ArrowRight, Building2, Trophy, Star, Target, type LucideIcon } from "lucide-react";
-import type { CourseWithRelations, College, FeaturedProfile, HomeStats } from "@shared/schema";
+import type { CourseWithRelations, College, FeaturedProfile } from "@shared/schema";
 import { BRAND_NAME, BRAND_COPYRIGHT } from "@/lib/branding";
 
 const heroImages = [
@@ -44,8 +44,13 @@ export default function Landing() {
     queryKey: ["/api/featured-profiles"],
   });
 
-  const { data: homeStats, isLoading: statsLoading } = useQuery<HomeStats>({
-    queryKey: ["/api/home-stats"],
+  const { data: publicStats, isLoading: statsLoading } = useQuery<{
+    totalCourses: number;
+    totalStudents: number;
+    totalTeachers: number;
+    totalColleges: number;
+  }>({
+    queryKey: ["/api/public-stats"],
   });
 
   useEffect(() => {
@@ -55,16 +60,16 @@ export default function Landing() {
     return () => clearInterval(interval);
   }, []);
 
-  const stats = homeStats ? [
-    { icon: iconMap[homeStats.stat1Icon] || BookOpen, label: homeStats.stat1Label, value: homeStats.stat1Value },
-    { icon: iconMap[homeStats.stat2Icon] || Users, label: homeStats.stat2Label, value: homeStats.stat2Value },
-    { icon: iconMap[homeStats.stat3Icon] || GraduationCap, label: homeStats.stat3Label, value: homeStats.stat3Value },
-    { icon: iconMap[homeStats.stat4Icon] || Award, label: homeStats.stat4Label, value: homeStats.stat4Value },
+  const stats = publicStats ? [
+    { icon: BookOpen, label: "Quality Courses", value: String(publicStats.totalCourses) },
+    { icon: Users, label: "Active Students", value: String(publicStats.totalStudents) },
+    { icon: GraduationCap, label: "Expert Teachers", value: String(publicStats.totalTeachers) },
+    { icon: Award, label: "Colleges", value: String(publicStats.totalColleges) },
   ] : [
-    { icon: BookOpen, label: "Quality Courses", value: "50+" },
-    { icon: Users, label: "Active Students", value: "1000+" },
-    { icon: GraduationCap, label: "Expert Teachers", value: "30+" },
-    { icon: Award, label: "Colleges", value: "3" },
+    { icon: BookOpen, label: "Quality Courses", value: "..." },
+    { icon: Users, label: "Active Students", value: "..." },
+    { icon: GraduationCap, label: "Expert Teachers", value: "..." },
+    { icon: Award, label: "Colleges", value: "..." },
   ];
 
   const featuredCourses = courses?.slice(0, 3) || [];

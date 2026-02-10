@@ -13,7 +13,8 @@ import { PDFParse } from "pdf-parse";
 import OpenAI from "openai";
 import { sendEmail } from "./email";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, count, sql } from "drizzle-orm";
+import { users, courses, colleges } from "@shared/schema";
 
 // Cloudflare R2 configuration
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -1341,6 +1342,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Home Stats - Public endpoint (returns stats or defaults)
+  app.get("/api/public-stats", async (_req, res) => {
+    try {
+      const [coursesResult] = await db.select({ value: count() }).from(courses).where(eq(courses.status, "PUBLISHED"));
+      const [studentsResult] = await db.select({ value: count() }).from(users).where(eq(users.role, "STUDENT"));
+      const [teachersResult] = await db.select({ value: count() }).from(users).where(eq(users.role, "TEACHER"));
+      const [collegesResult] = await db.select({ value: count() }).from(colleges);
+
+      res.json({
+        totalCourses: coursesResult.value,
+        totalStudents: studentsResult.value,
+        totalTeachers: teachersResult.value,
+        totalColleges: collegesResult.value,
+      });
+    } catch (error) {
+      console.error("Error fetching public stats:", error);
+      res.status(500).json({ message: "Failed to fetch public stats" });
+    }
+  });
+
   app.get("/api/home-stats", async (_req, res) => {
     try {
       const stats = await storage.getOrCreateHomeStats();
