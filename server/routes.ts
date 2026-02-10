@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, requireRole, seedSuperAdmin } from "./auth";
-import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema, updateAdminDashboardStatsConfigSchema } from "@shared/schema";
+import { insertCourseSchema, insertLessonSchema, insertEnrollmentSchema, insertCollegeSchema, insertUniversitySchema, insertMajorSchema, insertCourseApprovalLogSchema, insertFeaturedProfileSchema, updateHomeStatsSchema, updateAdminDashboardStatsConfigSchema } from "@shared/schema";
 import { z } from "zod";
 import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -263,6 +263,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(major);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch major" });
+    }
+  });
+
+  app.post("/api/universities", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "Only super admins can create universities" });
+      }
+      const data = insertUniversitySchema.parse(req.body);
+      const university = await storage.createUniversity(data);
+      res.status(201).json(university);
+    } catch (error) {
+      console.error("Error creating university:", error);
+      res.status(500).json({ message: "Failed to create university" });
+    }
+  });
+
+  app.patch("/api/universities/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "Only super admins can update universities" });
+      }
+      const id = parseInt(req.params.id);
+      const data = insertUniversitySchema.partial().parse(req.body);
+      const university = await storage.updateUniversity(id, data);
+      if (!university) {
+        return res.status(404).json({ message: "University not found" });
+      }
+      res.json(university);
+    } catch (error) {
+      console.error("Error updating university:", error);
+      res.status(500).json({ message: "Failed to update university" });
+    }
+  });
+
+  app.delete("/api/universities/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "Only super admins can delete universities" });
+      }
+      const id = parseInt(req.params.id);
+      await storage.deleteUniversity(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting university:", error);
+      res.status(500).json({ message: "Failed to delete university" });
+    }
+  });
+
+  app.post("/api/majors", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "Only super admins can create majors" });
+      }
+      const data = insertMajorSchema.parse(req.body);
+      const college = await storage.getCollegeById(data.collegeId);
+      if (!college) {
+        return res.status(400).json({ message: "Invalid college" });
+      }
+      const major = await storage.createMajor(data);
+      res.status(201).json(major);
+    } catch (error) {
+      console.error("Error creating major:", error);
+      res.status(500).json({ message: "Failed to create major" });
+    }
+  });
+
+  app.patch("/api/majors/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "Only super admins can update majors" });
+      }
+      const id = parseInt(req.params.id);
+      const data = insertMajorSchema.partial().parse(req.body);
+      const major = await storage.updateMajor(id, data);
+      if (!major) {
+        return res.status(404).json({ message: "Major not found" });
+      }
+      res.json(major);
+    } catch (error) {
+      console.error("Error updating major:", error);
+      res.status(500).json({ message: "Failed to update major" });
+    }
+  });
+
+  app.delete("/api/majors/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== "SUPER_ADMIN") {
+        return res.status(403).json({ message: "Only super admins can delete majors" });
+      }
+      const id = parseInt(req.params.id);
+      await storage.deleteMajor(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting major:", error);
+      res.status(500).json({ message: "Failed to delete major" });
     }
   });
 
