@@ -44,6 +44,7 @@ import { B2VideoUploader } from "@/components/B2VideoUploader";
 const courseFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().optional(),
+  coverImageUrl: z.string().optional(),
   collegeId: z.string().min(1, "College is required"),
   majorId: z.string().min(1, "Major is required"),
   teacherId: z.string().min(1, "Teacher is required"),
@@ -60,7 +61,10 @@ type CourseFormValues = z.infer<typeof courseFormSchema>;
 type LessonFormValues = z.infer<typeof lessonFormSchema>;
 
 export default function CourseEditor() {
-  const [matchEdit, editParams] = useRoute("/admin/courses/:id/edit");
+  const [matchAdminEdit, adminEditParams] = useRoute("/admin/courses/:id/edit");
+  const [matchTeacherEdit, teacherEditParams] = useRoute("/teacher/courses/:id/edit");
+  const matchEdit = matchAdminEdit || matchTeacherEdit;
+  const editParams = adminEditParams || teacherEditParams;
   const [matchNew] = useRoute("/admin/courses/new");
   const [, setLocation] = useLocation();
   const isNew = matchNew;
@@ -78,6 +82,9 @@ export default function CourseEditor() {
     enabled: !!courseId,
   });
 
+  const isOwner = course?.teacherId === user?.id;
+  const canEdit = isAdmin || isOwner;
+
   const { data: colleges } = useQuery<College[]>({
     queryKey: ["/api/colleges"],
   });
@@ -92,6 +99,7 @@ export default function CourseEditor() {
     defaultValues: {
       title: "",
       description: "",
+      coverImageUrl: "",
       collegeId: "",
       majorId: "",
       teacherId: "",
@@ -125,6 +133,7 @@ export default function CourseEditor() {
       courseForm.reset({
         title: course.title,
         description: course.description || "",
+        coverImageUrl: course.coverImageUrl || "",
         collegeId: String(course.collegeId),
         majorId: course.majorId ? String(course.majorId) : "",
         teacherId: course.teacherId || "",
@@ -260,14 +269,31 @@ export default function CourseEditor() {
     );
   }
 
-  if (!isAdmin) {
+  if (!canEdit && !isNew) {
     return (
       <DashboardLayout title="Access Denied">
         <div className="max-w-4xl mx-auto text-center py-16">
           <ShieldAlert className="w-16 h-16 mx-auto text-destructive mb-4" />
           <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
           <p className="text-muted-foreground mb-6">
-            Only administrators can create or edit courses.
+            You don't have permission to edit this course.
+          </p>
+          <Button asChild>
+            <Link href="/">Go Home</Link>
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (isNew && !isAdmin) {
+    return (
+      <DashboardLayout title="Access Denied">
+        <div className="max-w-4xl mx-auto text-center py-16">
+          <ShieldAlert className="w-16 h-16 mx-auto text-destructive mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+          <p className="text-muted-foreground mb-6">
+            Only administrators can create new courses.
           </p>
           <Button asChild>
             <Link href="/">Go Home</Link>
@@ -293,10 +319,10 @@ export default function CourseEditor() {
   return (
     <DashboardLayout title={isNew ? "Create Course" : "Edit Course"}>
       <div className="max-w-4xl mx-auto">
-        <Link href="/admin">
+        <Link href={isAdmin ? "/admin" : "/teacher/courses"}>
           <Button variant="ghost" className="mb-6" data-testid="button-back">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Admin Dashboard
+            {isAdmin ? "Back to Admin Dashboard" : "Back to My Courses"}
           </Button>
         </Link>
 
@@ -439,6 +465,24 @@ export default function CourseEditor() {
                             className="min-h-24"
                             {...field} 
                             data-testid="input-description"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={courseForm.control}
+                    name="coverImageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Thumbnail Image URL</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="https://example.com/image.jpg" 
+                            {...field} 
+                            data-testid="input-image-url"
                           />
                         </FormControl>
                         <FormMessage />

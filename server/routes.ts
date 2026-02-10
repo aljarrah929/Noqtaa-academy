@@ -526,9 +526,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+      const isOwner = course.teacherId === userId;
       
-      if (!isAdmin) {
-        return res.status(403).json({ message: "Only admins can update course details" });
+      if (!isAdmin && !isOwner) {
+        return res.status(403).json({ message: "Not authorized to update this course" });
       }
       
       const data = insertCourseSchema.partial().parse(req.body);

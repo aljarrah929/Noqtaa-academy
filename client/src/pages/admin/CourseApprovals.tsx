@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Check, X, FileCheck, Eye } from "lucide-react";
+import { Check, X, FileCheck, Eye, Pencil } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations } from "@shared/schema";
 
@@ -158,6 +158,16 @@ export default function CourseApprovals() {
                             >
                               <Link href={`/courses/${course.id}`}>
                                 <Eye className="w-4 h-4" />
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              asChild
+                              data-testid={`button-edit-${course.id}`}
+                            >
+                              <Link href={`/admin/courses/${course.id}/edit`}>
+                                <Pencil className="w-4 h-4" />
                               </Link>
                             </Button>
                             <Button

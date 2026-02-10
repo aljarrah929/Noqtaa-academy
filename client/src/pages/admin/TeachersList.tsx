@@ -19,8 +19,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Users, BookOpen, Mail, Loader2 } from "lucide-react";
+import { Users, BookOpen, Mail, Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import { formatPrice } from "@/lib/utils";
 
 interface TeacherWithStats {
@@ -218,6 +219,7 @@ function TeacherCoursesDialog({
                   <TableHead>Course Title</TableHead>
                   <TableHead className="text-right">Price</TableHead>
                   <TableHead className="text-center">Students</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -236,6 +238,18 @@ function TeacherCoursesDialog({
                     </TableCell>
                     <TableCell className="text-center">
                       {course.studentsCount}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        asChild
+                        data-testid={`button-edit-course-${course.id}`}
+                      >
+                        <Link href={`/admin/courses/${course.id}/edit`}>
+                          <Pencil className="w-4 h-4" />
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

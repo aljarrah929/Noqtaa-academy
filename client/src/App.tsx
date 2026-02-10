@@ -74,6 +74,7 @@ function Router() {
       <Route path="/teacher" component={TeacherDashboard} />
       <Route path="/teacher/courses" component={TeacherCourses} />
       <Route path="/teacher/courses/:id/content" component={TeacherContentManagement} />
+      <Route path="/teacher/courses/:id/edit" component={CourseEditor} />
       <Route path="/teacher/courses/:id/enrollments" component={CourseEnrollments} />
       <Route path="/teacher/join-requests" component={TeacherJoinRequests} />
       <Route path="/teacher/upload-video" component={UploadVideo} />
