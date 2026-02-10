@@ -91,19 +91,18 @@ export async function setupAuth(app: Express) {
       });
       console.log(`[Signup] User created: id=${user.id}`);
 
-      req.session.userId = user.id;
-      console.log(`[Signup] Session userId set to: ${user.id}, saving session...`);
-      
-      req.session.save(async (err) => {
-        if (err) {
-          console.error(`[Signup] Session save ERROR:`, err);
-          return res.status(500).json({ message: "Failed to save session" });
-        }
-        console.log(`[Signup] Session saved successfully for userId: ${user.id}`);
-        
-        const userWithCollege = await storage.getUserWithCollege(user.id);
-        res.status(201).json(userWithCollege);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+      await storage.setLoginOtp(user.id, otp, otpExpiry);
+      console.log(`[Signup] OTP generated for new user: ${user.id}`);
+
+      const emailContent = getOtpEmailContent(otp);
+      sendEmailInBackground({
+        to: user.email,
+        ...emailContent,
       });
+
+      res.status(201).json({ status: "pending_verification", userId: user.id });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
