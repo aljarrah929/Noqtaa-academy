@@ -7,6 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
+import "@/lib/i18n";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
@@ -103,6 +105,30 @@ function Router() {
   );
 }
 
+function DirectionHandler() {
+  const { i18n } = useTranslation();
+
+  useEffect(() => {
+    const lang = i18n.language?.startsWith("ar") ? "ar" : "en";
+    document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+    document.documentElement.lang = lang;
+  }, [i18n.language]);
+
+  useEffect(() => {
+    const handleLanguageChanged = (lng: string) => {
+      const lang = lng.startsWith("ar") ? "ar" : "en";
+      document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+      document.documentElement.lang = lang;
+    };
+    i18n.on("languageChanged", handleLanguageChanged);
+    return () => {
+      i18n.off("languageChanged", handleLanguageChanged);
+    };
+  }, [i18n]);
+
+  return null;
+}
+
 function AppContent() {
   const { user } = useAuth();
   const [showWarning, setShowWarning] = useState(false);
@@ -137,6 +163,7 @@ function AppContent() {
 
   return (
     <>
+      <DirectionHandler />
       <PathRedirect />
       <Router />
       <SupportWidget />

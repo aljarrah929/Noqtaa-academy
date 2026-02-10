@@ -18,6 +18,8 @@ import { BRAND_NAME } from "@/lib/branding";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import logoUrl from "@/assets/logo.png";
+import { useTranslation } from "react-i18next";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 function BrandIcon({ className, isCollegeThemed }: { className?: string; isCollegeThemed?: boolean }) {
   const [hasError, setHasError] = useState(false);
@@ -42,6 +44,7 @@ export function Header() {
   const { isDark, toggleDark, collegeTheme } = useTheme();
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { t } = useTranslation();
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -61,8 +64,8 @@ export function Header() {
   };
 
   const navLinks = [
-    { href: "/", label: "Home" },
-    { href: "/courses", label: "Courses" },
+    { href: "/", label: t("nav.home") },
+    { href: "/courses", label: t("nav.courses") },
   ];
 
   const getDashboardLink = () => {
@@ -122,7 +125,7 @@ export function Header() {
                     className={`${isCollegeThemed ? 'text-white/90 hover:text-white hover:bg-white/10' : ''} ${
                       location === link.href ? (isCollegeThemed ? 'bg-white/20 text-white' : 'bg-accent') : ''
                     }`}
-                    data-testid={`link-${link.label.toLowerCase()}`}
+                    data-testid={`link-${link.href === '/' ? 'home' : 'courses'}`}
                   >
                     {link.label}
                   </Button>
@@ -138,12 +141,14 @@ export function Header() {
                     }`}
                     data-testid="link-dashboard"
                   >
-                    <LayoutDashboard className="w-4 h-4 mr-1" />
-                    Dashboard
+                    <LayoutDashboard className="w-4 h-4 ltr:mr-1 rtl:ml-1" />
+                    {t("nav.dashboard")}
                   </Button>
                 </Link>
               )}
             </nav>
+
+            <LanguageToggle className={`hidden md:flex ${isCollegeThemed ? 'text-white hover:bg-white/10' : ''}`} />
 
             <Button
               variant="ghost"
@@ -185,13 +190,13 @@ export function Header() {
                   <DropdownMenuItem asChild>
                     <Link href={getDashboardLink()} className="flex items-center gap-2 cursor-pointer">
                       <LayoutDashboard className="w-4 h-4" />
-                      Dashboard
+                      {t("nav.dashboard")}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/profile" className="flex items-center gap-2 cursor-pointer" data-testid="link-dropdown-profile">
                       <User className="w-4 h-4" />
-                      Profile
+                      {t("nav.profile")}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -201,7 +206,7 @@ export function Header() {
                     data-testid="button-logout"
                   >
                     <LogOut className="w-4 h-4" />
-                    Log out
+                    {t("nav.logout")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -211,7 +216,7 @@ export function Header() {
                   className={isCollegeThemed ? 'bg-white text-gray-900 hover:bg-white/90' : ''} 
                   data-testid="button-header-login"
                 >
-                  Log in
+                  {t("nav.login")}
                 </Button>
               </Link>
             )}
@@ -236,7 +241,7 @@ export function Header() {
                   <Button
                     variant="ghost"
                     className={`w-full justify-start ${isCollegeThemed ? 'text-white/90 hover:text-white hover:bg-white/10' : ''}`}
-                    data-testid={`link-mobile-${link.label.toLowerCase()}`}
+                    data-testid={`link-mobile-${link.href === '/' ? 'home' : 'courses'}`}
                   >
                     {link.label}
                   </Button>
@@ -249,20 +254,23 @@ export function Header() {
                     className={`w-full justify-start ${isCollegeThemed ? 'text-white/90 hover:text-white hover:bg-white/10' : ''}`}
                     data-testid="link-mobile-dashboard"
                   >
-                    <LayoutDashboard className="w-4 h-4 mr-2" />
-                    Dashboard
+                    <LayoutDashboard className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                    {t("nav.dashboard")}
                   </Button>
                 </Link>
               )}
-              <Button
-                variant="ghost"
-                onClick={toggleDark}
-                className={`w-full justify-start ${isCollegeThemed ? 'text-white/90 hover:text-white hover:bg-white/10' : ''}`}
-                data-testid="button-mobile-theme-toggle"
-              >
-                {isDark ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
-                {isDark ? "Light Mode" : "Dark Mode"}
-              </Button>
+              <div className="flex gap-2 px-2">
+                <LanguageToggle className={isCollegeThemed ? 'text-white hover:bg-white/10' : ''} />
+                <Button
+                  variant="ghost"
+                  onClick={toggleDark}
+                  className={`flex-1 justify-start ${isCollegeThemed ? 'text-white/90 hover:text-white hover:bg-white/10' : ''}`}
+                  data-testid="button-mobile-theme-toggle"
+                >
+                  {isDark ? <Sun className="w-4 h-4 ltr:mr-2 rtl:ml-2" /> : <Moon className="w-4 h-4 ltr:mr-2 rtl:ml-2" />}
+                  {isDark ? t("nav.lightMode") : t("nav.darkMode")}
+                </Button>
+              </div>
             </nav>
           </div>
         )}

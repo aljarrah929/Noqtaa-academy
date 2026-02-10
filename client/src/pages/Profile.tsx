@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Copy, Check, Upload, Camera, Loader2 } from "lucide-react";
 import type { UserWithCollege } from "@shared/schema";
+import { useTranslation } from "react-i18next";
 
 export default function Profile() {
   const { toast } = useToast();
@@ -20,6 +21,7 @@ export default function Profile() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [uploading, setUploading] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
+  const { t } = useTranslation();
 
   const { data: user, isLoading } = useQuery<UserWithCollege>({
     queryKey: ["/api/auth/user"],
@@ -30,10 +32,10 @@ export default function Profile() {
       try {
         await navigator.clipboard.writeText(user.publicId);
         setCopied(true);
-        toast({ title: "Copied!", description: "Your ID has been copied to clipboard." });
+        toast({ title: t("profile.copied"), description: t("profile.copiedDesc") });
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {
-        toast({ title: "Failed to copy", variant: "destructive" });
+        toast({ title: t("profile.copyFailed"), variant: "destructive" });
       }
     }
   };
@@ -51,10 +53,10 @@ export default function Profile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({ title: "Phone Updated", description: "Your phone number has been updated." });
+      toast({ title: t("profile.phoneUpdated"), description: t("profile.phoneUpdatedDesc") });
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: error.message, variant: "destructive" });
     },
   });
 
@@ -69,23 +71,23 @@ export default function Profile() {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Password Updated", description: "Your password has been changed successfully." });
+      toast({ title: t("profile.passwordUpdated"), description: t("profile.passwordUpdatedDesc") });
       setNewPassword("");
       setConfirmPassword("");
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: error.message, variant: "destructive" });
     },
   });
 
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      toast({ title: "Error", description: "Passwords do not match.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("profile.passwordsNoMatch"), variant: "destructive" });
       return;
     }
     if (newPassword.length < 8) {
-      toast({ title: "Error", description: "Password must be at least 8 characters.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("profile.passwordMin8"), variant: "destructive" });
       return;
     }
     passwordMutation.mutate({ newPassword, confirmPassword });
@@ -97,13 +99,13 @@ export default function Profile() {
 
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
-      toast({ title: "Error", description: "Only PNG, JPG, JPEG, and WebP files are allowed.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("profile.invalidFileType"), variant: "destructive" });
       return;
     }
 
     const maxSize = 2 * 1024 * 1024; // 2MB
     if (file.size > maxSize) {
-      toast({ title: "Error", description: "File size must be less than 2MB.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("profile.fileTooLarge"), variant: "destructive" });
       return;
     }
 
@@ -165,10 +167,10 @@ export default function Profile() {
       
       // Refresh user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({ title: "Avatar Updated", description: "Your profile picture has been updated." });
+      toast({ title: t("profile.avatarUpdated"), description: t("profile.avatarUpdatedDesc") });
     } catch (error) {
       console.error("Avatar upload error:", error);
-      toast({ title: "Error", description: "Failed to upload avatar.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("profile.avatarUploadFailed"), variant: "destructive" });
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -186,7 +188,7 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <DashboardLayout title="Profile">
+      <DashboardLayout title={t("profile.title")}>
         <div className="max-w-2xl mx-auto space-y-6">
           <Card>
             <CardContent className="flex items-center justify-center py-12">
@@ -199,13 +201,13 @@ export default function Profile() {
   }
 
   return (
-    <DashboardLayout title="Profile">
+    <DashboardLayout title={t("profile.title")}>
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Avatar Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Profile Picture</CardTitle>
-            <CardDescription>Upload a photo to personalize your account</CardDescription>
+            <CardTitle>{t("profile.profilePicture")}</CardTitle>
+            <CardDescription>{t("profile.uploadPhotoDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="flex items-center gap-6">
             <div className="relative">
@@ -236,13 +238,13 @@ export default function Profile() {
               >
                 {uploading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading...
+                    <Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                    {t("profile.uploading")}
                   </>
                 ) : (
                   <>
-                    <Camera className="w-4 h-4 mr-2" />
-                    Upload Photo
+                    <Camera className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                    {t("profile.uploadPhoto")}
                   </>
                 )}
               </Button>
@@ -256,13 +258,13 @@ export default function Profile() {
         {/* Public ID Section */}
         <Card>
           <CardHeader>
-            <CardTitle>My ID</CardTitle>
-            <CardDescription>Your unique identifier on this platform</CardDescription>
+            <CardTitle>{t("profile.myId")}</CardTitle>
+            <CardDescription>{t("profile.uniqueIdDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Badge variant="outline" className="text-lg font-mono px-4 py-2">
-                {user?.publicId || "Not assigned"}
+                {user?.publicId || t("profile.notAssigned")}
               </Badge>
             </div>
             <Button
@@ -274,13 +276,13 @@ export default function Profile() {
             >
               {copied ? (
                 <>
-                  <Check className="w-4 h-4 mr-2" />
-                  Copied
+                  <Check className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                  {t("profile.copied")}
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copy ID
+                  <Copy className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                  {t("profile.copyId")}
                 </>
               )}
             </Button>
@@ -290,26 +292,26 @@ export default function Profile() {
         {/* Account Info Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Account Information</CardTitle>
-            <CardDescription>Your account details</CardDescription>
+            <CardTitle>{t("profile.accountInfo")}</CardTitle>
+            <CardDescription>{t("profile.accountInfo")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-muted-foreground text-sm">Name</Label>
+                <Label className="text-muted-foreground text-sm">{t("profile.name")}</Label>
                 <p className="font-medium">{user?.firstName} {user?.lastName}</p>
               </div>
               <div>
-                <Label className="text-muted-foreground text-sm">Email</Label>
+                <Label className="text-muted-foreground text-sm">{t("profile.email")}</Label>
                 <p className="font-medium">{user?.email}</p>
               </div>
               <div>
-                <Label className="text-muted-foreground text-sm">Role</Label>
+                <Label className="text-muted-foreground text-sm">{t("profile.role")}</Label>
                 <Badge variant="secondary">{user?.role}</Badge>
               </div>
               {user?.college && (
                 <div>
-                  <Label className="text-muted-foreground text-sm">College</Label>
+                  <Label className="text-muted-foreground text-sm">{t("profile.collegeName")}</Label>
                   <p className="font-medium">{user.college.name}</p>
                 </div>
               )}
@@ -320,13 +322,13 @@ export default function Profile() {
         {/* Phone Number Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Phone Number</CardTitle>
-            <CardDescription>Keep your contact information up to date</CardDescription>
+            <CardTitle>{t("profile.phoneNumber")}</CardTitle>
+            <CardDescription>{t("profile.phoneDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handlePhoneUpdate} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="phone-number">Phone Number</Label>
+                <Label htmlFor="phone-number">{t("profile.phoneNumber")}</Label>
                 <Input
                   id="phone-number"
                   type="tel"
@@ -343,11 +345,11 @@ export default function Profile() {
               >
                 {phoneMutation.isPending ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
+                    <Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                    {t("profile.saving")}
                   </>
                 ) : (
-                  "Save Phone Number"
+                  t("profile.savePhone")
                 )}
               </Button>
             </form>
@@ -357,13 +359,13 @@ export default function Profile() {
         {/* Change Password Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Change Password</CardTitle>
-            <CardDescription>Update your account password</CardDescription>
+            <CardTitle>{t("profile.changePassword")}</CardTitle>
+            <CardDescription>{t("profile.updatePassword")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handlePasswordChange} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
+                <Label htmlFor="new-password">{t("profile.newPassword")}</Label>
                 <Input
                   id="new-password"
                   type="password"
@@ -374,7 +376,7 @@ export default function Profile() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <Label htmlFor="confirm-password">{t("profile.confirmNewPassword")}</Label>
                 <Input
                   id="confirm-password"
                   type="password"
@@ -391,11 +393,11 @@ export default function Profile() {
               >
                 {passwordMutation.isPending ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Updating...
+                    <Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                    {t("profile.updating")}
                   </>
                 ) : (
-                  "Update Password"
+                  t("profile.updatePasswordBtn")
                 )}
               </Button>
             </form>

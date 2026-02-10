@@ -19,12 +19,14 @@ import {
 } from "@/components/ui/form";
 import { GraduationCap, Loader2, ArrowLeft, Mail, CheckCircle, RefreshCw } from "lucide-react";
 import { BRAND_NAME } from "@/lib/branding";
+import { useTranslation } from "react-i18next";
 
 export default function ForgotPassword() {
   const [submitted, setSubmitted] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [isResending, setIsResending] = useState(false);
   const submittedEmailRef = useRef<string>("");
+  const { t } = useTranslation();
 
   const form = useForm<ForgotPasswordInput>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -122,19 +124,19 @@ export default function ForgotPassword() {
               </div>
             </div>
             <CardTitle className="text-2xl">
-              {submitted ? "Check your email" : "Forgot password?"}
+              {submitted ? t("auth.checkEmail") : t("auth.forgotPasswordTitle")}
             </CardTitle>
             <CardDescription>
               {submitted
-                ? "If an account exists with this email, we sent a password reset link."
-                : "Enter your email and we'll send you a reset link"}
+                ? t("auth.checkEmailDesc")
+                : t("auth.forgotPasswordDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {submitted ? (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground text-center">
-                  The link will expire in 30 minutes. If you don't see the email, check your spam folder.
+                  {t("auth.linkExpiry")}
                 </p>
                 
                 <div className="space-y-2">
@@ -147,24 +149,24 @@ export default function ForgotPassword() {
                   >
                     {isResending ? (
                       <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Sending...
+                        <Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                        {t("auth.sending")}
                       </>
                     ) : cooldownSeconds > 0 ? (
                       <>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Resend available in {cooldownSeconds}s
+                        <RefreshCw className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                        {t("auth.resendAvailableIn", { seconds: cooldownSeconds })}
                       </>
                     ) : (
                       <>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Resend email
+                        <RefreshCw className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                        {t("auth.resendEmail")}
                       </>
                     )}
                   </Button>
                   
                   <p className="text-xs text-muted-foreground text-center">
-                    Didn't receive the email? Wait for the countdown and try resending.
+                    {t("auth.didntReceive")}
                   </p>
                 </div>
 
@@ -174,12 +176,12 @@ export default function ForgotPassword() {
                   onClick={handleTryAnother}
                   data-testid="button-try-another"
                 >
-                  Try another email
+                  {t("auth.tryAnotherEmail")}
                 </Button>
                 <Link href="/login" className="block">
                   <Button variant="ghost" className="w-full" data-testid="link-back-to-login">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to login
+                    <ArrowLeft className="w-4 h-4 ltr:mr-2 rtl:ml-2" />
+                    {t("auth.backToLogin")}
                   </Button>
                 </Link>
               </div>
@@ -192,7 +194,7 @@ export default function ForgotPassword() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email</FormLabel>
+                          <FormLabel>{t("auth.email")}</FormLabel>
                           <FormControl>
                             <Input
                               type="email"
@@ -214,11 +216,11 @@ export default function ForgotPassword() {
                     >
                       {forgotPasswordMutation.isPending ? (
                         <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Sending...
+                          <Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                          {t("auth.sending")}
                         </>
                       ) : (
-                        "Send reset link"
+                        t("auth.sendResetLink")
                       )}
                     </Button>
                   </form>
@@ -226,8 +228,8 @@ export default function ForgotPassword() {
 
                 <div className="mt-6 text-center">
                   <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground" data-testid="link-back-to-login">
-                    <ArrowLeft className="w-4 h-4 inline mr-1" />
-                    Back to login
+                    <ArrowLeft className="w-4 h-4 inline ltr:mr-1 rtl:ml-1" />
+                    {t("auth.backToLogin")}
                   </Link>
                 </div>
               </>

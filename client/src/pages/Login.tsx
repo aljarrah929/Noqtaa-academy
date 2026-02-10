@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { GraduationCap, Loader2, ShieldCheck } from "lucide-react";
 import { BRAND_NAME } from "@/lib/branding";
+import { useTranslation } from "react-i18next";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -30,6 +31,7 @@ export default function Login() {
   const [resendCountdown, setResendCountdown] = useState(0);
   const [otpCode, setOtpCode] = useState("");
   const [otpError, setOtpError] = useState("");
+  const { t } = useTranslation();
 
   const searchParams = new URLSearchParams(window.location.search);
   const nextUrl = searchParams.get("next");
@@ -54,14 +56,14 @@ export default function Login() {
       setOtpError("");
       setOtpStep(true);
       toast({
-        title: "Verification code sent",
-        description: "Check your email for the 6-digit code",
+        title: t("auth.codeSent"),
+        description: t("auth.checkEmailForCode"),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Login failed",
-        description: error.message || "Invalid email or password",
+        title: t("auth.loginFailed"),
+        description: error.message || t("auth.invalidCredentials"),
         variant: "destructive",
       });
     },
@@ -75,8 +77,8 @@ export default function Login() {
     onSuccess: (user) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
-        title: "Welcome back!",
-        description: `Logged in as ${user.firstName} ${user.lastName}`,
+        title: t("auth.welcomeBackUser"),
+        description: t("auth.loggedInAs", { name: `${user.firstName} ${user.lastName}` }),
       });
 
       if (nextUrl) {
@@ -98,8 +100,8 @@ export default function Login() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Verification failed",
-        description: error.message || "Invalid or expired code",
+        title: t("auth.verificationFailed"),
+        description: error.message || t("auth.invalidCode"),
         variant: "destructive",
       });
     },
@@ -113,14 +115,14 @@ export default function Login() {
     onSuccess: () => {
       setResendCountdown(60);
       toast({
-        title: "Code resent",
-        description: "A new verification code has been sent to your email",
+        title: t("auth.codeResent"),
+        description: t("auth.newCodeSent"),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Resend failed",
-        description: error.message || "Unable to resend code",
+        title: t("auth.resendFailed"),
+        description: error.message || t("auth.unableToResend"),
         variant: "destructive",
       });
     },
@@ -148,7 +150,7 @@ export default function Login() {
 
   const handleOtpSubmit = () => {
     if (otpCode.length !== 6) {
-      setOtpError("Verification code must be 6 digits");
+      setOtpError(t("auth.codeMustBe6"));
       return;
     }
     setOtpError("");
@@ -182,12 +184,12 @@ export default function Login() {
               </div>
             </div>
             <CardTitle className="text-2xl">
-              {otpStep ? "Verify your identity" : "Welcome back"}
+              {otpStep ? t("auth.verifyIdentity") : t("auth.welcomeBack")}
             </CardTitle>
             <CardDescription>
               {otpStep
-                ? `We sent a verification code to ${userEmail}`
-                : `Sign in to your ${BRAND_NAME} account`}
+                ? t("auth.codeSentTo", { email: userEmail })
+                : t("auth.signInTo", { brand: BRAND_NAME })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -199,7 +201,7 @@ export default function Login() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel>{t("auth.email")}</FormLabel>
                         <FormControl>
                           <Input
                             type="email"
@@ -218,7 +220,7 @@ export default function Login() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Password</FormLabel>
+                        <FormLabel>{t("auth.password")}</FormLabel>
                         <FormControl>
                           <Input
                             type="password"
@@ -232,9 +234,9 @@ export default function Login() {
                     )}
                   />
 
-                  <div className="text-right">
+                  <div className="text-right rtl:text-left">
                     <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-foreground" data-testid="link-forgot-password">
-                      Forgot password?
+                      {t("auth.forgotPassword")}
                     </Link>
                   </div>
 
@@ -246,11 +248,11 @@ export default function Login() {
                   >
                     {loginMutation.isPending ? (
                       <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Sending code...
+                        <Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                        {t("auth.sendingCode")}
                       </>
                     ) : (
-                      "Sign in"
+                      t("auth.signIn")
                     )}
                   </Button>
                 </form>
@@ -259,7 +261,7 @@ export default function Login() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label htmlFor="otp-input-field" className="text-sm font-medium leading-none">
-                    Verification Code
+                    {t("auth.verificationCode")}
                   </label>
                   <Input
                     type="text"
@@ -268,7 +270,7 @@ export default function Login() {
                     name="auth_otp_field_verify_v2"
                     autoComplete="off"
                     maxLength={6}
-                    placeholder="Enter 6-digit code"
+                    placeholder={t("auth.enterCode")}
                     autoFocus
                     className="text-center text-lg tracking-widest"
                     value={otpCode}
@@ -293,11 +295,11 @@ export default function Login() {
                 >
                   {verifyOtpMutation.isPending ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Verifying...
+                      <Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                      {t("auth.verifying")}
                     </>
                   ) : (
-                    "Verify & Sign in"
+                    t("auth.verifySignIn")
                   )}
                 </Button>
 
@@ -310,10 +312,10 @@ export default function Login() {
                     data-testid="button-resend-otp"
                   >
                     {resendOtpMutation.isPending
-                      ? "Sending..."
+                      ? t("auth.sending")
                       : resendCountdown > 0
-                        ? `Resend code in ${resendCountdown}s`
-                        : "Resend code"}
+                        ? t("auth.resendCodeIn", { seconds: resendCountdown })
+                        : t("auth.resendCode")}
                   </button>
                 </div>
 
@@ -324,16 +326,16 @@ export default function Login() {
                   onClick={handleBackToLogin}
                   data-testid="button-back-to-login"
                 >
-                  Back to login
+                  {t("auth.backToLogin")}
                 </Button>
               </div>
             )}
 
             {!otpStep && (
               <div className="mt-6 text-center text-sm text-muted-foreground">
-                Don't have an account?{" "}
+                {t("auth.noAccount")}{" "}
                 <Link href="/signup" className="text-primary hover:underline" data-testid="link-signup">
-                  Sign up
+                  {t("auth.signUp")}
                 </Link>
               </div>
             )}

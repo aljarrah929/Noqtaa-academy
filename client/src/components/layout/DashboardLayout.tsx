@@ -45,6 +45,8 @@ import {
 import { getRoleDisplayName, canAccessAdminDashboard, canAccessTeacherDashboard, canAccessAccountantDashboard, canManageColleges, canManageRoles } from "@/lib/authUtils";
 import { BRAND_NAME } from "@/lib/branding";
 import cpeIconUrl from "@assets/Untitled_(1)_1765745611438.png";
+import { useTranslation } from "react-i18next";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -55,6 +57,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const { user, isLoading } = useAuth();
   const { isDark, toggleDark, collegeTheme } = useTheme();
   const [location, setLocation] = useLocation();
+  const { t } = useTranslation();
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -81,35 +84,35 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   };
 
   const studentMenuItems = [
-    { href: "/dashboard", label: "My Courses", icon: BookOpen },
-    { href: "/profile", label: "Profile", icon: User },
+    { href: "/dashboard", label: t("sidebar.myCourses"), icon: BookOpen },
+    { href: "/profile", label: t("nav.profile"), icon: User },
   ];
 
   const teacherMenuItems = [
-    { href: "/teacher", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/teacher/courses", label: "My Courses", icon: BookOpen },
-    { href: "/teacher/join-requests", label: "Join Requests", icon: UserPlus },
-    { href: "/teacher/upload-video", label: "Upload Videos", icon: Video },
-    { href: "/teacher/upload-file", label: "Add File", icon: FileUp },
+    { href: "/teacher", label: t("nav.dashboard"), icon: LayoutDashboard },
+    { href: "/teacher/courses", label: t("sidebar.myCourses"), icon: BookOpen },
+    { href: "/teacher/join-requests", label: t("sidebar.joinRequests"), icon: UserPlus },
+    { href: "/teacher/upload-video", label: t("sidebar.uploadVideos"), icon: Video },
+    { href: "/teacher/upload-file", label: t("sidebar.addFile"), icon: FileUp },
   ];
 
   const adminMenuItems = [
-    { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/admin/approvals", label: "Approvals", icon: FileCheck },
-    { href: "/admin/requests", label: "Join Requests", icon: UserPlus },
-    { href: "/admin/teachers", label: "Teachers", icon: Users },
+    { href: "/admin", label: t("nav.dashboard"), icon: LayoutDashboard },
+    { href: "/admin/approvals", label: t("sidebar.approvals"), icon: FileCheck },
+    { href: "/admin/requests", label: t("sidebar.joinRequests"), icon: UserPlus },
+    { href: "/admin/teachers", label: t("sidebar.teachers"), icon: Users },
   ];
 
   const superAdminMenuItems = [
-    { href: "/admin/users", label: "User Management", icon: UserCog },
-    { href: "/admin/structure", label: "Manage Universities", icon: Landmark },
-    { href: "/admin/colleges", label: "Colleges", icon: Building2 },
-    { href: "/admin/featured-profiles", label: "Featured Profiles", icon: Star },
-    { href: "/admin/home-stats", label: "Home Stats", icon: BarChart3 },
+    { href: "/admin/users", label: t("sidebar.userManagement"), icon: UserCog },
+    { href: "/admin/structure", label: t("sidebar.manageUniversities"), icon: Landmark },
+    { href: "/admin/colleges", label: t("sidebar.colleges"), icon: Building2 },
+    { href: "/admin/featured-profiles", label: t("sidebar.featuredProfiles"), icon: Star },
+    { href: "/admin/home-stats", label: t("sidebar.homeStats"), icon: BarChart3 },
   ];
 
   const accountantMenuItems = [
-    { href: "/accountant", label: "Enrollment Stats", icon: BarChart3 },
+    { href: "/accountant", label: t("sidebar.enrollmentStats"), icon: BarChart3 },
   ];
 
   const getMenuItems = () => {
@@ -118,23 +121,23 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     const items = [];
     
     if (user.role === "STUDENT") {
-      items.push({ group: "Student", items: studentMenuItems });
+      items.push({ group: t("sidebar.student"), items: studentMenuItems });
     }
     
     if (canAccessTeacherDashboard(user.role)) {
-      items.push({ group: "Teacher", items: teacherMenuItems });
+      items.push({ group: t("sidebar.teacher"), items: teacherMenuItems });
     }
     
     if (canAccessAdminDashboard(user.role)) {
-      items.push({ group: "Admin", items: adminMenuItems });
+      items.push({ group: t("sidebar.admin"), items: adminMenuItems });
     }
     
     if (canManageRoles(user.role) || canManageColleges(user.role)) {
-      items.push({ group: "Super Admin", items: superAdminMenuItems });
+      items.push({ group: t("sidebar.superAdmin"), items: superAdminMenuItems });
     }
 
     if (canAccessAccountantDashboard(user.role)) {
-      items.push({ group: "Accountant", items: accountantMenuItems });
+      items.push({ group: t("sidebar.accountant"), items: accountantMenuItems });
     }
     
     return items;
@@ -150,7 +153,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
       <div className="flex h-screen w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -191,7 +194,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                           asChild
                           isActive={location === item.href || (item.href !== "/dashboard" && item.href !== "/teacher" && item.href !== "/admin" && location.startsWith(item.href))}
                         >
-                          <Link href={item.href} data-testid={`sidebar-link-${item.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                          <Link href={item.href} data-testid={`sidebar-link-${item.href.replace(/\//g, '-').slice(1)}`}>
                             <item.icon className="w-4 h-4" />
                             <span>{item.label}</span>
                           </Link>
@@ -220,6 +223,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               </div>
             </div>
             <div className="flex gap-2">
+              <LanguageToggle />
               <Button variant="ghost" size="icon" onClick={toggleDark} data-testid="sidebar-theme-toggle">
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </Button>

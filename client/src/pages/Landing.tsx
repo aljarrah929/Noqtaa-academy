@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { GraduationCap, BookOpen, Users, Award, ArrowRight, Building2, Trophy, Star, Target, type LucideIcon } from "lucide-react";
 import type { CourseWithRelations, College, FeaturedProfile } from "@shared/schema";
 import { BRAND_NAME, BRAND_COPYRIGHT } from "@/lib/branding";
+import { useTranslation } from "react-i18next";
 
 const heroImages = [
   { src: "/images/hero-pharmacy.png", alt: "Pharmacy" },
@@ -31,6 +32,7 @@ const iconMap: Record<string, LucideIcon> = {
 
 export default function Landing() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const { t } = useTranslation();
 
   const { data: courses, isLoading: coursesLoading } = useQuery<CourseWithRelations[]>({
     queryKey: ["/api/courses", "featured"],
@@ -61,15 +63,15 @@ export default function Landing() {
   }, []);
 
   const stats = publicStats ? [
-    { icon: BookOpen, label: "Quality Courses", value: String(publicStats.totalCourses) },
-    { icon: Users, label: "Active Students", value: String(publicStats.totalStudents) },
-    { icon: GraduationCap, label: "Expert Teachers", value: String(publicStats.totalTeachers) },
-    { icon: Award, label: "Colleges", value: String(publicStats.totalColleges) },
+    { icon: BookOpen, label: t("landing.qualityCourses"), value: String(publicStats.totalCourses) },
+    { icon: Users, label: t("landing.activeStudents"), value: String(publicStats.totalStudents) },
+    { icon: GraduationCap, label: t("landing.expertTeachers"), value: String(publicStats.totalTeachers) },
+    { icon: Award, label: t("landing.collegesLabel"), value: String(publicStats.totalColleges) },
   ] : [
-    { icon: BookOpen, label: "Quality Courses", value: "..." },
-    { icon: Users, label: "Active Students", value: "..." },
-    { icon: GraduationCap, label: "Expert Teachers", value: "..." },
-    { icon: Award, label: "Colleges", value: "..." },
+    { icon: BookOpen, label: t("landing.qualityCourses"), value: "..." },
+    { icon: Users, label: t("landing.activeStudents"), value: "..." },
+    { icon: GraduationCap, label: t("landing.expertTeachers"), value: "..." },
+    { icon: Award, label: t("landing.collegesLabel"), value: "..." },
   ];
 
   const featuredCourses = courses?.slice(0, 3) || [];
@@ -125,22 +127,22 @@ export default function Landing() {
               {BRAND_NAME}
             </Badge>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-white" data-testid="text-hero-title">
-              Learn from the Best
-              <span className="block text-white/90 mt-2">Academic Courses</span>
+              {t("landing.heroTitle")}
+              <span className="block text-white/90 mt-2">{t("landing.heroSubtitle")}</span>
             </h1>
             <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-              Access high-quality courses from top university professors across Pharmacy, Engineering, and IT colleges.
+              {t("landing.heroDescription")}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" asChild data-testid="button-browse-courses">
                 <Link href="/courses">
-                  Browse Courses
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  {t("landing.browseCourses")}
+                  <ArrowRight className="w-5 h-5 ltr:ml-2 rtl:mr-2" />
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20" asChild data-testid="button-login-hero">
                 <Link href="/login">
-                  Get Started
+                  {t("landing.getStarted")}
                 </Link>
               </Button>
             </div>
@@ -192,9 +194,9 @@ export default function Landing() {
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Colleges</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("landing.ourColleges")}</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Choose from three specialized colleges, each offering courses tailored to your academic interests.
+              {t("landing.ourCollegesDesc")}
             </p>
           </div>
           
@@ -224,12 +226,12 @@ export default function Landing() {
                   <CardContent className="p-6 text-center">
                     <h3 className="text-xl font-semibold mb-2">{college.name}</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Explore courses in the {college.name} department
+                      {t("landing.exploreCourses", { college: college.name })}
                     </p>
                     <Button variant="outline" size="sm" asChild>
                       <Link href={`/courses?college=${college.slug}`}>
-                        View Courses
-                        <ArrowRight className="w-4 h-4 ml-1" />
+                        {t("landing.viewCourses")}
+                        <ArrowRight className="w-4 h-4 ltr:ml-1 rtl:mr-1" />
                       </Link>
                     </Button>
                   </CardContent>
@@ -244,15 +246,15 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between mb-12">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-2">Featured Courses</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-2">{t("landing.featuredCourses")}</h2>
               <p className="text-muted-foreground">
-                Popular courses from our top instructors
+                {t("landing.popularCourses")}
               </p>
             </div>
             <Button variant="outline" asChild className="hidden md:flex">
               <Link href="/courses">
-                View All
-                <ArrowRight className="w-4 h-4 ml-2" />
+                {t("landing.viewAll")}
+                <ArrowRight className="w-4 h-4 ltr:ml-2 rtl:mr-2" />
               </Link>
             </Button>
           </div>
@@ -277,9 +279,9 @@ export default function Landing() {
             <Card className="py-12">
               <CardContent className="text-center">
                 <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="font-medium text-lg mb-2">No courses yet</h3>
+                <h3 className="font-medium text-lg mb-2">{t("landing.noCoursesYet")}</h3>
                 <p className="text-muted-foreground">
-                  Check back soon for new course offerings.
+                  {t("landing.checkBackSoon")}
                 </p>
               </CardContent>
             </Card>
@@ -288,8 +290,8 @@ export default function Landing() {
           <div className="mt-8 text-center md:hidden">
             <Button variant="outline" asChild>
               <Link href="/courses">
-                View All Courses
-                <ArrowRight className="w-4 h-4 ml-2" />
+                {t("landing.viewAllCourses")}
+                <ArrowRight className="w-4 h-4 ltr:ml-2 rtl:mr-2" />
               </Link>
             </Button>
           </div>
@@ -300,9 +302,9 @@ export default function Landing() {
         <section className="py-20">
           <div className="max-w-7xl mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="text-team-title">Platform Team</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="text-team-title">{t("landing.platformTeam")}</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Meet the people behind our university e-learning platform
+                {t("landing.platformTeamDesc")}
               </p>
             </div>
             

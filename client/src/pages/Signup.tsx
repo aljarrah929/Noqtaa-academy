@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { GraduationCap, Loader2, ShieldCheck } from "lucide-react";
 import { BRAND_NAME } from "@/lib/branding";
+import { useTranslation } from "react-i18next";
 
 export default function Signup() {
   const [, setLocation] = useLocation();
@@ -37,6 +38,7 @@ export default function Signup() {
   const [otpCode, setOtpCode] = useState("");
   const [otpError, setOtpError] = useState("");
   const [resendCountdown, setResendCountdown] = useState(0);
+  const { t } = useTranslation();
 
   const form = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
@@ -93,15 +95,15 @@ export default function Signup() {
         setOtpError("");
         setOtpStep(true);
         toast({
-          title: "Account created!",
-          description: "Please check your email for the verification code.",
+          title: t("auth.accountCreated"),
+          description: t("auth.checkEmailVerify"),
         });
       }
     },
     onError: (error: Error) => {
       toast({
-        title: "Signup failed",
-        description: error.message || "Could not create account",
+        title: t("auth.signupFailed"),
+        description: error.message || t("auth.couldNotCreate"),
         variant: "destructive",
       });
     },
@@ -115,15 +117,15 @@ export default function Signup() {
     onSuccess: (user) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({
-        title: "Welcome!",
-        description: `Welcome to ${BRAND_NAME}, ${user.firstName}!`,
+        title: t("auth.welcomeUser"),
+        description: t("auth.welcomeToBrand", { brand: BRAND_NAME, name: user.firstName }),
       });
       setLocation("/dashboard");
     },
     onError: (error: Error) => {
       toast({
-        title: "Verification failed",
-        description: error.message || "Invalid or expired code",
+        title: t("auth.verificationFailed"),
+        description: error.message || t("auth.invalidCode"),
         variant: "destructive",
       });
     },
@@ -137,14 +139,14 @@ export default function Signup() {
     onSuccess: () => {
       setResendCountdown(60);
       toast({
-        title: "Code resent",
-        description: "A new verification code has been sent to your email",
+        title: t("auth.codeResent"),
+        description: t("auth.newCodeSent"),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Resend failed",
-        description: error.message || "Unable to resend code",
+        title: t("auth.resendFailed"),
+        description: error.message || t("auth.unableToResend"),
         variant: "destructive",
       });
     },
@@ -168,7 +170,7 @@ export default function Signup() {
 
   const handleOtpSubmit = () => {
     if (otpCode.length !== 6) {
-      setOtpError("Verification code must be 6 digits");
+      setOtpError(t("auth.codeMustBe6"));
       return;
     }
     setOtpError("");
@@ -200,12 +202,12 @@ export default function Signup() {
               </div>
             </div>
             <CardTitle className="text-2xl">
-              {otpStep ? "Verify your email" : "Create an account"}
+              {otpStep ? t("auth.verifyEmail") : t("auth.createAccount")}
             </CardTitle>
             <CardDescription>
               {otpStep
-                ? `We sent a verification code to ${userEmail}`
-                : `Join ${BRAND_NAME} to access quality courses`}
+                ? t("auth.codeSentTo", { email: userEmail })
+                : t("auth.joinBrand", { brand: BRAND_NAME })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -213,7 +215,7 @@ export default function Signup() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label htmlFor="signup-otp-input" className="text-sm font-medium leading-none">
-                    Verification Code
+                    {t("auth.verificationCode")}
                   </label>
                   <Input
                     type="text"
@@ -221,7 +223,7 @@ export default function Signup() {
                     id="signup-otp-input"
                     autoComplete="off"
                     maxLength={6}
-                    placeholder="Enter 6-digit code"
+                    placeholder={t("auth.enterCode")}
                     autoFocus
                     className="text-center text-lg tracking-widest"
                     value={otpCode}
@@ -246,11 +248,11 @@ export default function Signup() {
                 >
                   {verifyOtpMutation.isPending ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Verifying...
+                      <Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                      {t("auth.verifying")}
                     </>
                   ) : (
-                    "Verify & Continue"
+                    t("auth.verifyContinue")
                   )}
                 </Button>
 
@@ -263,10 +265,10 @@ export default function Signup() {
                     data-testid="button-resend-signup-otp"
                   >
                     {resendOtpMutation.isPending
-                      ? "Sending..."
+                      ? t("auth.sending")
                       : resendCountdown > 0
-                        ? `Resend code in ${resendCountdown}s`
-                        : "Resend code"}
+                        ? t("auth.resendCodeIn", { seconds: resendCountdown })
+                        : t("auth.resendCode")}
                   </button>
                 </div>
 
@@ -277,7 +279,7 @@ export default function Signup() {
                   onClick={handleBackToSignup}
                   data-testid="button-back-to-signup"
                 >
-                  Back to signup
+                  {t("auth.backToSignup")}
                 </Button>
               </div>
             ) : (
@@ -290,7 +292,7 @@ export default function Signup() {
                         name="firstName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>First Name</FormLabel>
+                            <FormLabel>{t("auth.firstName")}</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="John"
@@ -308,7 +310,7 @@ export default function Signup() {
                         name="lastName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Last Name</FormLabel>
+                            <FormLabel>{t("auth.lastName")}</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="Doe"
@@ -327,7 +329,7 @@ export default function Signup() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email</FormLabel>
+                          <FormLabel>{t("auth.email")}</FormLabel>
                           <FormControl>
                             <Input
                               type="email"
@@ -346,7 +348,7 @@ export default function Signup() {
                       name="phoneNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Phone Number *</FormLabel>
+                          <FormLabel>{t("auth.phoneNumber")} *</FormLabel>
                           <FormControl>
                             <Input
                               type="tel"
@@ -365,11 +367,11 @@ export default function Signup() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Password</FormLabel>
+                          <FormLabel>{t("auth.password")}</FormLabel>
                           <FormControl>
                             <Input
                               type="password"
-                              placeholder="Min 8 chars, upper, lower, number, special"
+                              placeholder={t("auth.passwordPlaceholder")}
                               {...field}
                               data-testid="input-password"
                             />
@@ -384,11 +386,11 @@ export default function Signup() {
                       name="confirmPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Confirm Password</FormLabel>
+                          <FormLabel>{t("auth.confirmPassword")}</FormLabel>
                           <FormControl>
                             <Input
                               type="password"
-                              placeholder="Re-enter your password"
+                              placeholder={t("auth.confirmPasswordPlaceholder")}
                               {...field}
                               data-testid="input-confirm-password"
                             />
@@ -403,7 +405,7 @@ export default function Signup() {
                       name="universityId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>University</FormLabel>
+                          <FormLabel>{t("auth.university")}</FormLabel>
                           <Select
                             onValueChange={(value) => {
                               field.onChange(parseInt(value, 10));
@@ -414,7 +416,7 @@ export default function Signup() {
                           >
                             <FormControl>
                               <SelectTrigger data-testid="select-university">
-                                <SelectValue placeholder={universitiesLoading ? "Loading..." : "Select your university"} />
+                                <SelectValue placeholder={universitiesLoading ? t("auth.loading") : t("auth.selectUniversity")} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -435,7 +437,7 @@ export default function Signup() {
                       name="collegeId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>College</FormLabel>
+                          <FormLabel>{t("auth.college")}</FormLabel>
                           <Select
                             onValueChange={(value) => {
                               field.onChange(parseInt(value, 10));
@@ -448,10 +450,10 @@ export default function Signup() {
                               <SelectTrigger data-testid="select-college">
                                 <SelectValue placeholder={
                                   !selectedUniversityId || selectedUniversityId === 0
-                                    ? "Select a university first"
+                                    ? t("auth.selectUniversityFirst")
                                     : collegesLoading
-                                    ? "Loading..."
-                                    : "Select your college"
+                                    ? t("auth.loading")
+                                    : t("auth.selectCollege")
                                 } />
                               </SelectTrigger>
                             </FormControl>
@@ -473,7 +475,7 @@ export default function Signup() {
                       name="majorId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Major</FormLabel>
+                          <FormLabel>{t("auth.major")}</FormLabel>
                           <Select
                             onValueChange={(value) => field.onChange(parseInt(value, 10))}
                             value={field.value ? String(field.value) : ""}
@@ -483,10 +485,10 @@ export default function Signup() {
                               <SelectTrigger data-testid="select-major">
                                 <SelectValue placeholder={
                                   !selectedCollegeId || selectedCollegeId === 0
-                                    ? "Select a college first"
+                                    ? t("auth.selectCollegeFirst")
                                     : majorsLoading
-                                    ? "Loading..."
-                                    : "Select your major"
+                                    ? t("auth.loading")
+                                    : t("auth.selectMajor")
                                 } />
                               </SelectTrigger>
                             </FormControl>
@@ -511,20 +513,20 @@ export default function Signup() {
                     >
                       {signupMutation.isPending ? (
                         <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Creating account...
+                          <Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" />
+                          {t("auth.creatingAccount")}
                         </>
                       ) : (
-                        "Create account"
+                        t("auth.createAccount")
                       )}
                     </Button>
                   </form>
                 </Form>
 
                 <div className="mt-6 text-center text-sm text-muted-foreground">
-                  Already have an account?{" "}
+                  {t("auth.hasAccount")}{" "}
                   <Link href="/login" className="text-primary hover:underline" data-testid="link-login">
-                    Sign in
+                    {t("auth.signIn")}
                   </Link>
                 </div>
               </>

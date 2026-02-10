@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookOpen, Users, Clock, ArrowRight } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { CourseWithRelations } from "@shared/schema";
+import { useTranslation } from "react-i18next";
 
 interface CourseCardProps {
   course: CourseWithRelations;
@@ -22,10 +23,14 @@ export function CourseCard({
   showStatus = false,
   showTeacher = true,
   showEnrollmentCount = false,
-  actionLabel = "View Course",
+  actionLabel,
   actionHref,
   onAction,
 }: CourseCardProps) {
+  const { t } = useTranslation();
+
+  const resolvedActionLabel = actionLabel || t("course.viewCourse");
+
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "PUBLISHED":
@@ -42,7 +47,13 @@ export function CourseCard({
   const getStatusLabel = (status: string) => {
     switch (status) {
       case "PENDING_APPROVAL":
-        return "Pending";
+        return t("course.pending");
+      case "PUBLISHED":
+        return t("course.published");
+      case "REJECTED":
+        return t("course.rejected");
+      case "DRAFT":
+        return t("course.draft");
       default:
         return status.charAt(0) + status.slice(1).toLowerCase();
     }
@@ -64,6 +75,9 @@ export function CourseCard({
   const teacherInitials = course.teacher 
     ? `${course.teacher.firstName?.[0] || ""}${course.teacher.lastName?.[0] || ""}`.toUpperCase() || "T"
     : "T";
+
+  const lessonCount = course._count?.lessons || course.lessons?.length || 0;
+  const studentCount = course._count?.enrollments || course.enrollments?.length || 0;
 
   return (
     <Card className="flex flex-col h-full hover-elevate" data-testid={`card-course-${course.id}`}>
@@ -111,12 +125,12 @@ export function CourseCard({
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
             <BookOpen className="w-4 h-4" />
-            <span>{course._count?.lessons || course.lessons?.length || 0} lessons</span>
+            <span>{lessonCount} {lessonCount === 1 ? t("course.lesson") : t("course.lessons")}</span>
           </div>
           {showEnrollmentCount && (
             <div className="flex items-center gap-1">
               <Users className="w-4 h-4" />
-              <span>{course._count?.enrollments || course.enrollments?.length || 0} students</span>
+              <span>{studentCount} {studentCount === 1 ? t("course.student") : t("course.students")}</span>
             </div>
           )}
         </div>
@@ -138,14 +152,14 @@ export function CourseCard({
         {actionHref ? (
           <Button asChild size="sm" variant="ghost" data-testid={`button-view-course-${course.id}`}>
             <Link href={actionHref}>
-              {actionLabel}
-              <ArrowRight className="w-4 h-4 ml-1" />
+              {resolvedActionLabel}
+              <ArrowRight className="w-4 h-4 ltr:ml-1 rtl:mr-1" />
             </Link>
           </Button>
         ) : onAction ? (
           <Button size="sm" variant="ghost" onClick={onAction} data-testid={`button-action-course-${course.id}`}>
-            {actionLabel}
-            <ArrowRight className="w-4 h-4 ml-1" />
+            {resolvedActionLabel}
+            <ArrowRight className="w-4 h-4 ltr:ml-1 rtl:mr-1" />
           </Button>
         ) : null}
       </CardFooter>
