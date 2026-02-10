@@ -197,6 +197,18 @@ export const homeStats = pgTable("home_stats", {
   updatedByUserId: varchar("updated_by_user_id").references(() => users.id),
 });
 
+// Quiz Questions table (AI-generated from PDFs)
+export const quizQuestions = pgTable("quiz_questions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  question: text("question").notNull(),
+  options: text("options").array().notNull(),
+  correctAnswer: text("correct_answer").notNull(),
+  explanation: text("explanation"),
+  createdByUserId: varchar("created_by_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Admin Dashboard Stats Config table (single-row config for admin dashboard stats)
 export const adminDashboardStatsConfig = pgTable("admin_dashboard_stats_config", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -299,6 +311,17 @@ export const courseApprovalLogsRelations = relations(courseApprovalLogs, ({ one 
   }),
   actor: one(users, {
     fields: [courseApprovalLogs.actorUserId],
+    references: [users.id],
+  }),
+}));
+
+export const quizQuestionsRelations = relations(quizQuestions, ({ one }) => ({
+  course: one(courses, {
+    fields: [quizQuestions.courseId],
+    references: [courses.id],
+  }),
+  createdBy: one(users, {
+    fields: [quizQuestions.createdByUserId],
     references: [users.id],
   }),
 }));
@@ -421,6 +444,11 @@ export const updateHomeStatsSchema = createInsertSchema(homeStats).omit({
   updatedByUserId: true,
 });
 
+export const insertQuizQuestionSchema = createInsertSchema(quizQuestions).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const updateAdminDashboardStatsConfigSchema = createInsertSchema(adminDashboardStatsConfig).omit({
   id: true,
   updatedAt: true,
@@ -461,6 +489,9 @@ export const verifyOtpSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   otp: z.string().length(6, "Verification code must be 6 digits"),
 });
+
+export type InsertQuizQuestion = z.infer<typeof insertQuizQuestionSchema>;
+export type QuizQuestion = typeof quizQuestions.$inferSelect;
 
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
