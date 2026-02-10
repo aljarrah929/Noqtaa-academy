@@ -1,4 +1,5 @@
 import logoSrc from "@/assets/logo.png";
+import { formatPrice } from "@/lib/utils";
 
 interface CourseReport {
   courseId: number;
@@ -70,8 +71,8 @@ export function InvoiceTemplate({ reports, totals, instructorName, showAll }: In
             <tr key={r.courseId}>
               <td className="invoice-td invoice-td-left">{r.title}</td>
               <td className="invoice-td invoice-td-right">{r.studentCount}</td>
-              <td className="invoice-td invoice-td-right">${r.price.toLocaleString()}</td>
-              <td className="invoice-td invoice-td-right">${r.totalRevenue.toLocaleString()}</td>
+              <td className="invoice-td invoice-td-right">{formatPrice(r.price)}</td>
+              <td className="invoice-td invoice-td-right">{formatPrice(r.totalRevenue)}</td>
             </tr>
           ))}
         </tbody>
@@ -82,7 +83,7 @@ export function InvoiceTemplate({ reports, totals, instructorName, showAll }: In
             </td>
             <td className="invoice-td invoice-td-right invoice-td-bold">{totals.totalStudents}</td>
             <td className="invoice-td invoice-td-right"></td>
-            <td className="invoice-td invoice-td-right invoice-td-bold">${totals.totalRevenue.toLocaleString()}</td>
+            <td className="invoice-td invoice-td-right invoice-td-bold">{formatPrice(totals.totalRevenue)}</td>
           </tr>
         </tfoot>
       </table>

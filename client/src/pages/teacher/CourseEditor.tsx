@@ -412,7 +412,7 @@ export default function CourseEditor() {
                     name="price"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Price (EGP)</FormLabel>
+                        <FormLabel>Price (JOD)</FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 

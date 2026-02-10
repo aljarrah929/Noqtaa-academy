@@ -21,6 +21,7 @@ import {
   Clock
 } from "lucide-react";
 import { Link } from "wouter";
+import { formatPrice } from "@/lib/utils";
 import type { CourseWithRelations } from "@shared/schema";
 
 export default function CourseDetail() {
@@ -163,9 +164,16 @@ export default function CourseDetail() {
                     </Badge>
                   )}
                 </div>
-                <CardTitle className="text-2xl md:text-3xl" data-testid="text-course-title">
-                  {course.title}
-                </CardTitle>
+                <div className="flex flex-wrap items-center gap-4">
+                  <CardTitle className="text-2xl md:text-3xl" data-testid="text-course-title">
+                    {course.title}
+                  </CardTitle>
+                  {course.price != null && course.price > 0 && (
+                    <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400" data-testid="text-course-price">
+                      {formatPrice(course.price)}
+                    </span>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 {course.description && (
@@ -271,6 +279,11 @@ export default function CourseDetail() {
                 <CardContent className="py-6 text-center">
                   <Lock className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
                   <h3 className="font-semibold mb-2">Want to enroll?</h3>
+                  {course.price != null && course.price > 0 && (
+                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mb-2" data-testid="text-enroll-price">
+                      Price: {formatPrice(course.price)}
+                    </p>
+                  )}
                   <p className="text-sm text-muted-foreground mb-4">
                     Log in to request enrollment and access course content.
                   </p>
@@ -324,6 +337,11 @@ export default function CourseDetail() {
                     <>
                       <UserPlus className="w-10 h-10 mx-auto text-primary mb-3" />
                       <h3 className="font-semibold mb-2">Want to Enroll?</h3>
+                      {course.price != null && course.price > 0 && (
+                        <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mb-2" data-testid="text-join-price">
+                          Price: {formatPrice(course.price)}
+                        </p>
+                      )}
                       <p className="text-sm text-muted-foreground mb-4">
                         Submit your payment receipt to request enrollment.
                       </p>

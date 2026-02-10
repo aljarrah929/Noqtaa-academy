@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { canAccessAccountantDashboard } from "@/lib/authUtils";
+import { formatPrice } from "@/lib/utils";
 import { InvoiceTemplate } from "./InvoiceTemplate";
 
 interface CourseReport {
@@ -160,7 +161,7 @@ export default function AccountantDashboard() {
                     <Skeleton className="h-8 w-24" />
                   ) : (
                     <div className="text-2xl font-bold" data-testid="text-total-revenue">
-                      ${filteredTotals.totalRevenue.toLocaleString()}
+                      {formatPrice(filteredTotals.totalRevenue)}
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground">
@@ -307,10 +308,10 @@ export default function AccountantDashboard() {
                               <div className="text-xs text-muted-foreground">{report.collegeName}</div>
                             </td>
                             <td className="py-2.5 px-4 text-sm">{report.instructorName}</td>
-                            <td className="py-2.5 px-4 text-sm text-right">${report.price.toLocaleString()}</td>
+                            <td className="py-2.5 px-4 text-sm text-right">{formatPrice(report.price)}</td>
                             <td className="py-2.5 px-4 text-sm text-right">{report.studentCount.toLocaleString()}</td>
                             <td className="py-2.5 px-4 text-sm text-right font-semibold">
-                              ${report.totalRevenue.toLocaleString()}
+                              {formatPrice(report.totalRevenue)}
                             </td>
                           </tr>
                         ))}
@@ -322,7 +323,7 @@ export default function AccountantDashboard() {
                             {filteredTotals.totalStudents.toLocaleString()}
                           </td>
                           <td className="py-2.5 px-4 text-sm text-right">
-                            ${filteredTotals.totalRevenue.toLocaleString()}
+                            {formatPrice(filteredTotals.totalRevenue)}
                           </td>
                         </tr>
                       </tbody>

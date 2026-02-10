@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookOpen, Users, Clock, ArrowRight } from "lucide-react";
+import { formatPrice } from "@/lib/utils";
 import type { CourseWithRelations } from "@shared/schema";
 
 interface CourseCardProps {
@@ -88,6 +89,15 @@ export function CourseCard({
               {course.title}
             </h3>
           </div>
+          {course.price != null && course.price > 0 && (
+            <Badge
+              variant="outline"
+              className="flex-shrink-0 font-bold text-emerald-700 border-emerald-300 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:bg-emerald-900/20"
+              data-testid={`badge-price-${course.id}`}
+            >
+              {formatPrice(course.price)}
+            </Badge>
+          )}
         </div>
       </CardHeader>
       
