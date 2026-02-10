@@ -57,7 +57,8 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const { user, isLoading } = useAuth();
   const { isDark, toggleDark, collegeTheme } = useTheme();
   const [location, setLocation] = useLocation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language?.startsWith("ar");
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -162,7 +163,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   return (
     <SidebarProvider style={sidebarStyle}>
       <div className="flex h-screen w-full">
-        <Sidebar>
+        <Sidebar side={isRtl ? "right" : "left"}>
           <SidebarHeader className="border-b border-sidebar-border p-4">
             <Link href="/" className="flex items-center gap-2">
               <div className="p-1.5 rounded-md bg-primary/10 flex items-center justify-center" style={{ width: '32px', height: '32px' }}>
