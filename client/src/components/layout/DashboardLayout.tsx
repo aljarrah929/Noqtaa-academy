@@ -40,6 +40,7 @@ import {
   FileUp,
   User,
   UserPlus,
+  Landmark,
 } from "lucide-react";
 import { getRoleDisplayName, canAccessAdminDashboard, canAccessTeacherDashboard, canAccessAccountantDashboard, canManageColleges, canManageRoles } from "@/lib/authUtils";
 import { BRAND_NAME } from "@/lib/branding";
@@ -100,6 +101,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
 
   const superAdminMenuItems = [
     { href: "/admin/users", label: "User Management", icon: UserCog },
+    { href: "/admin/structure", label: "Manage Universities", icon: Landmark },
     { href: "/admin/colleges", label: "Colleges", icon: Building2 },
     { href: "/admin/featured-profiles", label: "Featured Profiles", icon: Star },
     { href: "/admin/home-stats", label: "Home Stats", icon: BarChart3 },

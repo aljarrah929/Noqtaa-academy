@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, BookOpen, Filter, X } from "lucide-react";
+import { Search, BookOpen, X, GraduationCap } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import type { CourseWithRelations, College } from "@shared/schema";
 
 export default function Courses() {
@@ -24,9 +25,21 @@ export default function Courses() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCollege, setSelectedCollege] = useState(initialCollege);
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+
+  const userMajorId = user?.majorId;
+  const coursesQueryKey = userMajorId
+    ? ["/api/courses", { majorId: userMajorId }]
+    : ["/api/courses"];
 
   const { data: courses, isLoading: coursesLoading } = useQuery<CourseWithRelations[]>({
-    queryKey: ["/api/courses"],
+    queryKey: coursesQueryKey,
+    queryFn: async () => {
+      const url = userMajorId ? `/api/courses?majorId=${userMajorId}` : "/api/courses";
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch courses");
+      return res.json();
+    },
   });
 
   const { data: colleges } = useQuery<College[]>({
@@ -67,6 +80,12 @@ export default function Courses() {
 
   const hasActiveFilters = searchQuery !== "" || selectedCollege !== "all";
 
+  const pathLabel = user?.major && user?.university
+    ? `${user.major.name} at ${user.university.name}`
+    : user?.major
+    ? user.major.name
+    : null;
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -76,9 +95,18 @@ export default function Courses() {
           <h1 className="text-3xl md:text-4xl font-bold mb-2" data-testid="text-page-title">
             Course Catalog
           </h1>
-          <p className="text-muted-foreground">
-            Browse courses from all our colleges
-          </p>
+          {pathLabel ? (
+            <div className="flex items-center gap-2 mt-1">
+              <GraduationCap className="w-4 h-4 text-primary" />
+              <p className="text-sm text-muted-foreground" data-testid="text-path-label">
+                Showing courses for <span className="font-medium text-foreground">{pathLabel}</span>
+              </p>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">
+              Browse courses from all our colleges
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 mb-8">
@@ -116,7 +144,7 @@ export default function Courses() {
           )}
         </div>
 
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
           {selectedCollege !== "all" && (
             <Badge 
               variant="secondary" 

@@ -43,12 +43,13 @@ import {
   Trash2,
   ShieldAlert,
 } from "lucide-react";
+import { canAccessAdminDashboard } from "@/lib/authUtils";
 import type { University, College, Major } from "@shared/schema";
 
 export default function HierarchyManager() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
-  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const isAdmin = user ? canAccessAdminDashboard(user.role) : false;
 
   const [uniDialogOpen, setUniDialogOpen] = useState(false);
   const [editingUni, setEditingUni] = useState<University | null>(null);
@@ -253,7 +254,7 @@ export default function HierarchyManager() {
     );
   }
 
-  if (!isSuperAdmin) {
+  if (!isAdmin) {
     return (
       <DashboardLayout title="Access Denied">
         <div className="max-w-4xl mx-auto text-center py-16">

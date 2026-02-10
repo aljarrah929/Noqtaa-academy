@@ -45,7 +45,7 @@ const courseFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().optional(),
   collegeId: z.string().min(1, "College is required"),
-  majorId: z.string().optional(),
+  majorId: z.string().min(1, "Major is required"),
   teacherId: z.string().min(1, "Teacher is required"),
   price: z.string().min(1, "Price is required"),
 });
@@ -138,7 +138,7 @@ export default function CourseEditor() {
       const res = await apiRequest("POST", "/api/courses", {
         ...data,
         collegeId: Number(data.collegeId),
-        majorId: data.majorId ? Number(data.majorId) : null,
+        majorId: Number(data.majorId),
         price: Number(data.price),
       });
       return res.json();
@@ -158,7 +158,7 @@ export default function CourseEditor() {
       await apiRequest("PATCH", `/api/courses/${courseId}`, {
         ...data,
         collegeId: Number(data.collegeId),
-        majorId: data.majorId ? Number(data.majorId) : null,
+        majorId: Number(data.majorId),
         price: Number(data.price),
       });
     },
@@ -358,7 +358,7 @@ export default function CourseEditor() {
                     name="majorId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Major (optional)</FormLabel>
+                        <FormLabel>Major</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value || ""}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -32,10 +32,30 @@ import UserManagement from "@/pages/admin/UserManagement";
 import CollegeManagement from "@/pages/admin/CollegeManagement";
 import FeaturedProfilesManagement from "@/pages/admin/FeaturedProfilesManagement";
 import HomeStatsManagement from "@/pages/admin/HomeStatsManagement";
+import HierarchyManager from "@/pages/admin/HierarchyManager";
 import AccountantDashboard from "@/pages/accountant/AccountantDashboard";
 import CollegeOnboarding from "@/pages/CollegeOnboarding";
+import SelectPath from "@/pages/SelectPath";
 import Profile from "@/pages/Profile";
 import SupportWidget from "@/components/SupportWidget";
+
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/select-path", "/onboarding"];
+
+function PathRedirect() {
+  const { user, isLoading } = useAuth();
+  const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isLoading || !user) return;
+    if (PUBLIC_PATHS.includes(location)) return;
+    if (user.role !== "STUDENT") return;
+    if (!user.majorId || !user.universityId) {
+      setLocation("/select-path");
+    }
+  }, [user, isLoading, location, setLocation]);
+
+  return null;
+}
 
 function Router() {
   return (
@@ -45,6 +65,7 @@ function Router() {
       <Route path="/signup" component={Signup} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/select-path" component={SelectPath} />
       <Route path="/courses" component={Courses} />
       <Route path="/courses/:id" component={CourseDetail} />
       <Route path="/courses/:courseId/lessons/:lessonId" component={LessonDetail} />
@@ -64,6 +85,7 @@ function Router() {
       <Route path="/admin/approvals" component={CourseApprovals} />
       <Route path="/admin/teachers" component={TeachersList} />
       <Route path="/admin/users" component={UserManagement} />
+      <Route path="/admin/structure" component={HierarchyManager} />
       <Route path="/admin/colleges" component={CollegeManagement} />
       <Route path="/admin/featured-profiles" component={FeaturedProfilesManagement} />
       <Route path="/admin/home-stats" component={HomeStatsManagement} />
@@ -110,6 +132,7 @@ function AppContent() {
 
   return (
     <>
+      <PathRedirect />
       <Router />
       <SupportWidget />
       {showWarning && (

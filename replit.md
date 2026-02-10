@@ -46,10 +46,11 @@ Preferred communication style: Simple, everyday language.
 
 **Route Structure**:
 - `/api/auth/*` - Authentication endpoints (login, signup, verify-otp, forgot-password, reset-password)
-- `/api/universities/*` - University listing and details
+- `/api/auth/user/path` - PATCH to update student's academic path (universityId, collegeId, majorId)
+- `/api/universities/*` - University CRUD (GET all, POST/PATCH/DELETE for SUPER_ADMIN)
 - `/api/universities/:id/colleges` - Colleges for a specific university
 - `/api/colleges/*` - College CRUD operations
-- `/api/majors/*` - Major listing (filterable by collegeId query param)
+- `/api/majors/*` - Major CRUD (GET filterable by collegeId, POST/PATCH/DELETE for SUPER_ADMIN)
 - `/api/courses/*` - Course management with approval workflow (filterable by majorId)
 - `/api/lessons/*` - Lesson content management
 - `/api/enrollments/*` - Student enrollment management
