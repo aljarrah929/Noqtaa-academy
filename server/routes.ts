@@ -9,9 +9,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import PDFDocument from "pdfkit";
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse");
+import { PDFParse } from "pdf-parse";
 import OpenAI from "openai";
 import { sendEmail } from "./email";
 import { db } from "./db";
@@ -2826,16 +2824,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No PDF file uploaded" });
         }
 
-        let pdfData;
+        let extractedText: string;
         try {
-          pdfData = await pdfParse(req.file.buffer);
+          const parser = new PDFParse({ data: req.file.buffer });
+          const textResult = await parser.getText();
+          extractedText = textResult.text?.trim() || "";
+          await parser.destroy();
         } catch (parseErr) {
           return res.status(400).json({
             message: "Could not read text from this PDF. Please ensure the PDF is text-based, not scanned images."
           });
         }
-
-        const extractedText = pdfData.text?.trim();
         if (!extractedText || extractedText.length < 50) {
           return res.status(400).json({
             message: "Could not extract enough text from the PDF. Please ensure the PDF is text-based and contains readable content, not scanned images."
