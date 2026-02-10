@@ -31,15 +31,34 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// Colleges table
+// Universities table (top-level)
+export const universities = pgTable("universities", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  logoUrl: varchar("logo_url", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Colleges table (belongs to a university)
 export const colleges = pgTable("colleges", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 255 }).notNull(),
   slug: varchar("slug", { length: 100 }).notNull().unique(),
+  universityId: integer("university_id").references(() => universities.id),
   themeName: varchar("theme_name", { length: 100 }).notNull(),
   primaryColor: varchar("primary_color", { length: 7 }).notNull(),
   secondaryColor: varchar("secondary_color", { length: 7 }).notNull(),
   logoUrl: varchar("logo_url", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Majors table (belongs to a college)
+export const majors = pgTable("majors", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull(),
+  collegeId: integer("college_id").notNull().references(() => colleges.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -52,7 +71,9 @@ export const users = pgTable("users", {
   lastName: varchar("last_name", { length: 100 }),
   profileImageUrl: text("profile_image_url"),
   role: userRoleEnum("role").notNull().default("STUDENT"),
+  universityId: integer("university_id").references(() => universities.id),
   collegeId: integer("college_id").references(() => colleges.id),
+  majorId: integer("major_id").references(() => majors.id),
   isActive: boolean("is_active").notNull().default(true),
   phoneNumber: varchar("phone_number", { length: 20 }),
   publicId: varchar("public_id", { length: 8 }).unique(),
@@ -67,8 +88,11 @@ export const users = pgTable("users", {
 export const courses = pgTable("courses", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   collegeId: integer("college_id").notNull().references(() => colleges.id),
+  majorId: integer("major_id").references(() => majors.id),
   teacherId: varchar("teacher_id").notNull().references(() => users.id),
   title: varchar("title", { length: 255 }).notNull(),
+  code: varchar("code", { length: 20 }),
+  instructorName: varchar("instructor_name", { length: 255 }),
   description: text("description"),
   coverImageUrl: varchar("cover_image_url", { length: 500 }),
   price: integer("price").notNull().default(0),
@@ -186,15 +210,42 @@ export const adminDashboardStatsConfig = pgTable("admin_dashboard_stats_config",
 });
 
 // Relations
-export const collegesRelations = relations(colleges, ({ many }) => ({
+export const universitiesRelations = relations(universities, ({ many }) => ({
+  colleges: many(colleges),
+  users: many(users),
+}));
+
+export const collegesRelations = relations(colleges, ({ one, many }) => ({
+  university: one(universities, {
+    fields: [colleges.universityId],
+    references: [universities.id],
+  }),
+  majors: many(majors),
   users: many(users),
   courses: many(courses),
 }));
 
+export const majorsRelations = relations(majors, ({ one, many }) => ({
+  college: one(colleges, {
+    fields: [majors.collegeId],
+    references: [colleges.id],
+  }),
+  courses: many(courses),
+  users: many(users),
+}));
+
 export const usersRelations = relations(users, ({ one, many }) => ({
+  university: one(universities, {
+    fields: [users.universityId],
+    references: [universities.id],
+  }),
   college: one(colleges, {
     fields: [users.collegeId],
     references: [colleges.id],
+  }),
+  major: one(majors, {
+    fields: [users.majorId],
+    references: [majors.id],
   }),
   teacherCourses: many(courses),
   enrollments: many(enrollments),
@@ -205,6 +256,10 @@ export const coursesRelations = relations(courses, ({ one, many }) => ({
   college: one(colleges, {
     fields: [courses.collegeId],
     references: [colleges.id],
+  }),
+  major: one(majors, {
+    fields: [courses.majorId],
+    references: [majors.id],
   }),
   teacher: one(users, {
     fields: [courses.teacherId],
@@ -260,7 +315,17 @@ export const joinRequestsRelations = relations(joinRequests, ({ one }) => ({
 }));
 
 // Insert schemas
+export const insertUniversitySchema = createInsertSchema(universities).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertCollegeSchema = createInsertSchema(colleges).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMajorSchema = createInsertSchema(majors).omit({
   id: true,
   createdAt: true,
 });
@@ -286,7 +351,9 @@ export const signupSchema = z.object({
   phoneNumber: z.string()
     .min(10, "Phone number must be at least 10 digits")
     .regex(/^\+?[0-9]+$/, "Invalid phone number format"),
+  universityId: z.number().int().positive("Please select a university"),
   collegeId: z.number().int().positive("Please select a college"),
+  majorId: z.number().int().positive("Please select a major"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
@@ -369,8 +436,12 @@ export const updateAdminDashboardStatsConfigSchema = createInsertSchema(adminDas
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type InsertUniversity = z.infer<typeof insertUniversitySchema>;
+export type University = typeof universities.$inferSelect;
 export type InsertCollege = z.infer<typeof insertCollegeSchema>;
 export type College = typeof colleges.$inferSelect;
+export type InsertMajor = z.infer<typeof insertMajorSchema>;
+export type Major = typeof majors.$inferSelect;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
 export type Course = typeof courses.$inferSelect;
 export type InsertLesson = z.infer<typeof insertLessonSchema>;
@@ -407,6 +478,7 @@ export type JoinRequestWithRelations = JoinRequest & {
 };
 export type CourseWithRelations = Course & {
   college?: College;
+  major?: Major;
   teacher?: User;
   lessons?: Lesson[];
   enrollments?: Enrollment[];
@@ -417,5 +489,7 @@ export type CourseWithRelations = Course & {
 };
 
 export type UserWithCollege = User & {
+  university?: University;
   college?: College;
+  major?: Major;
 };

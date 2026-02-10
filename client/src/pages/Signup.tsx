@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { signupSchema, type SignupInput, type UserWithCollege, type College } from "@shared/schema";
+import { signupSchema, type SignupInput, type UserWithCollege, type College, type University, type Major } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/Header";
@@ -24,16 +24,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { GraduationCap, Loader2, Phone } from "lucide-react";
+import { GraduationCap, Loader2 } from "lucide-react";
 import { BRAND_NAME } from "@/lib/branding";
 
 export default function Signup() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-
-  const { data: colleges, isLoading: collegesLoading } = useQuery<College[]>({
-    queryKey: ["/api/colleges"],
-  });
 
   const form = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
@@ -44,8 +40,37 @@ export default function Signup() {
       firstName: "",
       lastName: "",
       phoneNumber: "",
+      universityId: 0,
       collegeId: 0,
+      majorId: 0,
     },
+  });
+
+  const selectedUniversityId = form.watch("universityId");
+  const selectedCollegeId = form.watch("collegeId");
+
+  const { data: universities, isLoading: universitiesLoading } = useQuery<University[]>({
+    queryKey: ["/api/universities"],
+  });
+
+  const { data: colleges, isLoading: collegesLoading } = useQuery<College[]>({
+    queryKey: ["/api/universities", selectedUniversityId, "colleges"],
+    queryFn: async () => {
+      const res = await fetch(`/api/universities/${selectedUniversityId}/colleges`);
+      if (!res.ok) throw new Error("Failed to fetch colleges");
+      return res.json();
+    },
+    enabled: !!selectedUniversityId && selectedUniversityId > 0,
+  });
+
+  const { data: majorsData, isLoading: majorsLoading } = useQuery<Major[]>({
+    queryKey: ["/api/majors", selectedCollegeId],
+    queryFn: async () => {
+      const res = await fetch(`/api/majors?collegeId=${selectedCollegeId}`);
+      if (!res.ok) throw new Error("Failed to fetch majors");
+      return res.json();
+    },
+    enabled: !!selectedCollegeId && selectedCollegeId > 0,
   });
 
   const signupMutation = useMutation({
@@ -209,23 +234,100 @@ export default function Signup() {
 
                 <FormField
                   control={form.control}
+                  name="universityId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>University</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(parseInt(value, 10));
+                          form.setValue("collegeId", 0);
+                          form.setValue("majorId", 0);
+                        }}
+                        value={field.value ? String(field.value) : ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-university">
+                            <SelectValue placeholder={universitiesLoading ? "Loading..." : "Select your university"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {universities?.map((uni) => (
+                            <SelectItem key={uni.id} value={String(uni.id)}>
+                              {uni.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="collegeId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>College</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(parseInt(value, 10))}
+                        onValueChange={(value) => {
+                          field.onChange(parseInt(value, 10));
+                          form.setValue("majorId", 0);
+                        }}
                         value={field.value ? String(field.value) : ""}
+                        disabled={!selectedUniversityId || selectedUniversityId === 0}
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-college">
-                            <SelectValue placeholder={collegesLoading ? "Loading..." : "Select your college"} />
+                            <SelectValue placeholder={
+                              !selectedUniversityId || selectedUniversityId === 0
+                                ? "Select a university first"
+                                : collegesLoading
+                                ? "Loading..."
+                                : "Select your college"
+                            } />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {colleges?.map((college) => (
                             <SelectItem key={college.id} value={String(college.id)}>
                               {college.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="majorId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Major</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value, 10))}
+                        value={field.value ? String(field.value) : ""}
+                        disabled={!selectedCollegeId || selectedCollegeId === 0}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-major">
+                            <SelectValue placeholder={
+                              !selectedCollegeId || selectedCollegeId === 0
+                                ? "Select a college first"
+                                : majorsLoading
+                                ? "Loading..."
+                                : "Select your major"
+                            } />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {majorsData?.map((major) => (
+                            <SelectItem key={major.id} value={String(major.id)}>
+                              {major.name}
                             </SelectItem>
                           ))}
                         </SelectContent>

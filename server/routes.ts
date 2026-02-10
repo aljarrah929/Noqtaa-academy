@@ -174,6 +174,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/auth/user/path", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { universityId, collegeId, majorId } = req.body;
+      
+      if (!universityId || !collegeId || !majorId) {
+        return res.status(400).json({ message: "University, college, and major are required" });
+      }
+
+      const university = await storage.getUniversityById(universityId);
+      if (!university) {
+        return res.status(400).json({ message: "Invalid university" });
+      }
+
+      const college = await storage.getCollegeById(collegeId);
+      if (!college || college.universityId !== universityId) {
+        return res.status(400).json({ message: "Invalid college for selected university" });
+      }
+
+      const major = await storage.getMajorById(majorId);
+      if (!major || major.collegeId !== collegeId) {
+        return res.status(400).json({ message: "Invalid major for selected college" });
+      }
+      
+      const user = await storage.updateUserPath(userId, universityId, collegeId, majorId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const userWithCollege = await storage.getUserWithCollege(userId);
+      res.json(userWithCollege);
+    } catch (error) {
+      console.error("Error updating user path:", error);
+      res.status(500).json({ message: "Failed to update academic path" });
+    }
+  });
+
+  app.get("/api/universities", async (_req, res) => {
+    try {
+      const universityList = await storage.getUniversities();
+      res.json(universityList);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch universities" });
+    }
+  });
+
+  app.get("/api/universities/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const university = await storage.getUniversityById(id);
+      if (!university) {
+        return res.status(404).json({ message: "University not found" });
+      }
+      res.json(university);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch university" });
+    }
+  });
+
+  app.get("/api/universities/:id/colleges", async (req, res) => {
+    try {
+      const universityId = parseInt(req.params.id);
+      const collegeList = await storage.getCollegesByUniversity(universityId);
+      res.json(collegeList);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch colleges" });
+    }
+  });
+
+  app.get("/api/majors", async (req, res) => {
+    try {
+      const collegeId = req.query.collegeId ? parseInt(req.query.collegeId as string) : undefined;
+      const majorList = await storage.getMajors(collegeId);
+      res.json(majorList);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch majors" });
+    }
+  });
+
+  app.get("/api/majors/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const major = await storage.getMajorById(id);
+      if (!major) {
+        return res.status(404).json({ message: "Major not found" });
+      }
+      res.json(major);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch major" });
+    }
+  });
+
   app.get("/api/colleges", async (_req, res) => {
     try {
       const collegeList = await storage.getColleges();
@@ -253,22 +345,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/courses", async (req: any, res) => {
     try {
       const collegeId = req.query.collegeId ? parseInt(req.query.collegeId as string) : undefined;
+      const majorId = req.query.majorId ? parseInt(req.query.majorId as string) : undefined;
       const requestedStatus = req.query.status as any;
       
-      // Check if authenticated user is admin
       const user = req.user;
       const isAdmin = user?.role === "SUPER_ADMIN" || user?.role === "ADMIN";
       
-      let courseList = await storage.getCourses(collegeId);
+      let courseList = await storage.getCourses(collegeId, undefined, majorId);
       
-      // Only admins can see all courses or filter by status
-      // Non-admins always see only PUBLISHED courses
       if (isAdmin && requestedStatus) {
         courseList = courseList.filter(c => c.status === requestedStatus);
       } else if (!isAdmin) {
         courseList = courseList.filter(c => c.status === "PUBLISHED");
       }
-      // Admins without status filter see all courses
       
       res.json(courseList);
     } catch (error) {

@@ -38,13 +38,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Plus, Trash2, Save, ArrowLeft, ShieldAlert } from "lucide-react";
 import { Link } from "wouter";
-import type { CourseWithRelations, College, Lesson, User } from "@shared/schema";
+import type { CourseWithRelations, College, Lesson, User, Major } from "@shared/schema";
 import { B2VideoUploader } from "@/components/B2VideoUploader";
 
 const courseFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().optional(),
   collegeId: z.string().min(1, "College is required"),
+  majorId: z.string().optional(),
   teacherId: z.string().min(1, "Teacher is required"),
   price: z.string().min(1, "Price is required"),
 });
@@ -92,9 +93,22 @@ export default function CourseEditor() {
       title: "",
       description: "",
       collegeId: "",
+      majorId: "",
       teacherId: "",
       price: "0",
     },
+  });
+
+  const watchedCollegeId = courseForm.watch("collegeId");
+
+  const { data: majorsData } = useQuery<Major[]>({
+    queryKey: ["/api/majors", watchedCollegeId],
+    queryFn: async () => {
+      const res = await fetch(`/api/majors?collegeId=${watchedCollegeId}`);
+      if (!res.ok) throw new Error("Failed to fetch majors");
+      return res.json();
+    },
+    enabled: !!watchedCollegeId && watchedCollegeId !== "",
   });
 
   const lessonForm = useForm<LessonFormValues>({
@@ -112,6 +126,7 @@ export default function CourseEditor() {
         title: course.title,
         description: course.description || "",
         collegeId: String(course.collegeId),
+        majorId: course.majorId ? String(course.majorId) : "",
         teacherId: course.teacherId || "",
         price: String(course.price || 0),
       });
@@ -123,6 +138,7 @@ export default function CourseEditor() {
       const res = await apiRequest("POST", "/api/courses", {
         ...data,
         collegeId: Number(data.collegeId),
+        majorId: data.majorId ? Number(data.majorId) : null,
         price: Number(data.price),
       });
       return res.json();
@@ -142,6 +158,7 @@ export default function CourseEditor() {
       await apiRequest("PATCH", `/api/courses/${courseId}`, {
         ...data,
         collegeId: Number(data.collegeId),
+        majorId: data.majorId ? Number(data.majorId) : null,
         price: Number(data.price),
       });
     },
@@ -311,7 +328,13 @@ export default function CourseEditor() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>College</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={(val) => {
+                            field.onChange(val);
+                            courseForm.setValue("majorId", "");
+                          }}
+                          value={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger data-testid="select-college">
                               <SelectValue placeholder="Select a college" />
@@ -321,6 +344,35 @@ export default function CourseEditor() {
                             {colleges?.map((college) => (
                               <SelectItem key={college.id} value={String(college.id)}>
                                 {college.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={courseForm.control}
+                    name="majorId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Major (optional)</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value || ""}
+                          disabled={!watchedCollegeId}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-major">
+                              <SelectValue placeholder={!watchedCollegeId ? "Select a college first" : "Select a major"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {majorsData?.map((major) => (
+                              <SelectItem key={major.id} value={String(major.id)}>
+                                {major.name}
                               </SelectItem>
                             ))}
                           </SelectContent>

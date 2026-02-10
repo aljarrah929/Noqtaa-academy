@@ -55,10 +55,25 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ message: "Email already registered" });
       }
 
+      const university = await storage.getUniversityById(data.universityId);
+      if (!university) {
+        return res.status(400).json({ message: "Invalid university selected" });
+      }
+
       const college = await storage.getCollegeById(data.collegeId);
       if (!college) {
-        console.log(`[Signup] Invalid college ID: ${data.collegeId}`);
         return res.status(400).json({ message: "Invalid college selected" });
+      }
+      if (college.universityId !== data.universityId) {
+        return res.status(400).json({ message: "Selected college does not belong to the selected university" });
+      }
+
+      const major = await storage.getMajorById(data.majorId);
+      if (!major) {
+        return res.status(400).json({ message: "Invalid major selected" });
+      }
+      if (major.collegeId !== data.collegeId) {
+        return res.status(400).json({ message: "Selected major does not belong to the selected college" });
       }
 
       const passwordHash = await bcrypt.hash(data.password, 10);
@@ -69,7 +84,9 @@ export async function setupAuth(app: Express) {
         firstName: data.firstName,
         lastName: data.lastName,
         phoneNumber: data.phoneNumber,
+        universityId: data.universityId,
         collegeId: data.collegeId,
+        majorId: data.majorId,
         role: "STUDENT",
       });
       console.log(`[Signup] User created: id=${user.id}`);

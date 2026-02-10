@@ -4,7 +4,7 @@ import { setupAuth, seedSuperAdmin } from "./auth"; // أضفنا استيراد
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { verifyEmailConnection } from "./email";
-import { ensureCollegesExist } from "./db-init";
+import { ensureUniversitiesAndCollegesExist } from "./db-init";
 
 const app = express();
 
@@ -39,7 +39,7 @@ app.use((req, res, next) => {
 
 (async () => {
   // 1. تأكد من وجود البيانات الأساسية (الكليات)
-  await ensureCollegesExist();
+  await ensureUniversitiesAndCollegesExist();
 
   // 2. تفعيل الصلاحيات والجلسات
   await setupAuth(app); 

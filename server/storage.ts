@@ -1,6 +1,8 @@
 import {
   users,
+  universities,
   colleges,
+  majors,
   courses,
   lessons,
   enrollments,
@@ -12,8 +14,12 @@ import {
   joinRequests,
   type User,
   type UpsertUser,
+  type University,
+  type InsertUniversity,
   type College,
   type InsertCollege,
+  type Major,
+  type InsertMajor,
   type Course,
   type InsertCourse,
   type Lesson,
@@ -84,12 +90,24 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByPublicId(publicId: string): Promise<User | undefined>;
   searchUsers(query: string, searcherRole: User["role"], limit?: number): Promise<UserWithCollege[]>;
-  createUserWithPassword(data: { email: string; passwordHash: string; firstName: string; lastName: string; phoneNumber?: string; collegeId: number; role?: User["role"] }): Promise<User>;
+  createUserWithPassword(data: { email: string; passwordHash: string; firstName: string; lastName: string; phoneNumber?: string; universityId: number; collegeId: number; majorId: number; role?: User["role"] }): Promise<User>;
   migrateUsersWithoutPublicId(): Promise<number>;
   upsertUser(user: UpsertUser): Promise<User>;
   getUserWithCollege(id: string): Promise<UserWithCollege | undefined>;
   updateUserRole(id: string, role: User["role"], collegeId?: number | null): Promise<User | undefined>;
   updateUserCollege(id: string, collegeId: number): Promise<User | undefined>;
+  updateUserPath(id: string, universityId: number, collegeId: number, majorId: number): Promise<User | undefined>;
+  getUniversities(): Promise<University[]>;
+  getUniversityById(id: number): Promise<University | undefined>;
+  createUniversity(university: InsertUniversity): Promise<University>;
+  updateUniversity(id: number, university: Partial<InsertUniversity>): Promise<University | undefined>;
+  deleteUniversity(id: number): Promise<void>;
+  getCollegesByUniversity(universityId: number): Promise<College[]>;
+  getMajors(collegeId?: number): Promise<Major[]>;
+  getMajorById(id: number): Promise<Major | undefined>;
+  createMajor(major: InsertMajor): Promise<Major>;
+  updateMajor(id: number, major: Partial<InsertMajor>): Promise<Major | undefined>;
+  deleteMajor(id: number): Promise<void>;
   updateUserPassword(id: string, passwordHash: string): Promise<User | undefined>;
   updatePasswordResetLastSentAt(id: string): Promise<User | undefined>;
   setLoginOtp(id: string, otp: string, expiry: Date): Promise<void>;
@@ -102,7 +120,7 @@ export interface IStorage {
   createCollege(college: InsertCollege): Promise<College>;
   updateCollege(id: number, college: Partial<InsertCollege>): Promise<College | undefined>;
   deleteCollege(id: number): Promise<void>;
-  getCourses(collegeId?: number, status?: Course["status"]): Promise<CourseWithRelations[]>;
+  getCourses(collegeId?: number, status?: Course["status"], majorId?: number): Promise<CourseWithRelations[]>;
   getCourseById(id: number): Promise<CourseWithRelations | undefined>;
   getCoursesByTeacher(teacherId: string): Promise<CourseWithRelations[]>;
   createCourse(course: InsertCourse): Promise<Course>;
@@ -163,8 +181,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUserWithPassword(data: { email: string; passwordHash: string; firstName: string; lastName: string; phoneNumber?: string; collegeId: number; role?: User["role"] }): Promise<User> {
-    // Generate public ID for the new user
+  async createUserWithPassword(data: { email: string; passwordHash: string; firstName: string; lastName: string; phoneNumber?: string; universityId: number; collegeId: number; majorId: number; role?: User["role"] }): Promise<User> {
     const publicId = await generatePublicId(data.collegeId);
     
     const [user] = await db.insert(users).values({
@@ -173,7 +190,9 @@ export class DatabaseStorage implements IStorage {
       firstName: data.firstName,
       lastName: data.lastName,
       phoneNumber: data.phoneNumber || null,
+      universityId: data.universityId,
       collegeId: data.collegeId,
+      majorId: data.majorId,
       role: data.role || "STUDENT",
       publicId,
     }).returning();
@@ -273,14 +292,18 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select()
       .from(users)
+      .leftJoin(universities, eq(users.universityId, universities.id))
       .leftJoin(colleges, eq(users.collegeId, colleges.id))
+      .leftJoin(majors, eq(users.majorId, majors.id))
       .where(eq(users.id, id));
     
     if (result.length === 0) return undefined;
     
     return {
       ...result[0].users,
+      university: result[0].universities || undefined,
       college: result[0].colleges || undefined,
+      major: result[0].majors || undefined,
     };
   }
 
@@ -300,6 +323,68 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async updateUserPath(id: string, universityId: number, collegeId: number, majorId: number): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ universityId, collegeId, majorId, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async getUniversities(): Promise<University[]> {
+    return db.select().from(universities).orderBy(universities.name);
+  }
+
+  async getUniversityById(id: number): Promise<University | undefined> {
+    const [university] = await db.select().from(universities).where(eq(universities.id, id));
+    return university;
+  }
+
+  async createUniversity(university: InsertUniversity): Promise<University> {
+    const [created] = await db.insert(universities).values(university).returning();
+    return created;
+  }
+
+  async updateUniversity(id: number, university: Partial<InsertUniversity>): Promise<University | undefined> {
+    const [updated] = await db.update(universities).set(university).where(eq(universities.id, id)).returning();
+    return updated;
+  }
+
+  async deleteUniversity(id: number): Promise<void> {
+    await db.delete(universities).where(eq(universities.id, id));
+  }
+
+  async getCollegesByUniversity(universityId: number): Promise<College[]> {
+    return db.select().from(colleges).where(eq(colleges.universityId, universityId)).orderBy(colleges.name);
+  }
+
+  async getMajors(collegeId?: number): Promise<Major[]> {
+    if (collegeId) {
+      return db.select().from(majors).where(eq(majors.collegeId, collegeId)).orderBy(majors.name);
+    }
+    return db.select().from(majors).orderBy(majors.name);
+  }
+
+  async getMajorById(id: number): Promise<Major | undefined> {
+    const [major] = await db.select().from(majors).where(eq(majors.id, id));
+    return major;
+  }
+
+  async createMajor(major: InsertMajor): Promise<Major> {
+    const [created] = await db.insert(majors).values(major).returning();
+    return created;
+  }
+
+  async updateMajor(id: number, major: Partial<InsertMajor>): Promise<Major | undefined> {
+    const [updated] = await db.update(majors).set(major).where(eq(majors.id, id)).returning();
+    return updated;
+  }
+
+  async deleteMajor(id: number): Promise<void> {
+    await db.delete(majors).where(eq(majors.id, id));
   }
 
   async updateUserPassword(id: string, passwordHash: string): Promise<User | undefined> {
@@ -347,12 +432,16 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select()
       .from(users)
+      .leftJoin(universities, eq(users.universityId, universities.id))
       .leftJoin(colleges, eq(users.collegeId, colleges.id))
+      .leftJoin(majors, eq(users.majorId, majors.id))
       .orderBy(desc(users.createdAt));
     
     return result.map(r => ({
       ...r.users,
+      university: r.universities || undefined,
       college: r.colleges || undefined,
+      major: r.majors || undefined,
     }));
   }
 
@@ -384,15 +473,14 @@ export class DatabaseStorage implements IStorage {
     await db.delete(colleges).where(eq(colleges.id, id));
   }
 
-  async getCourses(collegeId?: number, status?: Course["status"]): Promise<CourseWithRelations[]> {
-    let query = db
+  async getCourses(collegeId?: number, status?: Course["status"], majorId?: number): Promise<CourseWithRelations[]> {
+    const results = await db
       .select()
       .from(courses)
       .leftJoin(colleges, eq(courses.collegeId, colleges.id))
+      .leftJoin(majors, eq(courses.majorId, majors.id))
       .leftJoin(users, eq(courses.teacherId, users.id))
       .orderBy(desc(courses.createdAt));
-
-    const results = await query;
 
     const courseIds = results.map(r => r.courses.id);
     
@@ -411,6 +499,9 @@ export class DatabaseStorage implements IStorage {
     if (collegeId) {
       filtered = filtered.filter(r => r.courses.collegeId === collegeId);
     }
+    if (majorId) {
+      filtered = filtered.filter(r => r.courses.majorId === majorId);
+    }
     if (status) {
       filtered = filtered.filter(r => r.courses.status === status);
     }
@@ -418,6 +509,7 @@ export class DatabaseStorage implements IStorage {
     return filtered.map(r => ({
       ...r.courses,
       college: r.colleges || undefined,
+      major: r.majors || undefined,
       teacher: r.users || undefined,
       _count: {
         lessons: lessonMap.get(r.courses.id) || 0,
@@ -431,6 +523,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(courses)
       .leftJoin(colleges, eq(courses.collegeId, colleges.id))
+      .leftJoin(majors, eq(courses.majorId, majors.id))
       .leftJoin(users, eq(courses.teacherId, users.id))
       .where(eq(courses.id, id));
 
@@ -442,6 +535,7 @@ export class DatabaseStorage implements IStorage {
     return {
       ...result[0].courses,
       college: result[0].colleges || undefined,
+      major: result[0].majors || undefined,
       teacher: result[0].users || undefined,
       lessons: lessonList,
       enrollments: enrollmentList,
@@ -457,6 +551,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(courses)
       .leftJoin(colleges, eq(courses.collegeId, colleges.id))
+      .leftJoin(majors, eq(courses.majorId, majors.id))
       .where(eq(courses.teacherId, teacherId))
       .orderBy(desc(courses.createdAt));
 
@@ -476,6 +571,7 @@ export class DatabaseStorage implements IStorage {
     return results.map(r => ({
       ...r.courses,
       college: r.colleges || undefined,
+      major: r.majors || undefined,
       _count: {
         lessons: lessonMap.get(r.courses.id) || 0,
         enrollments: enrollmentMap.get(r.courses.id) || 0,

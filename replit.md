@@ -2,7 +2,7 @@
 
 ## Overview
 
-A scalable university e-learning platform (MVP) for paid academic courses targeting university students across multiple colleges. The platform features strict role-based access control with five user roles (Student, Teacher, Admin, Super Admin, Accountant) and supports three colleges (Pharmacy, Engineering, IT) with distinct visual themes.
+A scalable university e-learning platform (MVP) for paid academic courses targeting university students across multiple universities, colleges, and majors. The platform features strict role-based access control with five user roles (Student, Teacher, Admin, Super Admin, Accountant) and supports a hierarchical academic structure: University > College > Major > Course.
 
 Key features:
 - Course browsing with locked lesson content for non-enrolled students
@@ -46,8 +46,11 @@ Preferred communication style: Simple, everyday language.
 
 **Route Structure**:
 - `/api/auth/*` - Authentication endpoints (login, signup, verify-otp, forgot-password, reset-password)
+- `/api/universities/*` - University listing and details
+- `/api/universities/:id/colleges` - Colleges for a specific university
 - `/api/colleges/*` - College CRUD operations
-- `/api/courses/*` - Course management with approval workflow
+- `/api/majors/*` - Major listing (filterable by collegeId query param)
+- `/api/courses/*` - Course management with approval workflow (filterable by majorId)
 - `/api/lessons/*` - Lesson content management
 - `/api/enrollments/*` - Student enrollment management
 - `/api/join-requests/*` - Join request management (student enrollment requests)
@@ -61,11 +64,13 @@ Preferred communication style: Simple, everyday language.
 - **Auto-Initialization**: `server/db-init.ts` ensures required colleges exist on startup (prevents FK constraint errors)
 
 **Core Entities**:
-- `users` - Extended Replit Auth users with roles and college associations
+- `universities` - University definitions (id, name, slug)
+- `users` - Extended Replit Auth users with roles and university/college/major associations
   - Has `publicId` field: Unique identifier format `XXNNNNNN` (2-letter college code + 6 random digits)
   - College codes: PH (Pharmacy), EN (Engineering), IT (IT), XX (no college/admins)
-- `colleges` - College definitions with theme colors
-- `courses` - Courses with status workflow (DRAFT → PENDING_APPROVAL → PUBLISHED/REJECTED)
+- `colleges` - College definitions with theme colors (linked to university via universityId)
+- `majors` - Major/department definitions (linked to college via collegeId)
+- `courses` - Courses with status workflow (DRAFT → PENDING_APPROVAL → PUBLISHED/REJECTED), linked to major via majorId
 - `lessons` - Course content with ordering and content types (video, text, link, file)
 - `enrollments` - Student-course relationships
 - `joinRequests` - Student enrollment requests with payment receipt uploads

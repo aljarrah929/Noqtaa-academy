@@ -1,0 +1,30 @@
+I need to refactor the application to support a strict **"University-Based Path System"**.
+
+In Jordan, university curriculums are highly specific. A course like "Chemistry 101" at University A is completely different from University B. We must NOT mix content.
+
+Please implement the following changes to the Database Schema and User Flow:
+
+1.  **Database Schema Refactoring (`shared/schema.ts`):**
+    Create a strict hierarchy using One-to-Many relationships:
+    * **`universities` table:** `id`, `name` (e.g., Jordan University of Science and Technology), `slug`, `logoUrl`.
+    * **`colleges` table:** `id`, `name` (e.g., Faculty of Engineering), `universityId` (Foreign Key).
+    * **`majors` table:** `id`, `name` (e.g., Civil Engineering), `collegeId` (Foreign Key).
+    * **`courses` table:** `id`, `name`, `code` (e.g., CHEM101), `instructorName` (String, nullable), `majorId` (Foreign Key).
+    * **Update `users` table:** Add `universityId`, `collegeId`, and `majorId` as nullable Foreign Keys.
+
+2.  **Onboarding / Sign-up Flow:**
+    * When a new user signs up, they MUST go through a selection wizard:
+        1.  **Select University** (Dropdown).
+        2.  **Select College** (Filtered by selected University).
+        3.  **Select Major** (Filtered by selected College).
+    * Save these selections to the user's profile.
+
+3.  **Content Scoping (The Golden Rule):**
+    * On the User Dashboard/Home, **ONLY** display courses that belong to the user's selected `majorId` (or `collegeId` for general electives).
+    * Do not show "Popular Courses" from other universities.
+    * In the Admin Dashboard, allow creating a course specifically nested under a University -> College -> Major.
+
+4.  **Seed Data (Optional but helpful):**
+    * Create a script to seed at least 2 universities (e.g., "JUST" and "University of Jordan") with dummy colleges and majors to test the hierarchy.
+
+Please restructure the backend and frontend to enforce this strict separation.
