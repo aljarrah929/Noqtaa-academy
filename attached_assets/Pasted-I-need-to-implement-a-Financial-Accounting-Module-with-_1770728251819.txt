@@ -1,0 +1,49 @@
+I need to implement a **Financial & Accounting Module** with a dedicated User Role.
+
+Please implement the following end-to-end features:
+
+1.  **Database & Auth Update:**
+    * Update the `users` table `role` enum in `shared/schema.ts` to include `'accountant'`.
+    * Update the auth middleware to allow access to `/accountant` routes for users with this role.
+
+2.  **Backend - Financial Aggregation Endpoint:**
+    * Create a generic route `GET /api/accountant/reports`.
+    * **Logic:** Fetch ALL courses with their relation to:
+        * `instructor` (User details).
+        * `enrollments` (Count of students).
+    * **Calculations:** For each course, calculate `Total Revenue` = (`course.price` * `enrollmentCount`).
+    * **Return Data Structure:**
+        ```json
+        [
+          {
+            "courseId": 1,
+            "title": "Chemistry 101",
+            "instructorName": "Dr. Ahmed",
+            "price": 50,
+            "studentCount": 120,
+            "totalRevenue": 6000
+          },
+          ...
+        ]
+        ```
+
+3.  **Frontend - Accountant Dashboard (`/accountant`):**
+    * Create a clean, data-heavy dashboard.
+    * **Main Table:** Display the data fetched above (Sortable by Revenue, Instructor, etc.).
+    * **Filter:** A dropdown to "Filter by Instructor".
+        * If an instructor is selected, show only their courses and a "Total Due" sum card.
+        * If "All" is selected, show platform-wide totals.
+
+4.  **The "Official Invoice" Print System (Crucial):**
+    * Create a printable component `<InvoiceTemplate />` that is only visible when printing or in a modal.
+    * **Header:** Display the Platform Logo (Noqtaa) and Date.
+    * **Body:** A clean table of the selected data (Course | Students | Price | Total).
+    * **Footer (Signatures):**
+        * Add a specific section at the bottom with two lines for signatures:
+            * "Accountant Signature: ______________"
+            * "Manager Signature: ______________"
+    * **Print Action:** Add a "🖨️ Print Invoice" button.
+        * When clicked, it should trigger `window.print()`.
+        * **CSS Media Query (`@media print`):** Ensure that **ONLY** the invoice component is printed. Hide the sidebar, navigation, buttons, and filters during printing.
+
+Please build this role and reporting system.

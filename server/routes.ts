@@ -2612,6 +2612,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Financial reports - course revenue data with instructor info
+  app.get("/api/accountant/reports", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
+    try {
+      const allCourses = await storage.getCourses();
+      const publishedCourses = allCourses.filter(c => c.status === "PUBLISHED");
+
+      const reports = publishedCourses.map(course => {
+        const enrollmentCount = course._count?.enrollments || 0;
+        const price = course.price || 0;
+        const instructorName = course.instructorName ||
+          (course.teacher ? `${course.teacher.firstName || ""} ${course.teacher.lastName || ""}`.trim() : "Unknown");
+
+        return {
+          courseId: course.id,
+          title: course.title,
+          instructorId: course.teacherId,
+          instructorName,
+          collegeName: course.college?.name || "N/A",
+          price,
+          studentCount: enrollmentCount,
+          totalRevenue: price * enrollmentCount,
+        };
+      });
+
+      const totalRevenue = reports.reduce((sum, r) => sum + r.totalRevenue, 0);
+      const totalStudents = reports.reduce((sum, r) => sum + r.studentCount, 0);
+
+      res.json({
+        reports,
+        totals: {
+          totalRevenue,
+          totalStudents,
+          totalCourses: reports.length,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching accountant reports:", error);
+      res.status(500).json({ message: "Failed to fetch financial reports" });
+    }
+  });
+
   // Generate PDF enrollment report
   app.get("/api/accountant/enrollments.pdf", requireRole("ACCOUNTANT", "SUPER_ADMIN"), async (req: any, res) => {
     try {

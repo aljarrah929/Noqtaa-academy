@@ -105,6 +105,14 @@ Quiz Builder Flow:
 ### Accountant API Endpoints
 - `GET /api/accountant/enrollments` - Returns enrollment stats grouped by college (requires ACCOUNTANT or SUPER_ADMIN role)
 - `GET /api/accountant/enrollments.pdf` - Generates English PDF enrollment report (requires ACCOUNTANT or SUPER_ADMIN role)
+- `GET /api/accountant/reports` - Returns financial reports with per-course revenue (price * enrollments), instructor info, college name, totals
+
+### Accountant Dashboard (`/accountant`)
+- **Financial Reports View**: Sortable table (by title, instructor, price, students, revenue) with instructor filter dropdown
+- **Summary Cards**: Total Revenue (or "Total Due" when filtered by instructor), Total Students, Total Courses - all update based on filter
+- **Print Invoice System**: `<InvoiceTemplate />` component with platform logo, date, data table, totals row, and signature lines (Accountant + Manager)
+  - Uses `@media print` CSS to hide all app chrome (sidebar, nav, buttons) and show only the invoice
+  - Triggered via "Print Invoice" button calling `window.print()`
 
 ### Join Request API Endpoints
 Student endpoints:
