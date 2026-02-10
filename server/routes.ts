@@ -854,11 +854,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Course not found" });
       }
       
-      const isOwner = course.teacherId === userId;
+      if (user?.role === "TEACHER") {
+        return res.status(403).json({ message: "Teachers cannot enroll students. Please contact an Admin." });
+      }
+      
       const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
       
-      if (!isOwner && !isAdmin) {
-        return res.status(403).json({ message: "Only teachers and admins can enroll students" });
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Only admins can enroll students" });
       }
       
       const { studentId } = req.body;
@@ -903,12 +906,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Course not found" });
       }
       
-      // Check authorization: teacher owns course OR is admin
-      const isOwner = course.teacherId === userId;
+      if (user?.role === "TEACHER") {
+        return res.status(403).json({ message: "Teachers cannot remove students. Please contact an Admin." });
+      }
+      
       const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
       
-      if (!isOwner && !isAdmin) {
-        return res.status(403).json({ message: "Unauthorized" });
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Only admins can remove students" });
       }
       
       // Check student exists and is a student

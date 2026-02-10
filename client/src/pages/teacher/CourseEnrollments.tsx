@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import type { CourseWithRelations, User, Enrollment, UserWithCollege } from "@shared/schema";
 
 interface EnrollmentWithStudent extends Enrollment {
@@ -40,6 +41,8 @@ export default function CourseEnrollments() {
   const [match, params] = useRoute("/teacher/courses/:id/enrollments");
   const courseId = params?.id;
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isTeacher = user?.role === "TEACHER";
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -168,10 +171,12 @@ export default function CourseEnrollments() {
                 {enrollments?.length || 0} students enrolled
               </p>
             </div>
-            <Button onClick={() => setDialogOpen(true)} data-testid="button-enroll-student">
-              <UserPlus className="w-4 h-4 mr-2" />
-              Enroll Student
-            </Button>
+            {!isTeacher && (
+              <Button onClick={() => setDialogOpen(true)} data-testid="button-enroll-student">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Enroll Student
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             {enrollmentsLoading ? (
@@ -227,28 +232,32 @@ export default function CourseEnrollments() {
                             </a>
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveClick(
-                            enrollment.studentId,
-                            `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || "this student"
-                          )}
-                          data-testid={`button-remove-${enrollment.id}`}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
+                        {!isTeacher && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveClick(
+                              enrollment.studentId,
+                              `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || "this student"
+                            )}
+                            data-testid={`button-remove-${enrollment.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="text-center py-12">
+              <div className="text-center py-12" data-testid="empty-enrollments">
                 <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="font-medium mb-2">No Students Enrolled</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Click "Enroll Student" to add students to this course.
+                  {isTeacher
+                    ? "No students enrolled yet. Please contact Admin to add students."
+                    : "Click \"Enroll Student\" to add students to this course."}
                 </p>
               </div>
             )}
