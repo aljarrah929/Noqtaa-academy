@@ -42,6 +42,7 @@ export default function CourseEnrollments() {
   const courseId = params?.id;
   const { toast } = useToast();
   const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
   const isTeacher = user?.role === "TEACHER";
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -171,7 +172,7 @@ export default function CourseEnrollments() {
                 {enrollments?.length || 0} students enrolled
               </p>
             </div>
-            {!isTeacher && (
+            {isAdmin && (
               <Button onClick={() => setDialogOpen(true)} data-testid="button-enroll-student">
                 <UserPlus className="w-4 h-4 mr-2" />
                 Enroll Student
@@ -232,7 +233,7 @@ export default function CourseEnrollments() {
                             </a>
                           </Button>
                         )}
-                        {!isTeacher && (
+                        {isAdmin && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -255,9 +256,9 @@ export default function CourseEnrollments() {
                 <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="font-medium mb-2">No Students Enrolled</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  {isTeacher
-                    ? "No students enrolled yet. Please contact Admin to add students."
-                    : "Click \"Enroll Student\" to add students to this course."}
+                  {isAdmin
+                    ? "Click \"Enroll Student\" to add students to this course."
+                    : "No students enrolled yet. Please contact Admin to add students."}
                 </p>
               </div>
             )}

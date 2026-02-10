@@ -2412,23 +2412,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const user = await storage.getUser(userId);
-      if (!user || !["TEACHER", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
-        return res.status(403).json({ message: "Access denied" });
+      if (!user || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+        return res.status(403).json({ message: "Only admins can approve join requests" });
       }
       
       const joinRequest = await storage.getJoinRequestById(requestId);
       if (!joinRequest) {
         console.log("[JoinRequest] Request not found:", requestId);
         return res.status(404).json({ message: "Join request not found" });
-      }
-      
-      // Teachers can only approve requests for their own courses
-      if (user.role === "TEACHER") {
-        const course = await storage.getCourseById(joinRequest.courseId);
-        if (!course || course.teacherId !== userId) {
-          console.log("[JoinRequest] Teacher not authorized for course:", joinRequest.courseId);
-          return res.status(403).json({ message: "You can only manage requests for your own courses" });
-        }
       }
       
       if (joinRequest.status !== "PENDING") {
@@ -2465,23 +2456,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const user = await storage.getUser(userId);
-      if (!user || !["TEACHER", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
-        return res.status(403).json({ message: "Access denied" });
+      if (!user || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+        return res.status(403).json({ message: "Only admins can reject join requests" });
       }
       
       const joinRequest = await storage.getJoinRequestById(requestId);
       if (!joinRequest) {
         console.log("[JoinRequest] Request not found:", requestId);
         return res.status(404).json({ message: "Join request not found" });
-      }
-      
-      // Teachers can only reject requests for their own courses
-      if (user.role === "TEACHER") {
-        const course = await storage.getCourseById(joinRequest.courseId);
-        if (!course || course.teacherId !== userId) {
-          console.log("[JoinRequest] Teacher not authorized for course:", joinRequest.courseId);
-          return res.status(403).json({ message: "You can only manage requests for your own courses" });
-        }
       }
       
       if (joinRequest.status !== "PENDING") {

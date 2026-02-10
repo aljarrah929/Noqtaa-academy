@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   UserPlus, 
   Clock, 
@@ -33,12 +34,15 @@ import {
   Loader2, 
   Inbox,
   BookOpen,
-  Eye
+  Eye,
+  ShieldAlert
 } from "lucide-react";
 import type { JoinRequestWithRelations } from "@shared/schema";
 
 export default function TeacherJoinRequests() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canApproveReject = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [receiptMimeType, setReceiptMimeType] = useState<string>("image/jpeg");
@@ -248,34 +252,43 @@ export default function TeacherJoinRequests() {
                               <Eye className="w-4 h-4 mr-1" />
                               Receipt
                             </Button>
-                            <Button 
-                              variant="default"
-                              size="sm"
-                              onClick={() => handleAction(
-                                request.id, 
-                                "approve", 
-                                `${request.student?.firstName} ${request.student?.lastName}`
-                              )}
-                              disabled={approveMutation.isPending || rejectMutation.isPending}
-                              data-testid={`button-approve-${request.id}`}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button 
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleAction(
-                                request.id, 
-                                "reject", 
-                                `${request.student?.firstName} ${request.student?.lastName}`
-                              )}
-                              disabled={approveMutation.isPending || rejectMutation.isPending}
-                              data-testid={`button-reject-${request.id}`}
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              Reject
-                            </Button>
+                            {canApproveReject ? (
+                              <>
+                                <Button 
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => handleAction(
+                                    request.id, 
+                                    "approve", 
+                                    `${request.student?.firstName} ${request.student?.lastName}`
+                                  )}
+                                  disabled={approveMutation.isPending || rejectMutation.isPending}
+                                  data-testid={`button-approve-${request.id}`}
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button 
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleAction(
+                                    request.id, 
+                                    "reject", 
+                                    `${request.student?.firstName} ${request.student?.lastName}`
+                                  )}
+                                  disabled={approveMutation.isPending || rejectMutation.isPending}
+                                  data-testid={`button-reject-${request.id}`}
+                                >
+                                  <XCircle className="w-4 h-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </>
+                            ) : (
+                              <Badge variant="outline" data-testid={`badge-pending-admin-${request.id}`}>
+                                <ShieldAlert className="w-3 h-3 mr-1" />
+                                Pending Admin Approval
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         {request.message && (

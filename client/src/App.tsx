@@ -34,6 +34,7 @@ import FeaturedProfilesManagement from "@/pages/admin/FeaturedProfilesManagement
 import HomeStatsManagement from "@/pages/admin/HomeStatsManagement";
 import HierarchyManager from "@/pages/admin/HierarchyManager";
 import QuizBuilder from "@/pages/admin/QuizBuilder";
+import AdminJoinRequests from "@/pages/admin/AdminJoinRequests";
 import AccountantDashboard from "@/pages/accountant/AccountantDashboard";
 import CollegeOnboarding from "@/pages/CollegeOnboarding";
 import SelectPath from "@/pages/SelectPath";
@@ -85,6 +86,7 @@ function Router() {
       <Route path="/admin/courses/:id/edit" component={CourseEditor} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/approvals" component={CourseApprovals} />
+      <Route path="/admin/requests" component={AdminJoinRequests} />
       <Route path="/admin/teachers" component={TeachersList} />
       <Route path="/admin/users" component={UserManagement} />
       <Route path="/admin/structure" component={HierarchyManager} />
