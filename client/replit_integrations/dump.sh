@@ -1,0 +1,1 @@
+pg_dump --no-owner --no-privileges "postgresql://neondb_owner:npg_hXn9dGsWT7fe@ep-falling-mouse-aekqcjwd.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require" > data.sql

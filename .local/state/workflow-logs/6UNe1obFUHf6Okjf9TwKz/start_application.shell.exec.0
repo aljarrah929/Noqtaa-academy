@@ -1,0 +1,20 @@
+[1G[0K⠙[1G[0K
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K⠙[1G[0KChecking if universities exist...
+Found 2 universities in database
+[Session] Configuring session middleware, isProduction: false
+2:52:28 PM [express] Super Admin seeding process completed
+[Session] Configuring session middleware, isProduction: false
+[R2 Config] ACCOUNT_ID: SET
+[R2 Config] ACCESS_KEY_ID: SET
+[R2 Config] SECRET_ACCESS_KEY: SET
+[R2 Config] BUCKET_NAME: cpeacademy-files
+2:52:30 PM [express] serving on port 5000
+[Resend] Connection verified - API key configured
+
+[1m[33mwarn[39m[22m - The class `duration-[800ms]` is ambiguous and matches multiple utilities.
+[1m[33mwarn[39m[22m - If this is content and not a class, replace it with `duration-&lsqb;800ms&rsqb;` to silence this warning.
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.

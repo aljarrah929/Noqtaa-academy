@@ -1,0 +1,86 @@
+[1G[0K⠙[1G[0K
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K⠙[1G[0KChecking if universities exist...
+Found 2 universities in database
+[Session] Configuring session middleware, isProduction: false
+7:03:07 AM [express] Super Admin seeding process completed
+[Session] Configuring session middleware, isProduction: false
+[R2 Config] ACCOUNT_ID: SET
+[R2 Config] ACCESS_KEY_ID: SET
+[R2 Config] SECRET_ACCESS_KEY: SET
+[R2 Config] BUCKET_NAME: cpeacademy-files
+7:03:09 AM [express] serving on port 5000
+[Resend] Connection verified - API key configured
+
+[1m[33mwarn[39m[22m - The class `duration-[800ms]` is ambiguous and matches multiple utilities.
+[1m[33mwarn[39m[22m - If this is content and not a class, replace it with `duration-&lsqb;800ms&rsqb;` to silence this warning.
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+7:03:16 AM [express] GET /api/auth/user 401 in 2ms
+7:03:16 AM [express] GET /api/colleges 304 in 18ms
+7:03:16 AM [express] GET /api/featured-profiles 304 in 18ms
+7:03:16 AM [express] GET /api/courses/featured 304 in 28ms
+7:03:16 AM [express] GET /api/public-stats 304 in 22ms
+7:03:29 AM [express] GET /api/auth/user 401 in 1ms
+7:03:29 AM [express] GET /api/courses/featured 304 in 15ms
+7:03:29 AM [express] GET /api/featured-profiles 304 in 13ms
+7:03:29 AM [express] GET /api/colleges 304 in 12ms
+7:03:29 AM [express] GET /api/public-stats 304 in 12ms
+7:04:28 AM [express] GET /api/courses 304 in 20ms
+7:04:52 AM [express] GET /api/courses/15 200 in 174ms
+[Login] Attempting login for email: frozzermoh25@gmail.com
+[Login] User NOT found for email: frozzermoh25@gmail.com
+7:06:06 AM [express] POST /api/auth/login 401 in 14ms
+[Login] Attempting login for email: frozzermoh25@gmail.com
+[Login] User NOT found for email: frozzermoh25@gmail.com
+7:06:15 AM [express] POST /api/auth/login 401 in 4ms
+[Login] Attempting login for email: cpeacademy5@gmail.com
+[Login] User FOUND: id=cpeacademy5-gmail, hasPasswordHash=true
+[Login] Password comparison result: false
+7:07:29 AM [express] POST /api/auth/login 401 in 99ms
+[Login] Attempting login for email: cpeacademy5@gmail.com
+[Login] User FOUND: id=cpeacademy5-gmail, hasPasswordHash=true
+[Login] Password comparison result: false
+7:07:30 AM [express] POST /api/auth/login 401 in 86ms
+[Login] Attempting login for email: cpeacademy5@gmail.com
+[Login] User FOUND: id=cpeacademy5-gmail, hasPasswordHash=true
+[Login] Password comparison result: false
+7:07:32 AM [express] POST /api/auth/login 401 in 90ms
+[Auth] Forgot password request for: moalshar23@ph.just.edu.jo
+[Resend] Attempting to send email to moalshar23@ph.just.edu.jo...
+7:07:51 AM [express] POST /api/auth/forgot-password 200 in 439ms
+[Resend] Starting email send to moalshar23@ph.just.edu.jo...
+[Resend] Using from address: Noqtaa Academy Support <support@noqtaa.cloud>
+[Resend] Email sent successfully to moalshar23@ph.just.edu.jo, ID: e48f0702-52fd-4b7d-b847-c58134911e02
+[Auth] Forgot password request for: frozzermoh14@gmail.com
+[Auth] User not found for email: frozzermoh14@gmail.com
+7:08:29 AM [express] POST /api/auth/forgot-password 200 in 10ms
+7:10:22 AM [express] GET /api/auth/user 401 in 1ms
+7:10:28 AM [express] GET /api/auth/user 401 in 0ms
+[Login] Attempting login for email: cpeacademy5@gmail.com
+[Login] User FOUND: id=cpeacademy5-gmail, hasPasswordHash=true
+[Login] Password comparison result: true
+[Login] OTP generated for userId: cpeacademy5-gmail
+[Resend] Attempting to send email to cpeacademy5@gmail.com...
+7:11:26 AM [express] POST /api/auth/login 200 in 296ms
+[Resend] Starting email send to cpeacademy5@gmail.com...
+[Resend] Using from address: Noqtaa Academy Support <support@noqtaa.cloud>
+[Resend] Email sent successfully to cpeacademy5@gmail.com, ID: 0c587fcd-d139-4331-91d7-0b46f64f7180
+[OTP] RAW BODY: {"userId":"cpeacademy5-gmail","otp":"724113"}
+[OTP] Sanitized: {"userId":"cpeacademy5-gmail","otp":"724113"}
+[OTP] Verifying OTP for userId: cpeacademy5-gmail
+[OTP] OTP verified, logging in userId: cpeacademy5-gmail
+[OTP] Session saved successfully for userId: cpeacademy5-gmail
+7:12:50 AM [express] POST /api/auth/verify-otp 200 in 428ms
+7:12:51 AM [express] GET /api/auth/user 200 in 12ms
+7:12:51 AM [express] GET /api/admin/pending 200 in 14ms
+7:12:51 AM [express] GET /api/admin/teachers 200 in 29ms
+7:12:51 AM [express] GET /api/admin/dashboard/stats 200 in 31ms
+7:13:36 AM [express] GET /api/accountant/reports 200 in 29ms
+7:28:09 AM [express] GET /api/auth/user 304 in 443ms
+7:28:09 AM [express] GET /api/colleges 304 in 585ms
+7:28:20 AM [express] GET /api/teacher/courses 200 in 26ms
+[JoinRequest] Fetched [33m2[39m requests for user: cpeacademy5-gmail
+7:28:29 AM [express] GET /api/join-requests 200 in 21ms

@@ -1,0 +1,40 @@
+[1G[0K⠙[1G[0K
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K⠙[1G[0KChecking if universities exist...
+Found 2 universities in database
+[Session] Configuring session middleware, isProduction: false
+11:25:52 AM [express] Super Admin seeding process completed
+[Session] Configuring session middleware, isProduction: false
+[R2 Config] ACCOUNT_ID: SET
+[R2 Config] ACCESS_KEY_ID: SET
+[R2 Config] SECRET_ACCESS_KEY: SET
+[R2 Config] BUCKET_NAME: cpeacademy-files
+11:25:54 AM [express] serving on port 5000
+[Resend] Connection verified - API key configured
+
+[1m[33mwarn[39m[22m - The class `duration-[800ms]` is ambiguous and matches multiple utilities.
+[1m[33mwarn[39m[22m - If this is content and not a class, replace it with `duration-&lsqb;800ms&rsqb;` to silence this warning.
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+11:26:30 AM [express] GET /api/auth/user 401 in 1ms
+11:26:30 AM [express] GET /api/featured-profiles 304 in 24ms
+11:26:30 AM [express] GET /api/colleges 200 in 16ms
+11:26:30 AM [express] GET /api/public-stats 200 in 22ms
+11:26:30 AM [express] GET /api/courses/featured 200 in 29ms
+11:27:03 AM [express] GET /api/auth/user 401 in 1ms
+11:27:03 AM [express] GET /api/featured-profiles 200 in 13ms
+11:27:03 AM [express] GET /api/colleges 200 in 15ms
+11:27:03 AM [express] GET /api/courses/featured 200 in 22ms
+11:27:03 AM [express] GET /api/public-stats 200 in 20ms
+[Auth] Forgot password request for: frozzermoh14@gmail.com
+[Auth] User not found for email: frozzermoh14@gmail.com
+11:27:45 AM [express] POST /api/auth/forgot-password 200 in 12ms
+[Auth] Forgot password request for: moalshar23@ph.just.edu.jo
+[Resend] Attempting to send email to moalshar23@ph.just.edu.jo...
+11:28:23 AM [express] POST /api/auth/forgot-password 200 in 293ms
+[Resend] Starting email send to moalshar23@ph.just.edu.jo...
+[Resend] Using from address: Noqtaa Academy Support <support@noqtaa.cloud>
+[Resend] Email sent successfully to moalshar23@ph.just.edu.jo, ID: 84d954ab-d550-4742-a839-4b9b26eb1507
+11:29:34 AM [express] GET /api/courses 200 in 20ms
