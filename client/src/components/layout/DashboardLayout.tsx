@@ -5,6 +5,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import logoUrl from "@/assets/logo.png";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -166,15 +167,10 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         <Sidebar side={isRtl ? "right" : "left"}>
           <SidebarHeader className="border-b border-sidebar-border p-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="p-1.5 rounded-md bg-primary/10 flex items-center justify-center" style={{ width: '32px', height: '32px' }}>
-                <img 
-                  src={cpeIconUrl} 
-                  alt="Noqtaa Academy" 
-                  className="h-6 w-auto object-contain"
-                  data-testid="img-sidebar-brand-icon"
-                />
-              </div>
-              <span className="font-semibold">{BRAND_NAME}</span>
+              <div className="flex items-center gap-2">
+                <img src={logoUrl} alt="Noqtaa Academy" className="h-8 w-8 object-contain" />
+                 </div>
+              <span className="font-semibold">Noqtaa Academy</span>
             </Link>
             {collegeTheme && user?.role === "STUDENT" && (
               <Badge variant="outline" className="mt-2 w-fit">
