@@ -12,7 +12,7 @@ import { GraduationCap, BookOpen, Users, Award, ArrowRight, Building2, Trophy, S
 import type { CourseWithRelations, College, FeaturedProfile } from "@shared/schema";
 import { BRAND_NAME, BRAND_COPYRIGHT } from "@/lib/branding";
 import { useTranslation } from "react-i18next";
-
+import logoUrl from "@/assets/logo.png";
 const heroImages = [
   { src: "/images/hero-pharmacy.png", alt: "Pharmacy" },
   { src: "/images/hero-engineering.png", alt: "Engineering" },
@@ -360,9 +360,11 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-md bg-primary/10">
-                <GraduationCap className="w-5 h-5 text-primary" />
-              </div>
+              <img 
+                src={logoUrl} 
+                alt={BRAND_NAME} 
+                className="w-10 h-10 object-contain rounded-md" 
+             />
               <span className="font-semibold">{BRAND_NAME}</span>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -374,3 +376,4 @@ export default function Landing() {
     </div>
   );
 }
+       
