@@ -14,9 +14,9 @@ import { BRAND_NAME, BRAND_COPYRIGHT } from "@/lib/branding";
 import { useTranslation } from "react-i18next";
 import logoUrl from "@/assets/logo.png";
 const heroImages = [
-  { src: "/images/hero-pharmacy.png", alt: "Pharmacy" },
-  { src: "/images/hero-engineering.png", alt: "Engineering" },
-  { src: "/images/hero-it.png", alt: "IT" },
+  //{ src: "/images/hero-pharmacy.png", alt: "Pharmacy" },
+  //{ src: "/images/hero-engineering.png", alt: "Engineering" },
+  //{ src: "/images/hero-it.png", alt: "IT" },
   { src: "/images/flag.png" },
 ];
 
