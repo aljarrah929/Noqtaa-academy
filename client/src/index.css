@@ -467,3 +467,13 @@ body.content-protected img {
     margin: 2px 0;
   }
 }
+@layer utilities {
+  .bg-gold-gradient {
+    background: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+  }
+  .text-gold-gradient {
+    background: linear-gradient(135deg, #BF953F, #B38728, #AA771C);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
