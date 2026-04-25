@@ -1596,7 +1596,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const command = new PutObjectCommand({
         Bucket: B2_BUCKET_NAME,
         Key: objectKey,
-        ContentType: contentType,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+        ContentLength: file.size, // 👈 هاد السطر هو الضربة القاضية اللي رح تجبر B2 يقبله
       });
       
       const uploadUrl = await getSignedUrl(b2Client, command, { expiresIn: 1800 });
