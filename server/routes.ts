@@ -46,20 +46,21 @@ const B2_REGION = process.env.B2_REGION || "eu-central-003";
 const CDN_BASE_URL = process.env.CDN_BASE_URL;
 
 function getB2Client(): S3Client | null {
-  if (!B2_KEY_ID || !B2_APP_KEY || !B2_ENDPOINT_RAW) {
-    console.log("[B2] Client not configured - missing credentials");
-    return null;
-  }
-  console.log("[B2] Creating S3Client with endpoint:", B2_ENDPOINT, "region:", B2_REGION);
-  return new S3Client({
-    region: B2_REGION,
-    endpoint: B2_ENDPOINT,
-    forcePathStyle: true,
-    credentials: {
-      accessKeyId: B2_KEY_ID,
-      secretAccessKey: B2_APP_KEY,
-    },
-  });
+  if (!B2_KEY_ID || !B2_APP_KEY || !B2_ENDPOINT_RAW) {
+    console.log("[B2] Client not configured - missing credentials");
+    return null;
+  }
+  console.log("[B2] Creating S3Client with endpoint:", B2_ENDPOINT, "region:", B2_REGION);
+  return new S3Client({
+    region: B2_REGION,
+    endpoint: B2_ENDPOINT,
+    forcePathStyle: true,
+    credentials: {
+      accessKeyId: B2_KEY_ID,
+      secretAccessKey: B2_APP_KEY,
+    },
+    requestChecksumCalculation: "WHEN_REQUIRED", // <-- هذا هو سطر الحل السحري
+  });
 }
 
 function getVideoCdnUrl(objectKey: string): string {
