@@ -329,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only super admins can create majors" });
       }
       const data = insertMajorSchema.parse(req.body);
-      const college = await storage.getCollegeById(data.collegeId);
+const college = await storage.getCollegeById((data as any).collegeId);
       if (!college) {
         return res.status(400).json({ message: "Invalid college" });
       }
