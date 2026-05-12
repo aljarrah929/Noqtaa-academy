@@ -1594,12 +1594,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate presigned PUT URL (30 minute expiry for large videos)
       const command = new PutObjectCommand({
-        Bucket: B2_BUCKET_NAME,
-        Key: objectKey,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-        ContentLength: file.size, // 👈 هاد السطر هو الضربة القاضية اللي رح تجبر B2 يقبله
-      });
+          Bucket: B2_BUCKET_NAME,
+          Key: objectKey,
+          ContentType: contentType,
+        });
       
       const uploadUrl = await getSignedUrl(b2Client, command, { expiresIn: 1800 });
       
@@ -1965,32 +1963,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Avatar must be under 2MB" });
       }
       
-      const r2Client = getR2Client();
-      if (!r2Client || !R2_BUCKET_NAME) {
-        console.error("R2 configuration missing for avatar upload");
-        return res.status(500).json({ message: "File storage service is not configured" });
-      }
+      const b2Client = getB2Client();
+        if (!b2Client || !B2_BUCKET_NAME) {
+          console.error("B2 configuration missing for avatar upload");
+          return res.status(500).json({ message: "File storage service is not configured" });
+        }
       
       // Create safe object key: avatars/<userId>/<timestamp>-<safeFileName>
       const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const timestamp = Date.now();
-      const objectKey = `avatars/${userId}/${timestamp}-${safeFileName}`;
+        const timestamp = Date.now();
+        const objectKey = `avatars/${userId}/${timestamp}-${safeFileName}`;
       
       // Generate presigned PUT URL (10 minute expiry)
       const command = new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: objectKey,
-        ContentType: contentType,
-      });
+          Bucket: B2_BUCKET_NAME,
+          Key: objectKey,
+          ContentType: contentType,
+        });
       
-      const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 600 });
+      const uploadUrl = await getSignedUrl(b2Client, command, { expiresIn: 600 });
       
       // For avatars, we'll generate a presigned GET URL that lasts longer
       const getCommand = new GetObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: objectKey,
-      });
-      const fileUrl = await getSignedUrl(r2Client, getCommand, { expiresIn: 86400 * 7 }); // 7 days
+          Bucket: B2_BUCKET_NAME,
+          Key: objectKey,
+        });
+      const fileUrl = await getSignedUrl(b2Client, getCommand, { expiresIn: 86400 * 7 });
       
       res.json({
         uploadUrl,
