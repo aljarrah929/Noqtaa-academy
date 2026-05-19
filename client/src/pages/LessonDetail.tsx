@@ -5,7 +5,6 @@ import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/hooks/useAuth";
 import { LockedContentMessage } from "@/components/courses/LessonList";
 import { ProtectedVideo } from "@/components/ProtectedVideo";
-import { WatermarkOverlay } from "@/components/WatermarkOverlay";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -121,13 +120,6 @@ export default function LessonDetail() {
                 allowFullScreen
                 title={lesson.title}
               />
-              {user && (
-                <WatermarkOverlay
-                  email={user.email}
-                  phoneNumber={user.phoneNumber}
-                  publicId={user.publicId}
-                />
-              )}
             </div>
           );
         }
@@ -142,13 +134,6 @@ export default function LessonDetail() {
                 allowFullScreen
                 title={lesson.title}
               />
-              {user && (
-                <WatermarkOverlay
-                  email={user.email}
-                  phoneNumber={user.phoneNumber}
-                  publicId={user.publicId}
-                />
-              )}
             </div>
           );
         }
@@ -183,9 +168,7 @@ export default function LessonDetail() {
               onError={() => {
                 setVideoError("The video file could not be loaded. It may have been deleted or the link is broken.");
               }}
-              watermarkEmail={user?.email}
-              watermarkPhone={user?.phoneNumber}
-              watermarkId={user?.publicId}
+              // شلنا خصائص الـ Watermark من هون كمان عشان الكود يكون نظيف
             />
           </div>
         );
@@ -359,13 +342,6 @@ export default function LessonDetail() {
           </CardHeader>
           <CardContent className="relative">
             {renderContent()}
-            {user && (
-              <WatermarkOverlay
-                email={user.email}
-                phoneNumber={user.phoneNumber}
-                publicId={user.publicId}
-              />
-            )}
           </CardContent>
         </Card>
 
