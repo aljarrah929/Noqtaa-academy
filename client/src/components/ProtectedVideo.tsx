@@ -117,14 +117,6 @@ export function ProtectedVideo({ src, onError, watermarkEmail, watermarkPhone, w
           data-testid="protected-video-element"
         />
 
-        {watermarkEmail && (
-          <WatermarkOverlay
-            email={watermarkEmail}
-            phoneNumber={watermarkPhone}
-            publicId={watermarkId}
-          />
-        )}
-
         {blocked && (
           <div
             className="absolute inset-0 bg-black flex items-center justify-center z-50"
@@ -142,7 +134,7 @@ export function ProtectedVideo({ src, onError, watermarkEmail, watermarkPhone, w
       {/* أزرار التحكم بالسرعة */}
       <div className="flex flex-wrap items-center gap-2 bg-gray-50 p-3 rounded-lg border border-gray-200" dir="rtl">
         <span className="text-sm font-semibold text-gray-700 ml-2">سرعة الفيديو:</span>
-        {[1, 1.25, 1.5, 1.75, 2].map((rate) => (
+        {[0.25,0.5,0.75,1, 1.25, 1.5, 1.75, 2,3].map((rate) => (
           <button
             key={rate}
             onClick={() => handleSpeedChange(rate)}
