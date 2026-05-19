@@ -131,7 +131,7 @@ export default function Profile() {
         return;
       }
 
-      // Step 2: Upload to R2
+      // Step 2: Upload to Cloud Storage (B2)
       try {
         const uploadRes = await fetch(presignData.uploadUrl, {
           method: "PUT",
@@ -142,12 +142,12 @@ export default function Profile() {
         });
 
         if (!uploadRes.ok) {
-          console.error("R2 upload failed:", uploadRes.status, await uploadRes.text().catch(() => ""));
+          console.error("Storage upload failed:", uploadRes.status, await uploadRes.text().catch(() => ""));
           throw new Error(`Upload failed with status ${uploadRes.status}`);
         }
       } catch (err) {
-        console.error("R2 upload error:", err);
-        toast({ title: "Upload to R2 Failed", description: err instanceof Error ? err.message : "Could not upload file.", variant: "destructive" });
+        console.error("Storage upload error:", err);
+        toast({ title: "Upload Failed", description: err instanceof Error ? err.message : "Could not upload file.", variant: "destructive" });
         return;
       }
 
