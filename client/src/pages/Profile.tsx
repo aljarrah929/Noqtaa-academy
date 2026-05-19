@@ -171,8 +171,19 @@ export default function Profile() {
       {imageSrc && (
         <div className="fixed inset-0 z-50 bg-black/90 p-4 flex flex-col items-center justify-center">
           <div className="relative w-full max-w-lg aspect-square overflow-hidden rounded-full">
-            <Cropper image={imageSrc} crop={crop} zoom={zoom} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} cropShape="round" />
-          </div>
+  <Cropper 
+    image={imageSrc} 
+    crop={crop} 
+    zoom={zoom} 
+    aspect={1} 
+    onCropChange={setCrop} 
+    onZoomChange={setZoom} 
+    onCropComplete={onCropComplete} 
+    cropShape="round"
+    // ضفنا هدول الخصائص عشان يضمن الـ Cropper يملأ الدائرة بشكل صحيح
+    style={{ containerStyle: { width: '100%', height: '100%', position: 'relative' } }}
+  />
+</div>
           <div className="mt-4 w-full max-w-lg flex flex-col gap-2">
             <Slider value={[zoom]} min={1} max={3} step={0.1} onValueChange={(v) => setZoom(v[0])} />
             <div className="flex gap-2 justify-end">
