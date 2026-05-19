@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Copy, Check, Upload, Camera, Loader2 } from "lucide-react";
+import { Copy, Check, Camera, Loader2 } from "lucide-react";
 import type { UserWithCollege } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 
@@ -111,66 +111,24 @@ export default function Profile() {
 
     setUploading(true);
     try {
-      // Step 1: Get presigned URL
-      let presignData: { uploadUrl: string; fileUrl: string };
-      try {
-        const presignRes = await apiRequest("POST", "/api/profile/avatar/presign", {
-          fileName: file.name,
-          contentType: file.type,
-          fileSize: file.size,
-        });
-        if (!presignRes.ok) {
-          const errorData = await presignRes.json().catch(() => ({}));
-          console.error("Presign failed:", presignRes.status, errorData);
-          throw new Error(errorData.message || "Failed to get upload URL");
-        }
-        presignData = await presignRes.json();
-      } catch (err) {
-        console.error("Presign error:", err);
-        toast({ title: "Presign Failed", description: err instanceof Error ? err.message : "Could not prepare upload.", variant: "destructive" });
-        return;
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const response = await fetch("/api/profile/avatar/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to upload avatar");
       }
 
-      // Step 2: Upload to Cloud Storage (B2)
-      try {
-        const uploadRes = await fetch(presignData.uploadUrl, {
-          method: "PUT",
-          body: file,
-          headers: {
-            "Content-Type": file.type,
-          },
-        });
-
-        if (!uploadRes.ok) {
-          console.error("Storage upload failed:", uploadRes.status, await uploadRes.text().catch(() => ""));
-          throw new Error(`Upload failed with status ${uploadRes.status}`);
-        }
-      } catch (err) {
-        console.error("Storage upload error:", err);
-        toast({ title: "Upload Failed", description: err instanceof Error ? err.message : "Could not upload file.", variant: "destructive" });
-        return;
-      }
-
-      // Step 3: Confirm upload
-      try {
-        const confirmRes = await apiRequest("POST", "/api/profile/avatar/confirm", { fileUrl: presignData.fileUrl });
-        if (!confirmRes.ok) {
-          const errorData = await confirmRes.json().catch(() => ({}));
-          console.error("Confirm failed:", confirmRes.status, errorData);
-          throw new Error(errorData.message || "Failed to save avatar");
-        }
-      } catch (err) {
-        console.error("Confirm error:", err);
-        toast({ title: "Confirm Failed", description: err instanceof Error ? err.message : "Could not save avatar.", variant: "destructive" });
-        return;
-      }
-      
-      // Refresh user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       toast({ title: t("profile.avatarUpdated"), description: t("profile.avatarUpdatedDesc") });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Avatar upload error:", error);
-      toast({ title: t("common.error"), description: t("profile.avatarUploadFailed"), variant: "destructive" });
+      toast({ title: t("common.error"), description: error.message || t("profile.avatarUploadFailed"), variant: "destructive" });
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
