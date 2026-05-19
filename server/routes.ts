@@ -1942,65 +1942,91 @@ const college = await storage.getCollegeById((data as any).collegeId);
   });
 
   // Profile - Avatar presign endpoint
-  const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
-  app.post("/api/profile/avatar/presign", isAuthenticated, async (req: any, res) => {
+ // Profile - Avatar Proxy Upload (Bypasses CORS & generates permanent CDN URL)
+  const avatarUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
+    fileFilter: (_req, file, cb) => {
+      const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only image files are allowed"));
+      }
+    },
+  });
+
+  app.post("/api/profile/avatar/upload", isAuthenticated, avatarUpload.single("avatar"), async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const { fileName, contentType, fileSize } = req.body;
-      
-      if (!fileName || !contentType) {
-        return res.status(400).json({ message: "fileName and contentType are required" });
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ message: "No image file provided" });
       }
-      
-      // Validate image type
-      const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-      if (!allowedTypes.includes(contentType)) {
-        return res.status(400).json({ message: "Only PNG, JPG, JPEG, and WebP files are allowed" });
-      }
-      
-      // Validate file size on server
-      if (fileSize && fileSize > MAX_AVATAR_SIZE) {
-        return res.status(400).json({ message: "Avatar must be under 2MB" });
-      }
-      
+
       const b2Client = getB2Client();
-        if (!b2Client || !B2_BUCKET_NAME) {
-          console.error("B2 configuration missing for avatar upload");
-          return res.status(500).json({ message: "File storage service is not configured" });
-        }
-      
-      // Create safe object key: avatars/<userId>/<timestamp>-<safeFileName>
-      const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const timestamp = Date.now();
-        const objectKey = `avatars/${userId}/${timestamp}-${safeFileName}`;
-      
-      // Generate presigned PUT URL (10 minute expiry)
+      if (!b2Client || !B2_BUCKET_NAME) {
+        return res.status(500).json({ message: "Storage not configured" });
+      }
+
+      // Create safe object key
+      const safeFileName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const timestamp = Date.now();
+      const objectKey = `avatars/${userId}/${timestamp}-${safeFileName}`;
+
+      // 1. Upload to B2 directly from backend
       const command = new PutObjectCommand({
-          Bucket: B2_BUCKET_NAME,
-          Key: objectKey,
-          ContentType: contentType,
-        });
-      
-      const uploadUrl = await getSignedUrl(b2Client, command, { expiresIn: 600 });
-      
-      // For avatars, we'll generate a presigned GET URL that lasts longer
-      const getCommand = new GetObjectCommand({
-          Bucket: B2_BUCKET_NAME,
-          Key: objectKey,
-        });
-      const fileUrl = await getSignedUrl(b2Client, getCommand, { expiresIn: 86400 * 7 });
-      
-      res.json({
-        uploadUrl,
-        objectKey,
-        fileUrl,
+        Bucket: B2_BUCKET_NAME,
+        Key: objectKey,
+        Body: file.buffer,
+        ContentType: file.mimetype,
       });
-    } catch (error) {
-      console.error("Error creating avatar presigned URL:", error);
-      res.status(500).json({ message: "Failed to create upload URL" });
+      await b2Client.send(command);
+
+      // 2. Generate permanent CDN URL (No expiration time!)
+      const fileUrl = getVideoCdnUrl(objectKey);
+
+      // 3. Update user profile in DB
+      const updatedUser = await storage.updateUserProfileImage(userId, fileUrl);
+
+      res.json({ success: true, user: updatedUser, fileUrl });
+    } catch (error: any) {
+      console.error("[Avatar Upload Error]", error);
+      res.status(500).json({ message: error.message || "Failed to upload avatar" });
     }
   });
 
+  // Profile - Change password endpoint
+  app.post("/api/profile/change-password", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { newPassword, confirmPassword } = req.body;
+      
+      if (!newPassword || !confirmPassword) {
+        return res.status(400).json({ message: "New password and confirmation are required" });
+      }
+      
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({ message: "Passwords do not match" });
+      }
+      
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      }
+      
+      // Hash the new password
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      
+      // Update user's password
+      await storage.updateUserPassword(userId, passwordHash);
+      
+      res.json({ success: true, message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
   // Profile - Avatar confirm endpoint
   app.post("/api/profile/avatar/confirm", isAuthenticated, async (req: any, res) => {
     try {
