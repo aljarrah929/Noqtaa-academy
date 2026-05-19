@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import Cropper from "react-easy-crop";
-import { Area } from "react-easy-crop/types";
+import { Area } from "react-easy-crop";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -158,7 +158,7 @@ export default function Profile() {
         <Card>
           <CardHeader><CardTitle>{t("profile.profilePicture")}</CardTitle></CardHeader>
           <CardContent className="flex items-center gap-6">
-            <Avatar className="h-24 w-24"><AvatarImage src={user?.profileImageUrl} /><AvatarFallback>{getInitials()}</AvatarFallback></Avatar>
+            <Avatar className="h-24 w-24"><AvatarImage src={user?.profileImageUrl ?? undefined} /><AvatarFallback>{getInitials()}</AvatarFallback></Avatar>
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
             <Button variant="outline" onClick={() => fileInputRef.current?.click()}><Camera className="mr-2 h-4 w-4" /> {t("profile.uploadPhoto")}</Button>
           </CardContent>
