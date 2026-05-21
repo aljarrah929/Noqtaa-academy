@@ -71,7 +71,7 @@ export default function CourseEditor() {
   const courseId = editParams?.id;
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
-  
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   
@@ -477,13 +477,69 @@ export default function CourseEditor() {
                     name="coverImageUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Thumbnail Image URL</FormLabel>
+                        <FormLabel>Course Thumbnail (غلاف المساق)</FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="https://example.com/image.jpg" 
-                            {...field} 
-                            data-testid="input-image-url"
-                          />
+                          <div className="space-y-4">
+                            {/* عرض معاينة الصورة إذا كانت موجودة */}
+                            {field.value && (
+                              <div className="relative w-full max-w-xs aspect-[16/10] rounded-xl overflow-hidden border border-slate-200 shadow-sm group">
+                                <img src={field.value} alt="Course Thumbnail Preview" className="w-full h-full object-cover" />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="icon"
+                                  className="absolute top-2 right-2 h-7 w-7 opacity-90 hover:opacity-100 transition-opacity"
+                                  onClick={() => field.onChange("")}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            )}
+                            
+                            {/* منتقي الملفات والرفع التلقائي */}
+                            <div className="flex items-center gap-3">
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                disabled={uploadingImage}
+                                className="cursor-pointer bg-slate-50 dark:bg-slate-900 file:bg-primary file:text-primary-foreground file:rounded-md file:border-0 file:text-xs file:font-semibold file:px-3 file:py-1 file:mr-2 hover:file:bg-primary/90"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+
+                                  setUploadingImage(true);
+                                  const formData = new FormData();
+                                  formData.append("file", file);
+
+                                  try {
+                                    // بنرفع الملف على مسار الصور بالـ Backend تبعك
+                                    const res = await fetch("/api/b2/image/upload", {
+                                      method: "POST",
+                                      body: formData,
+                                    });
+
+                                    if (!res.ok) throw new Error("Failed to upload image");
+                                    const data = await res.json();
+                                    
+                                    // تخزين الرابط الراجع في الـ Form State
+                                    field.onChange(data.cdnUrl || data.url || "");
+                                    toast({ title: "تم الرفع", description: "تم رفع غلاف المساق بنجاح." });
+                                  } catch (err: any) {
+                                    toast({ 
+                                      title: "فشل الرفع", 
+                                      description: "تأكد من وجود راوت /api/b2/image/upload في السيرفر.", 
+                                      variant: "destructive" 
+                                    });
+                                  } finally {
+                                    setUploadingImage(false);
+                                  }
+                                }}
+                              />
+                              {uploadingImage && (
+                                <span className="text-xs text-muted-foreground animate-pulse">جاري رفع الصورة...</span>
+                              )}
+                            </div>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

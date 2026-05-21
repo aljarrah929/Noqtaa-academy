@@ -1,8 +1,9 @@
+import { useState } from "react"; // ضفنا useState للتحكم باللايك محلياً هسا
 import { useLocation } from "wouter";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Users, Heart } from "lucide-react"; // ضفنا أيقونة Heart للاعجابات
+import { BookOpen, Users, Heart } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { CourseWithRelations } from "@shared/schema";
 import { useTranslation } from "react-i18next";
@@ -21,7 +22,7 @@ export function CourseCard({
   course,
   showStatus = false,
   showTeacher = true,
-  showEnrollmentCount = true, // خليناها true بشكل افتراضي عشان تظهر دايماً
+  showEnrollmentCount = true,
   actionLabel,
   actionHref,
   onAction,
@@ -29,70 +30,52 @@ export function CourseCard({
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
 
+  // 1. حساب العداد الافتراضي الحالي
+  const initialLikes = (course.id * 7 + 12) % 60; 
+  
+  // 2. State عشان التفاعل يظهر فوراً قدام الطالب بالحصة الحالية
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(initialLikes);
+
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "PUBLISHED":
-        return "default";
-      case "PENDING_APPROVAL":
-        return "secondary";
-      case "REJECTED":
-        return "destructive";
-      default:
-        return "outline";
+      case "PUBLISHED": return "default";
+      case "PENDING_APPROVAL": return "secondary";
+      case "REJECTED": return "destructive";
+      default: return "outline";
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "PENDING_APPROVAL":
-        return t("course.pending");
-      case "PUBLISHED":
-        return t("course.published");
-      case "REJECTED":
-        return t("course.rejected");
-      case "DRAFT":
-        return t("course.draft");
-      default:
-        return status.charAt(0) + status.slice(1).toLowerCase();
+      case "PENDING_APPROVAL": return t("course.pending");
+      case "PUBLISHED": return t("course.published");
+      case "REJECTED": return t("course.rejected");
+      case "DRAFT": return t("course.draft");
+      default: return status.charAt(0) + status.slice(1).toLowerCase();
     }
   };
 
   const getCollegeTheme = (slug?: string) => {
     switch (slug) {
       case "pharmacy":
-        return {
-          badge: "bg-emerald-500/90 text-white backdrop-blur-md border-none",
-          gradient: "from-emerald-500 to-teal-600"
-        };
+        return { badge: "bg-emerald-500/90 text-white backdrop-blur-md border-none", gradient: "from-emerald-500 to-teal-600" };
       case "engineering":
-        return {
-          badge: "bg-blue-500/90 text-white backdrop-blur-md border-none",
-          gradient: "from-blue-500 to-indigo-600"
-        };
+        return { badge: "bg-blue-500/90 text-white backdrop-blur-md border-none", gradient: "from-blue-500 to-indigo-600" };
       case "it":
-        return {
-          badge: "bg-purple-500/90 text-white backdrop-blur-md border-none",
-          gradient: "from-purple-500 to-pink-600"
-        };
+        return { badge: "bg-purple-500/90 text-white backdrop-blur-md border-none", gradient: "from-purple-500 to-pink-600" };
       default:
-        return {
-          badge: "bg-slate-500/90 text-white backdrop-blur-md border-none",
-          gradient: "from-slate-500 to-slate-700"
-        };
+        return { badge: "bg-slate-500/90 text-white backdrop-blur-md border-none", gradient: "from-slate-500 to-slate-700" };
     }
   };
 
   const currentTheme = getCollegeTheme(course.college?.slug);
-  
   const teacherInitials = course.teacher 
     ? `${course.teacher.firstName?.[0] || ""}${course.teacher.lastName?.[0] || ""}`.toUpperCase() || "T"
     : "T";
 
   const lessonCount = course._count?.lessons || course.lessons?.length || 0;
   const studentCount = course._count?.enrollments || course.enrollments?.length || 0;
-  
-  // إذا ما عندك حقل لايكات بقاعدة البيانات حالياً، رح نحط رقم تجميلي ذكي بناءً على id الكورس عشان الكرت يعيش هسا!
-  const likesCount = (course.id * 7 + 12) % 60; 
 
   const handleCardClick = () => {
     if (actionHref) {
@@ -102,14 +85,28 @@ export function CourseCard({
     }
   };
 
+  // الفنكشن السحري لعمل لايك بدون فتح الكرت كلو
+  const handleLikeClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation(); // ميزة جوهرية تمنع المتصفح من الانتقال لصفحة الكورس عند كبس القلب
+    
+    if (isLiked) {
+      setIsLiked(false);
+      setLikesCount(prev => prev - 1);
+    } else {
+      setIsLiked(true);
+      setLikesCount(prev => prev + 1);
+      // مستقبلاً هون بنربط أمر الـ الـ mutation عشان يحفظ اللايك بالداتابيز للأبد
+    }
+  };
+
   return (
     <Card 
       className="group flex flex-col h-full overflow-hidden rounded-xl border border-slate-100 dark:border-slate-800 bg-card shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer" 
       onClick={handleCardClick}
     >
-      {/* 1. قسم الصورة بالأعلى */}
+      {/* قسم الصورة بالأعلى */}
       <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-900">
-        {/* إذا في صورة للكورس بنعرضها، وإلا بنعرض التدرج اللوني الفخم للكلية */}
         {(course as any).thumbnailUrl ? (
           <img 
             src={(course as any).thumbnailUrl} 
@@ -124,7 +121,6 @@ export function CourseCard({
           </div>
         )}
 
-        {/* الباجات عائمة فوق الصورة بشكل مودرن جداً */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
           {course.college && (
             <Badge className={`${currentTheme.badge} text-xs font-semibold px-2.5 py-1 shadow-sm`}>
@@ -150,12 +146,11 @@ export function CourseCard({
         </div>
       </div>
       
-      {/* 2. قسم المحتوى والنصوص */}
+      {/* قسم المحتوى والنصوص */}
       <CardContent className="flex-1 p-4 pb-2">
         <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-slate-50 leading-snug line-clamp-2 group-hover:text-primary transition-colors duration-200" title={course.title}>
           {course.title}
         </h3>
-        
         {course.description && (
           <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-2 leading-relaxed">
             {course.description}
@@ -163,7 +158,7 @@ export function CourseCard({
         )}
       </CardContent>
 
-      {/* 3. ذيل الكرت (المدرس + العدادات التفاعلية) */}
+      {/* ذيل الكرت */}
       <CardFooter className="p-4 pt-3 border-t border-slate-50 dark:border-slate-900 flex items-center justify-between gap-2">
         {showTeacher && course.teacher && (
           <div className="flex items-center gap-2 min-w-0">
@@ -177,15 +172,12 @@ export function CourseCard({
           </div>
         )}
         
-        {/* العدادات التفاعلية الجذابة على اليمين */}
         <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium flex-shrink-0">
-          {/* عداد الدروس */}
           <div className="flex items-center gap-1" title={t("sidebar.lessons")}>
             <BookOpen className="w-3.5 h-3.5 text-slate-400" />
             <span>{lessonCount}</span>
           </div>
           
-          {/* عداد المشتركين */}
           {showEnrollmentCount && (
             <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded-md" title={t("sidebar.students")}>
               <Users className="w-3.5 h-3.5" />
@@ -193,11 +185,20 @@ export function CourseCard({
             </div>
           )}
 
-          {/* عداد الإعجابات الحية */}
-          <div className="flex items-center gap-1 text-pink-600 dark:text-pink-400 bg-pink-50/50 dark:bg-pink-950/30 px-1.5 py-0.5 rounded-md group/heart" title="الإعجابات">
-            <Heart className="w-3.5 h-3.5 fill-pink-600 dark:fill-pink-400 transition-transform duration-300 group-hover/heart:scale-125" />
+          {/* زر القلب التفاعلي الحي المحمي من الـ Event Bubbling */}
+          <button 
+            type="button"
+            onClick={handleLikeClick}
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md transition-all duration-200 active:scale-95 ${
+              isLiked 
+                ? "text-pink-600 bg-pink-100 dark:bg-pink-950/50" 
+                : "text-slate-500 bg-slate-50 dark:bg-slate-950/30 hover:text-pink-500 hover:bg-pink-50/50"
+            }`} 
+            title={isLiked ? "إلغاء الإعجاب" : "إعجاب"}
+          >
+            <Heart className={`w-3.5 h-3.5 transition-transform duration-300 ${isLiked ? "fill-pink-600 scale-110" : ""}`} />
             <span>{likesCount}</span>
-          </div>
+          </button>
         </div>
       </CardFooter>
     </Card>
