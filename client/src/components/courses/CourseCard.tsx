@@ -31,7 +31,7 @@ export function CourseCard({
   const [, setLocation] = useLocation();
 
   // 1. حساب العداد الافتراضي الحالي
-  const initialLikes = (course.id * 7 + 12) % 60; 
+  const initialLikes = 0; 
   
   // 2. State عشان التفاعل يظهر فوراً قدام الطالب بالحصة الحالية
   const [isLiked, setIsLiked] = useState(false);

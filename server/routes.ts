@@ -1712,7 +1712,89 @@ const college = await storage.getCollegeById((data as any).collegeId);
       res.status(500).json({ message: "Failed to upload video", details: error?.message });
     }
   });
+// 1. إعداد ميموري مولتر خاص بالصور مع فلتر للأمان
+  const imageUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // حد أقصى 5 ميجا بايت للصورة
+    fileFilter: (_req: any, file: any, cb: any) => {
+      if (file.mimetype.startsWith("image/")) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only image files are allowed"));
+      }
+    },
+  });
 
+  // 2. راوت رفع صور غلاف الكورس إلى Backblaze B2
+  app.post("/api/b2/image/upload", isAuthenticated, imageUpload.single("file"), async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+
+      // التحقق من الصلاحيات (أدمن أو مدرس)
+      if (!user || (user.role !== "TEACHER" && user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+        return res.status(403).json({ message: "Only teachers and admins can upload images" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      const b2Client = getB2Client();
+      if (!b2Client || !B2_BUCKET_NAME) {
+        return res.status(503).json({ message: "Image storage not configured" });
+      }
+
+      // توليد اسم فريد ونظيف للصورة داخل مجلد thumbnails
+      const timestamp = Date.now();
+      const cleanFileName = req.file.originalname.replace(/\s+/g, "_");
+      const objectKey = `thumbnails/${timestamp}-${cleanFileName}`;
+      
+      // استخدام دالة الـ CDN المعتمدة بالمشروع لتركيب الرابط
+      const cdnUrl = getVideoCdnUrl(objectKey);
+
+      console.log("[B2 Image Upload] Starting image upload", {
+        objectKey,
+        cdnUrl,
+        size: req.file.size,
+        contentType: req.file.mimetype,
+      });
+
+      // إرسال الأمر للـ B2 Bucket
+      const command = new PutObjectCommand({
+        Bucket: B2_BUCKET_NAME,
+        Key: objectKey,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      });
+
+      await b2Client.send(command);
+      console.log("[B2 Image Upload] PutObject completed, verifying...");
+
+      // التحقق من وصول الصورة بنجاح قبل تأكيد العملية للـ Frontend
+      const objectExists = await verifyObjectExistsInB2(b2Client, objectKey);
+      if (!objectExists) {
+        console.error("[B2 Image Upload] Verification failed for key:", objectKey);
+        return res.status(500).json({
+          message: "Upload verification failed - file not found in storage",
+          errorCode: "B2_VERIFY_FAILED"
+        });
+      }
+
+      // الفحص الاختياري للـ CDN إذا كان متاحاً بالملف
+      if (typeof verifyCdnUrlAccessible === "function") {
+        await verifyCdnUrlAccessible(cdnUrl);
+      }
+
+      console.log("[B2 Image Upload] Success - verified", { objectKey, cdnUrl });
+
+      // إرجاع الرابط والبيانات للـ Frontend لتخزينها فوراً بالـ Form
+      res.json({ cdnUrl, objectKey, verified: true });
+    } catch (error: any) {
+      console.error("[B2 Image Upload] Error:", error?.message || error);
+      res.status(500).json({ message: "Failed to upload image", details: error?.message });
+    }
+  });
   // Backblaze B2 - Verify upload completed successfully (for direct uploads)
   app.post("/api/b2/video/verify", isAuthenticated, async (req: any, res) => {
     try {
