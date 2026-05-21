@@ -106,15 +106,15 @@ export function Header() {
             {/* اللوغو المفرغ بدون حواف */}
             <BrandIcon className="h-12 w-auto object-contain" isCollegeThemed={isCollegeThemed} />
             
-            {/* الخط العمودي الفاصل */}
-            <div className={`h-8 w-[2px] rounded-full ${isCollegeThemed ? 'bg-white/30' : 'bg-black/20 dark:bg-white/20'}`}></div>
+            {/* الخط العمودي الفاصل - صار أسود غامق وصريح */}
+            <div className={`h-8 w-[2px] rounded-full ${isCollegeThemed ? 'bg-white/30' : 'bg-black dark:bg-white/30'}`}></div>
             
-            {/* النصوص (عربي وإنجليزي) */}
+            {/* النصوص (عربي وإنجليزي) - قلبناهم أسود غامق */}
             <div className="flex flex-col justify-center text-start">
-              <span className={`font-bold text-sm sm:text-base leading-tight ${isCollegeThemed ? 'text-white' : 'text-foreground'}`}>
+              <span className={`font-bold text-sm sm:text-base leading-tight ${isCollegeThemed ? 'text-white' : 'text-black font-extrabold'}`}>
                 منصة نقطة التعليمية
               </span>
-              <span className={`text-xs sm:text-sm font-medium leading-tight mt-0.5 ${isCollegeThemed ? 'text-white/80' : 'text-muted-foreground'}`}>
+              <span className={`text-xs sm:text-sm font-semibold leading-tight mt-0.5 ${isCollegeThemed ? 'text-white/80' : 'text-black'}`}>
                 Noqtaa Academy
               </span>
             </div>
