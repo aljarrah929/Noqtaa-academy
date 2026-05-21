@@ -1,9 +1,8 @@
-import { Link } from "wouter";
+import { useLocation } from "wouter"; // ضفنا هاد السطر للانتقال البرمجي
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Users, Clock, ArrowRight } from "lucide-react";
+import { BookOpen, Users, ArrowRight } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { CourseWithRelations } from "@shared/schema";
 import { useTranslation } from "react-i18next";
@@ -28,6 +27,7 @@ export function CourseCard({
   onAction,
 }: CourseCardProps) {
   const { t } = useTranslation();
+  const [, setLocation] = useLocation(); // استدعينا دالة التوجيه
 
   const resolvedActionLabel = actionLabel || t("course.viewCourse");
 
@@ -79,8 +79,22 @@ export function CourseCard({
   const lessonCount = course._count?.lessons || course.lessons?.length || 0;
   const studentCount = course._count?.enrollments || course.enrollments?.length || 0;
 
+  // هاد الفنكشن بيشتغل لما الطالب يكبس على أي مكان بالكرت
+  const handleCardClick = () => {
+    if (actionHref) {
+      setLocation(actionHref);
+    } else if (onAction) {
+      onAction();
+    }
+  };
+
   return (
-    <Card className="flex flex-col h-full hover-elevate" data-testid={`card-course-${course.id}`}>
+    <Card 
+      // ضفنا cursor-pointer و onClick هون
+      className="flex flex-col h-full hover-elevate cursor-pointer transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-900/50" 
+      data-testid={`card-course-${course.id}`}
+      onClick={handleCardClick}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -149,19 +163,13 @@ export function CourseCard({
           </div>
         )}
         
-        {actionHref ? (
-          <Button asChild size="sm" variant="ghost" data-testid={`button-view-course-${course.id}`}>
-            <Link href={actionHref}>
-              {resolvedActionLabel}
-              <ArrowRight className="w-4 h-4 ltr:ml-1 rtl:mr-1" />
-            </Link>
-          </Button>
-        ) : onAction ? (
-          <Button size="sm" variant="ghost" onClick={onAction} data-testid={`button-action-course-${course.id}`}>
+        {/* حولنا الزر لشكل بصري فقط لأن الكرت كامل صار يضغط */}
+        {(actionHref || onAction) && (
+          <div className="flex items-center text-sm font-medium text-primary hover:underline" data-testid={`button-view-course-${course.id}`}>
             {resolvedActionLabel}
             <ArrowRight className="w-4 h-4 ltr:ml-1 rtl:mr-1" />
-          </Button>
-        ) : null}
+          </div>
+        )}
       </CardFooter>
     </Card>
   );
