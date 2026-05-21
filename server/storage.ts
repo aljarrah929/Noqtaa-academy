@@ -530,17 +530,18 @@ export class DatabaseStorage implements IStorage {
       filtered = filtered.filter(r => r.courses.status === status);
     }
 
-    return filtered.map(r => ({
+   return filtered.map(r => ({
       ...r.courses,
       college: r.colleges || undefined,
       major: r.majors || undefined,
       teacher: r.users || undefined,
+      coverImageUrl: r.courses.coverImageUrl, // مررنا الحقل صراحة هون عشان نضمن ما يسقط نهائياً بالـ API العام
       _count: {
         lessons: lessonMap.get(r.courses.id) || 0,
         enrollments: enrollmentMap.get(r.courses.id) || 0,
-      },
+      }
     }));
-  }
+  } // هاد قوس إغلاق الدالة getCourses الرئيسي
 
   async getCourseById(id: number): Promise<CourseWithRelations | undefined> {
     const result = await db
