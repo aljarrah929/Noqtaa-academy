@@ -1,4 +1,4 @@
-import { useState } from "react"; // ضفنا useState للتحكم باللايك محلياً هسا
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,9 @@ import { BookOpen, Users, Heart } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { CourseWithRelations } from "@shared/schema";
 import { useTranslation } from "react-i18next";
+import { useMutation } from "@tanstack/react-query"; // مهم جداً للاتصال بالسيرفر
+import { apiRequest, queryClient } from "@/lib/queryClient"; // أدوات الاستعلام
+import { useToast } from "@/hooks/use-toast";
 
 interface CourseCardProps {
   course: CourseWithRelations;
@@ -29,13 +32,35 @@ export function CourseCard({
 }: CourseCardProps) {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
-  // 1. حساب العداد الافتراضي الحالي
-  const initialLikes = 0 + prev; 
-  
-  // 2. State عشان التفاعل يظهر فوراً قدام الطالب بالحصة الحالية
+  // 1. قراءة العداد الحقيقي من قاعدة البيانات (وإذا مافي بنعطيه 0)
+  const dbLikes = (course as any).likesCount || 0;
+  const [likesCount, setLikesCount] = useState<number>(Number(dbLikes) || 0);
   const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(initialLikes);
+
+  // 2. أمر الاتصال بالسيرفر لحفظ اللايك للأبد
+  const toggleLikeMutation = useMutation({
+    mutationFn: async () => {
+      // نضرب الراوت اللي ضفناه بالـ backend
+      const res = await apiRequest("POST", `/api/courses/${course.id}/like`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.likesCount !== undefined) {
+        setLikesCount(data.likesCount); // تحديث العداد من السيرفر
+      }
+      // تحديث باقي الكروت بالخلفية
+      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "خطأ", 
+        description: "لم يتم حفظ الإعجاب، تأكد من اتصال السيرفر.",
+        variant: "destructive"
+      });
+    }
+  });
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -85,19 +110,23 @@ export function CourseCard({
     }
   };
 
-  // الفنكشن السحري لعمل لايك بدون فتح الكرت كلو
+  // 3. الدالة السحرية المحدثة
   const handleLikeClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation(); // ميزة جوهرية تمنع المتصفح من الانتقال لصفحة الكورس عند كبس القلب
+    e.stopPropagation(); 
     
+    // تحديث الشكل فوراً للطالب
+    // تحديث الشكل فوراً للطالب
     if (isLiked) {
       setIsLiked(false);
-      setLikesCount(prev => prev - 1);
+      setLikesCount((prev: number) => prev - 1);
     } else {
       setIsLiked(true);
-      setLikesCount(prev => prev + 1);
-      // مستقبلاً هون بنربط أمر الـ الـ mutation عشان يحفظ اللايك بالداتابيز للأبد
+      setLikesCount((prev: number) => prev + 1);
     }
+
+    // إرسال اللايك للسيرفر عشان ينحفظ بالداتابيز
+    toggleLikeMutation.mutate();
   };
 
   return (
@@ -105,11 +134,10 @@ export function CourseCard({
       className="group flex flex-col h-full overflow-hidden rounded-xl border border-slate-100 dark:border-slate-800 bg-card shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer" 
       onClick={handleCardClick}
     >
-      {/* قسم الصورة بالأعلى */}
       <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-900">
         {course.coverImageUrl ? (
           <img 
-            src={course.coverImageUrl}
+            src={course.coverImageUrl} 
             alt={course.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
@@ -146,7 +174,6 @@ export function CourseCard({
         </div>
       </div>
       
-      {/* قسم المحتوى والنصوص */}
       <CardContent className="flex-1 p-4 pb-2">
         <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-slate-50 leading-snug line-clamp-2 group-hover:text-primary transition-colors duration-200" title={course.title}>
           {course.title}
@@ -158,7 +185,6 @@ export function CourseCard({
         )}
       </CardContent>
 
-      {/* ذيل الكرت */}
       <CardFooter className="p-4 pt-3 border-t border-slate-50 dark:border-slate-900 flex items-center justify-between gap-2">
         {showTeacher && course.teacher && (
           <div className="flex items-center gap-2 min-w-0">
@@ -185,11 +211,11 @@ export function CourseCard({
             </div>
           )}
 
-          {/* زر القلب التفاعلي الحي المحمي من الـ Event Bubbling */}
           <button 
             type="button"
             onClick={handleLikeClick}
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md transition-all duration-200 active:scale-95 ${
+            disabled={toggleLikeMutation.isPending}
+            className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md transition-all duration-200 active:scale-95 disabled:opacity-50 ${
               isLiked 
                 ? "text-pink-600 bg-pink-100 dark:bg-pink-950/50" 
                 : "text-slate-500 bg-slate-50 dark:bg-slate-950/30 hover:text-pink-500 hover:bg-pink-50/50"
@@ -216,7 +242,7 @@ export function CourseCardSkeleton() {
       <div className="p-4 border-t border-border flex justify-between items-center">
         <div className="flex items-center gap-2">
           <div className="h-7 w-7 bg-muted animate-pulse rounded-full" />
-          <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+          <div className="h-4 w-24 bg-muted animate-pulse rounded" />
         </div>
         <div className="h-4 w-16 bg-muted animate-pulse rounded" />
       </div>
