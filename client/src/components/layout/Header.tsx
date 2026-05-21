@@ -204,7 +204,7 @@ export function Header() {
                       {user.role === "STUDENT" ? (
                         <>
                           <BookOpen className="w-4 h-4" />
-                          {t("nav.myCourses", "كورساتي")}
+                          {t("nav.myCourses", "My Courses")} {/* عيّرنا البديل هون لإنجليزي */}
                         </>
                       ) : (
                         <>
@@ -214,7 +214,6 @@ export function Header() {
                       )}
                     </Link>
                   </DropdownMenuItem>
-
                   <DropdownMenuItem asChild>
                     <Link href="/profile" className="flex items-center gap-2 cursor-pointer" data-testid="link-dropdown-profile">
                       <User className="w-4 h-4" />
