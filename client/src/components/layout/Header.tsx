@@ -204,7 +204,7 @@ export function Header() {
                       {user.role === "STUDENT" ? (
                         <>
                           <BookOpen className="w-4 h-4" />
-                          {t("nav.myCourses", "My Courses")} {/* عيّرنا البديل هون لإنجليزي */}
+                          {t("sidebar.myCourses")} {/* عيّرنا البديل هون لإنجليزي */}
                         </>
                       ) : (
                         <>
