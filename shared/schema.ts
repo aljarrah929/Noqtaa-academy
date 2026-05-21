@@ -87,7 +87,6 @@ export const users = pgTable("users", {
 // Courses table
 export const courses = pgTable("courses", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  likesCount: integer("likes_count").notNull().default(0),
   collegeId: integer("college_id").notNull().references(() => colleges.id),
   majorId: integer("major_id").references(() => majors.id),
   teacherId: varchar("teacher_id").notNull().references(() => users.id),
