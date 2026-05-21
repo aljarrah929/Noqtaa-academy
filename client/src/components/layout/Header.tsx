@@ -102,11 +102,23 @@ export function Header() {
     >
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-20 gap-4">
-          <Link href="/" className="flex items-center gap-2">
-              <BrandIcon className="h-12 w-auto object-contain" isCollegeThemed={isCollegeThemed} />
-            <span className={`font-semibold text-lg hidden sm:block ${isCollegeThemed ? 'text-white' : 'text-foreground'}`} data-testid="text-logo">
-              {BRAND_NAME}
-            </span>
+          <Link href="/" className="flex items-center gap-3">
+            {/* اللوغو المفرغ بدون حواف */}
+            <BrandIcon className="h-12 w-auto object-contain" isCollegeThemed={isCollegeThemed} />
+            
+            {/* الخط العمودي الفاصل */}
+            <div className={`h-8 w-[2px] rounded-full ${isCollegeThemed ? 'bg-white/30' : 'bg-black/20 dark:bg-white/20'}`}></div>
+            
+            {/* النصوص (عربي وإنجليزي) */}
+            <div className="flex flex-col justify-center text-start">
+              <span className={`font-bold text-sm sm:text-base leading-tight ${isCollegeThemed ? 'text-white' : 'text-foreground'}`}>
+                منصة نقطة التعليمية
+              </span>
+              <span className={`text-xs sm:text-sm font-medium leading-tight mt-0.5 ${isCollegeThemed ? 'text-white/80' : 'text-muted-foreground'}`}>
+                Noqtaa Academy
+              </span>
+            </div>
+
             {collegeTheme && user?.role === "STUDENT" && (
               <Badge variant="secondary" className="ml-2 hidden md:flex bg-white/20 text-white border-white/30">
                 {collegeTheme.name}
