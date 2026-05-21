@@ -107,9 +107,9 @@ export function CourseCard({
     >
       {/* قسم الصورة بالأعلى */}
       <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-900">
-        {(course as any).thumbnailUrl ? (
+        {course.coverImageUrl ? (
           <img 
-            src={(course as any).thumbnailUrl} 
+            src={course.coverImageUrl}
             alt={course.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
