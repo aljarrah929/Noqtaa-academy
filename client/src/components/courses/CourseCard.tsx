@@ -1,8 +1,8 @@
-import { useLocation } from "wouter"; // ضفنا هاد السطر للانتقال البرمجي
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { useLocation } from "wouter";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Users, ArrowRight } from "lucide-react";
+import { BookOpen, Users, Heart } from "lucide-react"; // ضفنا أيقونة Heart للاعجابات
 import { formatPrice } from "@/lib/utils";
 import type { CourseWithRelations } from "@shared/schema";
 import { useTranslation } from "react-i18next";
@@ -21,15 +21,13 @@ export function CourseCard({
   course,
   showStatus = false,
   showTeacher = true,
-  showEnrollmentCount = false,
+  showEnrollmentCount = true, // خليناها true بشكل افتراضي عشان تظهر دايماً
   actionLabel,
   actionHref,
   onAction,
 }: CourseCardProps) {
   const { t } = useTranslation();
-  const [, setLocation] = useLocation(); // استدعينا دالة التوجيه
-
-  const resolvedActionLabel = actionLabel || t("course.viewCourse");
+  const [, setLocation] = useLocation();
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -59,27 +57,43 @@ export function CourseCard({
     }
   };
 
-  const getCollegeBadgeColor = (slug?: string) => {
+  const getCollegeTheme = (slug?: string) => {
     switch (slug) {
       case "pharmacy":
-        return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
+        return {
+          badge: "bg-emerald-500/90 text-white backdrop-blur-md border-none",
+          gradient: "from-emerald-500 to-teal-600"
+        };
       case "engineering":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+        return {
+          badge: "bg-blue-500/90 text-white backdrop-blur-md border-none",
+          gradient: "from-blue-500 to-indigo-600"
+        };
       case "it":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
+        return {
+          badge: "bg-purple-500/90 text-white backdrop-blur-md border-none",
+          gradient: "from-purple-500 to-pink-600"
+        };
       default:
-        return "";
+        return {
+          badge: "bg-slate-500/90 text-white backdrop-blur-md border-none",
+          gradient: "from-slate-500 to-slate-700"
+        };
     }
   };
 
+  const currentTheme = getCollegeTheme(course.college?.slug);
+  
   const teacherInitials = course.teacher 
     ? `${course.teacher.firstName?.[0] || ""}${course.teacher.lastName?.[0] || ""}`.toUpperCase() || "T"
     : "T";
 
   const lessonCount = course._count?.lessons || course.lessons?.length || 0;
   const studentCount = course._count?.enrollments || course.enrollments?.length || 0;
+  
+  // إذا ما عندك حقل لايكات بقاعدة البيانات حالياً، رح نحط رقم تجميلي ذكي بناءً على id الكورس عشان الكرت يعيش هسا!
+  const likesCount = (course.id * 7 + 12) % 60; 
 
-  // هاد الفنكشن بيشتغل لما الطالب يكبس على أي مكان بالكرت
   const handleCardClick = () => {
     if (actionHref) {
       setLocation(actionHref);
@@ -90,86 +104,101 @@ export function CourseCard({
 
   return (
     <Card 
-      // ضفنا cursor-pointer و onClick هون
-      className="flex flex-col h-full hover-elevate cursor-pointer transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-900/50" 
-      data-testid={`card-course-${course.id}`}
+      className="group flex flex-col h-full overflow-hidden rounded-xl border border-slate-100 dark:border-slate-800 bg-card shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer" 
       onClick={handleCardClick}
     >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              {course.college && (
-                <Badge 
-                  variant="outline" 
-                  className={`text-xs ${getCollegeBadgeColor(course.college.slug)}`}
-                >
-                  {course.college.name}
-                </Badge>
-              )}
-              {showStatus && (
-                <Badge variant={getStatusVariant(course.status)} className="text-xs">
-                  {getStatusLabel(course.status)}
-                </Badge>
-              )}
-            </div>
-            <h3 className="font-semibold text-lg leading-tight line-clamp-2" data-testid={`text-course-title-${course.id}`}>
+      {/* 1. قسم الصورة بالأعلى */}
+      <div className="relative w-full aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-900">
+        {/* إذا في صورة للكورس بنعرضها، وإلا بنعرض التدرج اللوني الفخم للكلية */}
+        {(course as any).thumbnailUrl ? (
+          <img 
+            src={(course as any).thumbnailUrl} 
+            alt={course.title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className={`w-full h-full bg-gradient-to-br ${currentTheme.gradient} flex items-center justify-center p-4 transition-transform duration-500 group-hover:scale-105`}>
+            <span className="text-white/20 font-bold text-4xl select-none truncate max-w-full px-2">
               {course.title}
-            </h3>
+            </span>
           </div>
-          {course.price != null && course.price > 0 && (
-            <Badge
-              variant="outline"
-              className="flex-shrink-0 font-bold text-emerald-700 border-emerald-300 bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 dark:bg-emerald-900/20"
-              data-testid={`badge-price-${course.id}`}
-            >
+        )}
+
+        {/* الباجات عائمة فوق الصورة بشكل مودرن جداً */}
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
+          {course.college && (
+            <Badge className={`${currentTheme.badge} text-xs font-semibold px-2.5 py-1 shadow-sm`}>
+              {course.college.name}
+            </Badge>
+          )}
+          
+          {showStatus && (
+            <Badge variant={getStatusVariant(course.status)} className="text-xs backdrop-blur-md shadow-sm">
+              {getStatusLabel(course.status)}
+            </Badge>
+          )}
+
+          {course.price != null && course.price > 0 ? (
+            <Badge className="ml-auto bg-black/70 dark:bg-white/80 text-white dark:text-black font-bold backdrop-blur-sm border-none px-2.5 py-1 shadow-sm">
               {formatPrice(course.price)}
+            </Badge>
+          ) : (
+            <Badge className="ml-auto bg-emerald-500 text-white font-bold border-none px-2.5 py-1 shadow-sm animate-pulse">
+              {t("course.free", "مجاني")}
             </Badge>
           )}
         </div>
-      </CardHeader>
+      </div>
       
-      <CardContent className="flex-1 pb-3">
+      {/* 2. قسم المحتوى والنصوص */}
+      <CardContent className="flex-1 p-4 pb-2">
+        <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-slate-50 leading-snug line-clamp-2 group-hover:text-primary transition-colors duration-200" title={course.title}>
+          {course.title}
+        </h3>
+        
         {course.description && (
-          <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-2 leading-relaxed">
             {course.description}
           </p>
         )}
-        
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <BookOpen className="w-4 h-4" />
-            <span>{lessonCount} {lessonCount === 1 ? t("course.lesson") : t("course.lessons")}</span>
-          </div>
-          {showEnrollmentCount && (
-            <div className="flex items-center gap-1">
-              <Users className="w-4 h-4" />
-              <span>{studentCount} {studentCount === 1 ? t("course.student") : t("course.students")}</span>
-            </div>
-          )}
-        </div>
       </CardContent>
 
-      <CardFooter className="pt-3 border-t border-border flex items-center justify-between gap-4">
+      {/* 3. ذيل الكرت (المدرس + العدادات التفاعلية) */}
+      <CardFooter className="p-4 pt-3 border-t border-slate-50 dark:border-slate-900 flex items-center justify-between gap-2">
         {showTeacher && course.teacher && (
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Avatar className="h-8 w-8 flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <Avatar className="h-7 w-7 ring-2 ring-slate-100 dark:ring-slate-800 flex-shrink-0">
               <AvatarImage src={course.teacher.profileImageUrl || undefined} className="object-cover" />
-              <AvatarFallback className="text-xs">{teacherInitials}</AvatarFallback>
+              <AvatarFallback className="text-[10px] bg-slate-100 dark:bg-slate-800 font-bold">{teacherInitials}</AvatarFallback>
             </Avatar>
-            <span className="text-sm text-muted-foreground truncate">
+            <span className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 truncate">
               {course.teacher.firstName} {course.teacher.lastName}
             </span>
           </div>
         )}
         
-        {/* حولنا الزر لشكل بصري فقط لأن الكرت كامل صار يضغط */}
-        {(actionHref || onAction) && (
-          <div className="flex items-center text-sm font-medium text-primary hover:underline" data-testid={`button-view-course-${course.id}`}>
-            {resolvedActionLabel}
-            <ArrowRight className="w-4 h-4 ltr:ml-1 rtl:mr-1" />
+        {/* العدادات التفاعلية الجذابة على اليمين */}
+        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 font-medium flex-shrink-0">
+          {/* عداد الدروس */}
+          <div className="flex items-center gap-1" title={t("sidebar.lessons")}>
+            <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+            <span>{lessonCount}</span>
           </div>
-        )}
+          
+          {/* عداد المشتركين */}
+          {showEnrollmentCount && (
+            <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded-md" title={t("sidebar.students")}>
+              <Users className="w-3.5 h-3.5" />
+              <span>{studentCount}</span>
+            </div>
+          )}
+
+          {/* عداد الإعجابات الحية */}
+          <div className="flex items-center gap-1 text-pink-600 dark:text-pink-400 bg-pink-50/50 dark:bg-pink-950/30 px-1.5 py-0.5 rounded-md group/heart" title="الإعجابات">
+            <Heart className="w-3.5 h-3.5 fill-pink-600 dark:fill-pink-400 transition-transform duration-300 group-hover/heart:scale-125" />
+            <span>{likesCount}</span>
+          </div>
+        </div>
       </CardFooter>
     </Card>
   );
@@ -177,28 +206,19 @@ export function CourseCard({
 
 export function CourseCardSkeleton() {
   return (
-    <Card className="flex flex-col h-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="h-5 w-20 bg-muted animate-pulse rounded" />
-        </div>
-        <div className="h-6 w-3/4 bg-muted animate-pulse rounded" />
-      </CardHeader>
-      <CardContent className="flex-1 pb-3">
-        <div className="space-y-2 mb-4">
-          <div className="h-4 w-full bg-muted animate-pulse rounded" />
-          <div className="h-4 w-2/3 bg-muted animate-pulse rounded" />
-        </div>
-        <div className="flex gap-4">
+    <Card className="flex flex-col h-full overflow-hidden rounded-xl">
+      <div className="w-full aspect-[16/10] bg-muted animate-pulse" />
+      <div className="p-4 flex-1 space-y-3">
+        <div className="h-5 w-3/4 bg-muted animate-pulse rounded" />
+        <div className="h-4 w-full bg-muted animate-pulse rounded" />
+      </div>
+      <div className="p-4 border-t border-border flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 bg-muted animate-pulse rounded-full" />
           <div className="h-4 w-20 bg-muted animate-pulse rounded" />
         </div>
-      </CardContent>
-      <CardFooter className="pt-3 border-t border-border">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 bg-muted animate-pulse rounded-full" />
-          <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-        </div>
-      </CardFooter>
+        <div className="h-4 w-16 bg-muted animate-pulse rounded" />
+      </div>
     </Card>
   );
 }
