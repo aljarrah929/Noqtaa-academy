@@ -10,8 +10,7 @@ interface B2VideoUploaderProps {
   value?: string;
   onChange: (cdnUrl: string | undefined) => void;
   onUploadStart?: () => void;
-  // عدلنا هاي عشان تستقبل المدة وتبعثها للصفحة الأب
-  onUploadComplete?: (cdnUrl: string, durationMinutes?: number) => void; 
+  onUploadComplete?: (cdnUrl: string) => void;
   onUploadError?: (error: string) => void;
 }
 
@@ -173,29 +172,6 @@ export function B2VideoUploader({
       return;
     }
 
-    // ==========================================
-    // الخدعة السحرية لاستخراج مدة الفيديو أوتوماتيكياً
-    // ==========================================
-    let extractedDurationMinutes = 0;
-    try {
-      extractedDurationMinutes = await new Promise<number>((resolve) => {
-        const video = document.createElement("video");
-        video.preload = "metadata";
-        video.onloadedmetadata = () => {
-          window.URL.revokeObjectURL(video.src);
-          // تحويل الثواني لدقائق وتقريب الرقم لأقرب دقيقة صحيحة
-          const minutes = Math.round(video.duration / 60);
-          resolve(minutes > 0 ? minutes : 1); // أقل مدة ممكنة هي دقيقة واحدة
-        };
-        video.onerror = () => resolve(0);
-        video.src = window.URL.createObjectURL(file);
-      });
-      log("Extracted video duration", { minutes: extractedDurationMinutes });
-    } catch (e) {
-      log("Failed to extract duration", e);
-    }
-    // ==========================================
-
     setFileName(file.name);
     setFileSize(formatFileSize(file.size));
     setUploadState("requesting");
@@ -298,9 +274,7 @@ export function B2VideoUploader({
       setUploadState("success");
       setProgress(100);
       onChange(cdnUrl);
-      
-      // هون بنبعث المدة المستخرجة للصفحة الرئيسية
-      onUploadComplete?.(cdnUrl, extractedDurationMinutes);
+      onUploadComplete?.(cdnUrl);
 
     } catch (error: any) {
       log("Upload error", { name: error?.name, message: error?.message });
