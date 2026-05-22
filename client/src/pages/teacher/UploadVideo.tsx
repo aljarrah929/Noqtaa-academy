@@ -25,7 +25,6 @@ export default function UploadVideo() {
   const [lessonTitle, setLessonTitle] = useState("");
   const [lessonDescription, setLessonDescription] = useState("");
   const [videoUid, setVideoUid] = useState<string | undefined>();
-  const [lessonDuration, setLessonDuration] = useState<number>(0); // ضفنا متغير المدة هون
   const [uploadComplete, setUploadComplete] = useState(false);
 
   // Only TEACHER and SUPER_ADMIN can upload videos
@@ -48,7 +47,6 @@ export default function UploadVideo() {
         contentType: "video",
         content: videoUid,
         orderIndex: (course?.lessons?.length || 0),
-        duration: lessonDuration, // هون بنبعث المدة للداتابيز
       });
       return response.json();
     },
@@ -70,20 +68,15 @@ export default function UploadVideo() {
     },
   });
 
-  // عدلنا الفنكشن عشان تستقبل المدة من الكومبوننت تبع الرفع
-  const handleVideoUploadComplete = (uid: string, durationInMinutes?: number) => {
+  const handleVideoUploadComplete = (uid: string) => {
     setVideoUid(uid);
     setUploadComplete(true);
-    if (durationInMinutes) {
-      setLessonDuration(durationInMinutes);
-    }
   };
 
   const handleVideoChange = (uid: string | undefined) => {
     setVideoUid(uid);
     if (!uid) {
       setUploadComplete(false);
-      setLessonDuration(0);
     }
   };
 
@@ -189,6 +182,30 @@ export default function UploadVideo() {
     );
   }
 
+  if (!course) {
+    return (
+      <DashboardLayout title="Upload Video">
+        <div className="max-w-2xl mx-auto">
+          <Card className="py-16">
+            <CardContent className="text-center">
+              <Video className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Course Not Found</h2>
+              <p className="text-muted-foreground mb-6">
+                The course you're looking for doesn't exist.
+              </p>
+              <Button asChild>
+                <Link href="/teacher/courses">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to My Courses
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout title="Upload Video Lesson">
       <div className="max-w-2xl mx-auto">
@@ -206,7 +223,7 @@ export default function UploadVideo() {
               Upload Video Lesson
             </CardTitle>
             <CardDescription>
-              Add a new video lesson to <strong>{course?.title}</strong>
+              Add a new video lesson to <strong>{course.title}</strong>
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
