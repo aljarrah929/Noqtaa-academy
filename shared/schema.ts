@@ -100,6 +100,7 @@ export const courses = pgTable("courses", {
   isLocked: boolean("is_locked").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  likesCount: integer("likes_count").default(0),
 });
 
 // Lessons table
@@ -111,6 +112,7 @@ export const lessons = pgTable("lessons", {
   content: text("content"),
   orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
+  duration: integer("duration").default(0), 
 });
 
 // Enrollments table
