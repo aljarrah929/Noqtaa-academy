@@ -40,6 +40,18 @@ export default function CourseDetail() {
     refetchOnWindowFocus: true,
   });
 
+  // دالة تحويل الدقائق لشكل مرتب
+  const formatDuration = (minutes: number) => {
+    if (!minutes) return "0 دقيقة";
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) return `${hours} ساعة ${mins > 0 ? `و ${mins} دقيقة` : ""}`;
+    return `${mins} دقيقة`;
+  };
+
+  // حساب المجموع الإجمالي لكل الدروس
+  const totalDurationMinutes = course?.lessons?.reduce((acc, lesson) => acc + (lesson.duration || 0), 0) || 0;
+  
   const { data: enrollmentCheck, isLoading: enrollmentLoading } = useQuery<{ enrolled: boolean }>({
     queryKey: ["/api/enrollments/check", courseId],
     enabled: !!courseId && isAuthenticated,
@@ -191,6 +203,13 @@ export default function CourseDetail() {
                     <Users className="w-4 h-4" />
                     <span>{course._count?.enrollments || 0} students</span>
                   </div>
+                  
+                  {/* هنا تم إضافة المجموع الإجمالي للوقت */}
+                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium">
+                    <Clock className="w-4 h-4" />
+                    <span>{formatDuration(totalDurationMinutes)}</span>
+                  </div>
+
                 </div>
               </CardContent>
             </Card>

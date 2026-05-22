@@ -9,7 +9,8 @@ import {
   File, 
   Lock, 
   ChevronRight,
-  Play
+  Play,
+  Clock // ضفنا أيقونة الساعة هون
 } from "lucide-react";
 import type { Lesson } from "@shared/schema";
 
@@ -85,6 +86,14 @@ export function LessonList({ lessons, courseId, isEnrolled, isCourseLocked = fal
                         {getContentTypeIcon(lesson.contentType)}
                         <span className="ml-1 text-xs">{getContentTypeLabel(lesson.contentType)}</span>
                       </Badge>
+                      
+                      {/* عرض مدة الفيديو للدرس المفتوح */}
+                      {lesson.duration != null && lesson.duration > 0 && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2 border-l pl-2 dark:border-slate-700">
+                          <Clock className="w-3 h-3" />
+                          {lesson.duration} دقيقة
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -110,6 +119,14 @@ export function LessonList({ lessons, courseId, isEnrolled, isCourseLocked = fal
                       {getContentTypeIcon(lesson.contentType)}
                       <span className="ml-1 text-xs">{getContentTypeLabel(lesson.contentType)}</span>
                     </Badge>
+
+                    {/* عرض مدة الفيديو للدرس المقفول */}
+                    {lesson.duration != null && lesson.duration > 0 && (
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2 border-l pl-2 dark:border-slate-700 opacity-70">
+                        <Clock className="w-3 h-3" />
+                        {lesson.duration} دقيقة
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {isEnrolled && isCourseLocked ? "Course locked by instructor" : "Content locked"}
