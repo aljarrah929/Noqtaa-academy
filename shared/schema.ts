@@ -112,6 +112,7 @@ export const lessons = pgTable("lessons", {
   content: text("content"),
   orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
+  duration: integer("duration").default(0),
 });
 
 // Enrollments table

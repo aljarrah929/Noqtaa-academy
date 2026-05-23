@@ -12,7 +12,7 @@ import { B2VideoUploader } from "@/components/B2VideoUploader";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Video, CheckCircle, ShieldAlert, BookOpen } from "lucide-react";
+import { ArrowLeft, Video, CheckCircle, ShieldAlert, BookOpen, Clock } from "lucide-react";
 import type { CourseWithRelations } from "@shared/schema";
 
 export default function UploadVideo() {
@@ -25,7 +25,8 @@ export default function UploadVideo() {
   const [lessonTitle, setLessonTitle] = useState("");
   const [lessonDescription, setLessonDescription] = useState("");
   const [videoUid, setVideoUid] = useState<string | undefined>();
-  const [lessonDuration, setLessonDuration] = useState<number>(0); // ضفنا متغير المدة هون
+  // حولناها لحقل فاضي عشان المعلم يعبيه يدوياً
+  const [lessonDuration, setLessonDuration] = useState<number | "">(""); 
   const [uploadComplete, setUploadComplete] = useState(false);
 
   // Only TEACHER and SUPER_ADMIN can upload videos
@@ -48,7 +49,7 @@ export default function UploadVideo() {
         contentType: "video",
         content: videoUid,
         orderIndex: (course?.lessons?.length || 0),
-        duration: lessonDuration, // هون بنبعث المدة للداتابيز
+        duration: Number(lessonDuration) || 0, // بنبعث المدة اللي كتبها المعلم
       });
       return response.json();
     },
@@ -70,24 +71,20 @@ export default function UploadVideo() {
     },
   });
 
-  // عدلنا الفنكشن عشان تستقبل المدة من الكومبوننت تبع الرفع
-  const handleVideoUploadComplete = (uid: string, durationInMinutes?: number) => {
+  const handleVideoUploadComplete = (uid: string) => {
     setVideoUid(uid);
     setUploadComplete(true);
-    if (durationInMinutes) {
-      setLessonDuration(durationInMinutes);
-    }
   };
 
   const handleVideoChange = (uid: string | undefined) => {
     setVideoUid(uid);
     if (!uid) {
       setUploadComplete(false);
-      setLessonDuration(0);
     }
   };
 
-  const canSave = lessonTitle.trim().length > 0 && uploadComplete && videoUid;
+  // ما بيقدر يضغط حفظ إلا إذا عبى المدة
+  const canSave = lessonTitle.trim().length > 0 && uploadComplete && videoUid && lessonDuration !== "" && Number(lessonDuration) > 0;
 
   if (authLoading || (courseId && courseLoading)) {
     return (
@@ -230,6 +227,23 @@ export default function UploadVideo() {
                 onChange={(e) => setLessonDescription(e.target.value)}
                 rows={3}
                 data-testid="input-lesson-description"
+              />
+            </div>
+
+            {/* الحقل الجديد المضمون 100% لإدخال المدة */}
+            <div className="space-y-2">
+              <Label htmlFor="lessonDuration" className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                مدة الفيديو (بالدقائق) *
+              </Label>
+              <Input
+                id="lessonDuration"
+                type="number"
+                min="1"
+                placeholder="مثال: 15"
+                value={lessonDuration}
+                onChange={(e) => setLessonDuration(parseInt(e.target.value) || "")}
+                required
               />
             </div>
 
