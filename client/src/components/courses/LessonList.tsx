@@ -65,10 +65,8 @@ export function LessonList({ lessons, courseId, isEnrolled, isCourseLocked = fal
     const s = totalSeconds % 60;
     
     if (h > 0) {
-      // إذا في ساعات، نظهرها
       return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     }
-    // إذا أقل من ساعة، نظهر دقائق وثواني بس
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
   // Determine if content should be accessible
@@ -104,7 +102,7 @@ export function LessonList({ lessons, courseId, isEnrolled, isCourseLocked = fal
                       {lesson.duration != null && lesson.duration > 0 && (
                         <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2 border-l pl-2 dark:border-slate-700">
                           <Clock className="w-3 h-3" />
-                           {formatLessonTime(lesson.duration)}
+                          <span dir="ltr">{formatLessonTime(lesson.duration)}</span>
                         </span>
                       )}
                     </div>

@@ -52,6 +52,7 @@ export default function CourseDetail() {
     if (m > 0) parts.push(`${m} دقيقة`);
     if (s > 0) parts.push(`${s} ثانية`);
 
+    // رح نجمعهم بنص واحد
     return parts.join(" و ");
   };
 
@@ -216,6 +217,7 @@ export default function CourseDetail() {
                   <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium">
                     <Clock className="w-4 h-4" />
                     <span>{formatDuration(totalDurationMinutes)}</span>
+                    <span dir="rtl">{formatDuration(totalDurationSeconds)}</span>
                   </div>
 
                 </div>
