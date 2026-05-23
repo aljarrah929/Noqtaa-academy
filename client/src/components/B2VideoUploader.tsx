@@ -10,9 +10,9 @@ interface B2VideoUploaderProps {
   value?: string;
   onChange: (cdnUrl: string | undefined) => void;
   onUploadStart?: () => void;
-  // عدلنا هاي عشان تستقبل المدة وتبعثها للصفحة الأب
-  onUploadComplete?: (cdnUrl: string, durationMinutes?: number) => void; 
+  onUploadComplete?: (cdnUrl: string) => void;
   onUploadError?: (error: string) => void;
+  onDurationExtracted?: (minutes: number) => void; // السطر السحري الجديد
 }
 
 type UploadState = "idle" | "requesting" | "uploading" | "success" | "error";
@@ -24,6 +24,7 @@ export function B2VideoUploader({
   onUploadStart,
   onUploadComplete,
   onUploadError,
+  onDurationExtracted,
 }: B2VideoUploaderProps) {
   const [uploadState, setUploadState] = useState<UploadState>(value ? "success" : "idle");
   const [progress, setProgress] = useState(0);
@@ -48,10 +49,25 @@ export function B2VideoUploader({
     console.log(`[B2Upload ${timestamp}] ${message}`, data || "");
   };
 
-  const uploadViaProxy = async (file: File): Promise<string> => {
-    log("Starting proxy upload", { fileName: file.name, size: file.size, type: file.type });
-    setUploadMethod("proxy");
+  // دالة استخراج الوقت الأوتوماتيكية
+  const extractDuration = (file: File) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(video.src);
+      // بنقرب الوقت لأقرب دقيقة (مثلا 1:30 بتصير دقيقتين) عشان ما يكون صفر
+      const minutes = Math.ceil(video.duration / 60);
+      if (onDurationExtracted) {
+        onDurationExtracted(minutes);
+      }
+      log("Duration extracted automatically", { minutes });
+    };
+    video.onerror = () => log("Failed to extract duration from video");
+    video.src = URL.createObjectURL(file);
+  };
 
+  const uploadViaProxy = async (file: File): Promise<string> => {
+    setUploadMethod("proxy");
     const formData = new FormData();
     formData.append("video", file);
     formData.append("courseId", String(courseId));
@@ -62,40 +78,23 @@ export function B2VideoUploader({
 
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
-          const percentage = Math.round((event.loaded / event.total) * 100);
-          setProgress(percentage);
+          setProgress(Math.round((event.loaded / event.total) * 100));
         }
       };
 
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
-            const response = JSON.parse(xhr.responseText);
-            log("Proxy upload success", { cdnUrl: response.cdnUrl });
-            resolve(response.cdnUrl);
+            resolve(JSON.parse(xhr.responseText).cdnUrl);
           } catch (e) {
-            log("Proxy upload response parse error", { responseText: xhr.responseText });
             reject(new Error("Invalid response from server"));
           }
         } else {
-          let errorMsg = `Proxy upload failed (${xhr.status})`;
-          try {
-            const response = JSON.parse(xhr.responseText);
-            if (response.message) errorMsg = response.message;
-          } catch {}
-          log("Proxy upload error", { status: xhr.status, errorMsg });
-          reject(new Error(errorMsg));
+          reject(new Error(`Proxy upload failed (${xhr.status})`));
         }
       };
-
-      xhr.onerror = () => {
-        log("Proxy upload network error");
-        reject(new Error("Network error during proxy upload"));
-      };
-
-      xhr.onabort = () => {
-        reject(new Error("Upload cancelled"));
-      };
+      xhr.onerror = () => reject(new Error("Network error during proxy upload"));
+      xhr.onabort = () => reject(new Error("Upload cancelled"));
 
       xhr.open("POST", "/api/b2/video/upload");
       xhr.withCredentials = true;
@@ -104,57 +103,29 @@ export function B2VideoUploader({
   };
 
   const uploadDirect = async (file: File, uploadUrl: string, cdnUrl: string): Promise<string> => {
-    const urlHost = new URL(uploadUrl).host;
-    log("Starting direct upload", {
-      host: urlHost,
-      fileSize: file.size,
-      fileType: file.type || "application/octet-stream",
-    });
     setUploadMethod("direct");
-
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhrRef.current = xhr;
 
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
-          const percentage = Math.round((event.loaded / event.total) * 100);
-          setProgress(percentage);
+          setProgress(Math.round((event.loaded / event.total) * 100));
         }
       };
 
       xhr.onload = () => {
-        log("Direct upload response", {
-          status: xhr.status,
-          statusText: xhr.statusText,
-          responseText: xhr.responseText?.substring(0, 500),
-        });
-
         if (xhr.status >= 200 && xhr.status < 300) {
-          log("Direct upload success", { cdnUrl });
           resolve(cdnUrl);
         } else {
-          const errorMsg = `Direct upload failed: ${xhr.status} ${xhr.statusText}`;
-          log("Direct upload failed", { status: xhr.status, responseText: xhr.responseText });
-          reject(new Error(errorMsg));
+          reject(new Error(`Direct upload failed: ${xhr.status}`));
         }
       };
-
-      xhr.onerror = () => {
-        log("Direct upload network error (likely CORS)", {
-          readyState: xhr.readyState,
-          status: xhr.status,
-        });
-        reject(new Error("CORS_OR_NETWORK_ERROR"));
-      };
-
-      xhr.onabort = () => {
-        reject(new Error("Upload cancelled"));
-      };
+      xhr.onerror = () => reject(new Error("CORS_OR_NETWORK_ERROR"));
+      xhr.onabort = () => reject(new Error("Upload cancelled"));
 
       xhr.open("PUT", uploadUrl);
-      const contentType = file.type || "application/octet-stream";
-      xhr.setRequestHeader("Content-Type", contentType);
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
       xhr.send(file);
     });
   };
@@ -166,35 +137,11 @@ export function B2VideoUploader({
       return;
     }
 
-    const maxSize = 1024 * 1024 * 1024;
-    if (file.size > maxSize) {
+    if (file.size > 1024 * 1024 * 1024) {
       setErrorMessage("File too large. Maximum size is 1GB.");
       setUploadState("error");
       return;
     }
-
-    // ==========================================
-    // الخدعة السحرية لاستخراج مدة الفيديو أوتوماتيكياً
-    // ==========================================
-    let extractedDurationMinutes = 0;
-    try {
-      extractedDurationMinutes = await new Promise<number>((resolve) => {
-        const video = document.createElement("video");
-        video.preload = "metadata";
-        video.onloadedmetadata = () => {
-          window.URL.revokeObjectURL(video.src);
-          // تحويل الثواني لدقائق وتقريب الرقم لأقرب دقيقة صحيحة
-          const minutes = Math.round(video.duration / 60);
-          resolve(minutes > 0 ? minutes : 1); // أقل مدة ممكنة هي دقيقة واحدة
-        };
-        video.onerror = () => resolve(0);
-        video.src = window.URL.createObjectURL(file);
-      });
-      log("Extracted video duration", { minutes: extractedDurationMinutes });
-    } catch (e) {
-      log("Failed to extract duration", e);
-    }
-    // ==========================================
 
     setFileName(file.name);
     setFileSize(formatFileSize(file.size));
@@ -203,15 +150,7 @@ export function B2VideoUploader({
     setErrorMessage("");
     onUploadStart?.();
 
-    log("Upload started", {
-      fileName: file.name,
-      size: file.size,
-      type: file.type,
-      courseId,
-    });
-
     try {
-      log("Requesting presigned URL...");
       const response = await apiRequest("POST", "/api/b2/video/presign", {
         fileName: file.name,
         contentType: file.type || "application/octet-stream",
@@ -219,101 +158,36 @@ export function B2VideoUploader({
         fileSize: file.size,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        log("Presign request failed", { status: response.status, errorData });
-        if (response.status === 401) {
-          throw new Error("Please log in to upload videos");
-        } else if (response.status === 403) {
-          throw new Error(errorData.message || "You don't have permission to upload videos");
-        } else if (response.status === 503) {
-          throw new Error(errorData.message || "Video storage not configured");
-        }
-        throw new Error(errorData.message || `Request failed (${response.status})`);
-      }
-
+      if (!response.ok) throw new Error("Failed to get upload URL");
       const data = await response.json();
-      log("Presign response received", {
-        hasUploadUrl: !!data.uploadUrl,
-        hasCdnUrl: !!data.cdnUrl,
-        hasObjectKey: !!data.objectKey,
-        cdnUrl: data.cdnUrl,
-        objectKey: data.objectKey,
-      });
-
-      if (!data.uploadUrl || !data.cdnUrl || !data.objectKey) {
-        throw new Error("Invalid response from video service");
-      }
-
       setUploadState("uploading");
 
       let cdnUrl: string;
-      let useDirectUpload = true;
-      
       try {
         cdnUrl = await uploadDirect(file, data.uploadUrl, data.cdnUrl);
-        log("Direct upload completed, verifying...");
-        
-        // VERIFY the upload succeeded by checking if object exists in B2
-        const verifyResponse = await apiRequest("POST", "/api/b2/video/verify", {
-          objectKey: data.objectKey,
-          cdnUrl: data.cdnUrl,
-        });
-        
-        if (!verifyResponse.ok) {
-          const verifyError = await verifyResponse.json().catch(() => ({}));
-          log("Direct upload verification FAILED", { status: verifyResponse.status, error: verifyError });
-          throw new Error(verifyError.message || "Upload verification failed - file not found in storage");
-        }
-        
-        const verifyResult = await verifyResponse.json();
-        log("Direct upload verified successfully", verifyResult);
-        
-        if (!verifyResult.verified) {
-          throw new Error("Upload verification failed - file not stored correctly");
-        }
-        
-      } catch (directError: any) {
-        if (directError.message === "CORS_OR_NETWORK_ERROR" || directError.message.includes("CORS")) {
-          log("Direct upload failed (CORS), falling back to proxy upload");
+      } catch (e: any) {
+        if (e.message.includes("CORS") || e.message === "CORS_OR_NETWORK_ERROR") {
           setProgress(0);
-          useDirectUpload = false;
           cdnUrl = await uploadViaProxy(file);
-        } else if (directError.message === "Upload cancelled") {
-          setUploadState("idle");
-          setProgress(0);
-          return;
-        } else if (directError.message.includes("verification failed") || directError.message.includes("not found")) {
-          // Direct upload succeeded but verification failed - try proxy as fallback
-          log("Direct upload verification failed, falling back to proxy upload");
-          setProgress(0);
-          useDirectUpload = false;
-          cdnUrl = await uploadViaProxy(file);
-        } else {
-          throw directError;
-        }
+        } else throw e;
       }
 
-      log("Upload complete", { cdnUrl, method: useDirectUpload ? "direct" : "proxy" });
       setUploadState("success");
       setProgress(100);
       onChange(cdnUrl);
-      
-      // هون بنبعث المدة المستخرجة للصفحة الرئيسية
-      onUploadComplete?.(cdnUrl, extractedDurationMinutes);
+      onUploadComplete?.(cdnUrl);
 
     } catch (error: any) {
-      log("Upload error", { name: error?.name, message: error?.message });
-      const message = error instanceof Error ? error.message : "Failed to start upload";
-      setErrorMessage(message);
+      setErrorMessage(error.message || "Failed to start upload");
       setUploadState("error");
-      onUploadError?.(message);
+      onUploadError?.(error.message);
     }
   }, [courseId, onChange, onUploadStart, onUploadComplete, onUploadError]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      extractDuration(file); // سحب الوقت فوراً
       uploadFile(file);
     }
   };
@@ -323,9 +197,10 @@ export function B2VideoUploader({
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file) {
+      extractDuration(file); // سحب الوقت فوراً
       uploadFile(file);
     }
-  }, [uploadFile]);
+  }, [uploadFile, onDurationExtracted]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -338,10 +213,7 @@ export function B2VideoUploader({
   }, []);
 
   const cancelUpload = () => {
-    if (xhrRef.current) {
-      xhrRef.current.abort();
-      xhrRef.current = null;
-    }
+    if (xhrRef.current) xhrRef.current.abort();
     setUploadState("idle");
     setProgress(0);
     setFileName("");
@@ -354,10 +226,6 @@ export function B2VideoUploader({
     setErrorMessage("");
   };
 
-  const openFilePicker = () => {
-    fileInputRef.current?.click();
-  };
-
   if (uploadState === "success" && value) {
     return (
       <Card className="p-4">
@@ -368,40 +236,16 @@ export function B2VideoUploader({
           <div className="flex-1 min-w-0">
             <p className="font-medium text-sm">Video uploaded successfully</p>
             {fileName && <p className="text-xs text-muted-foreground truncate">{fileName} ({fileSize})</p>}
-            <p className="text-xs text-muted-foreground mt-1 truncate">CDN URL ready</p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={resetUploader}
-            data-testid="button-replace-b2-video"
-          >
-            <RefreshCw className="w-4 h-4 mr-1" />
-            Replace
+          <Button type="button" variant="outline" size="sm" onClick={resetUploader}>
+            <RefreshCw className="w-4 h-4 mr-1" /> Replace
           </Button>
         </div>
       </Card>
     );
   }
 
-  if (uploadState === "requesting") {
-    return (
-      <Card className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full bg-primary/10">
-            <RefreshCw className="w-5 h-5 text-primary animate-spin" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm">Preparing upload...</p>
-            <p className="text-xs text-muted-foreground">{fileName} ({fileSize})</p>
-          </div>
-        </div>
-      </Card>
-    );
-  }
-
-  if (uploadState === "uploading") {
+  if (uploadState === "uploading" || uploadState === "requesting") {
     return (
       <Card className="p-4">
         <div className="space-y-3">
@@ -410,18 +254,10 @@ export function B2VideoUploader({
               <Video className="w-5 h-5 text-primary animate-pulse" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">
-                Uploading to CDN{uploadMethod === "proxy" ? " (via server)" : ""}...
-              </p>
-              <p className="text-xs text-muted-foreground truncate">{fileName} ({fileSize})</p>
+              <p className="font-medium text-sm">Uploading...</p>
+              <p className="text-xs text-muted-foreground truncate">{fileName}</p>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={cancelUpload}
-              data-testid="button-cancel-b2-upload"
-            >
+            <Button type="button" variant="ghost" size="icon" onClick={cancelUpload}>
               <X className="w-4 h-4" />
             </Button>
           </div>
@@ -434,43 +270,15 @@ export function B2VideoUploader({
     );
   }
 
-  if (uploadState === "error") {
-    return (
-      <Card className="p-4 border-destructive/50">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full bg-destructive/10">
-            <AlertCircle className="w-5 h-5 text-destructive" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm text-destructive">Upload failed</p>
-            <p className="text-xs text-muted-foreground">{errorMessage}</p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={resetUploader}
-            data-testid="button-retry-b2-upload"
-          >
-            Try again
-          </Button>
-        </div>
-      </Card>
-    );
-  }
-
   return (
     <div
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
-        isDragging
-          ? "border-primary bg-primary/5"
-          : "border-border hover:border-primary/50"
+        isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
       }`}
-      onClick={openFilePicker}
-      data-testid="dropzone-b2-video"
+      onClick={() => fileInputRef.current?.click()}
     >
       <input
         ref={fileInputRef}
@@ -478,7 +286,6 @@ export function B2VideoUploader({
         accept="video/*"
         onChange={handleFileSelect}
         className="hidden"
-        data-testid="input-b2-video-file"
       />
       <div className="flex flex-col items-center gap-2">
         <div className="p-3 rounded-full bg-muted">
@@ -486,7 +293,7 @@ export function B2VideoUploader({
         </div>
         <div>
           <p className="font-medium text-sm">Drop your video here or click to browse</p>
-          <p className="text-xs text-muted-foreground mt-1">MP4, MOV, WebM (max 1GB) - Served via CDN</p>
+          <p className="text-xs text-muted-foreground mt-1">MP4, MOV, WebM (max 1GB)</p>
         </div>
       </div>
     </div>

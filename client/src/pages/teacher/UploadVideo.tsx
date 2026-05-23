@@ -254,6 +254,7 @@ export default function UploadVideo() {
                 value={videoUid}
                 onChange={handleVideoChange}
                 onUploadComplete={handleVideoUploadComplete}
+                onDurationExtracted={(mins) => setLessonDuration(mins)}
               />
             </div>
 
