@@ -687,8 +687,16 @@ const college = await storage.getCollegeById((data as any).collegeId);
         return res.status(403).json({ message: "Only the course owner can add lessons" });
       }
       
+      // بنعمل تفتيش للبيانات الأساسية
       const data = insertLessonSchema.parse({ ...req.body, courseId });
-      const lesson = await storage.createLesson(data);
+      
+      // الخدعة هون: بنجبر السيرفر يدمج المدة الجاية من الواجهة مع البيانات
+      const lessonData = {
+        ...data,
+        duration: req.body.duration ? Number(req.body.duration) : 0
+      };
+
+      const lesson = await storage.createLesson(lessonData);
       res.status(201).json(lesson);
     } catch (error) {
       console.error("Error creating lesson:", error);
