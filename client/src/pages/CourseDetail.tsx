@@ -40,15 +40,23 @@ export default function CourseDetail() {
     refetchOnWindowFocus: true,
   });
 
-  // دالة تحويل الدقائق لشكل مرتب
-  const formatDuration = (minutes: number) => {
-    if (!minutes) return "0 دقيقة";
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) return `${hours} ساعة ${mins > 0 ? `و ${mins} دقيقة` : ""}`;
-    return `${mins} دقيقة`;
+  
+  const formatDuration = (totalSeconds: number) => {
+    if (!totalSeconds) return "0 ثانية";
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+
+    let parts = [];
+    if (h > 0) parts.push(`${h} ساعة`);
+    if (m > 0) parts.push(`${m} دقيقة`);
+    if (s > 0) parts.push(`${s} ثانية`);
+
+    return parts.join(" و ");
   };
 
+  // المجموع صار يمثل إجمالي الثواني وليس الدقائق
+  const totalDurationSeconds = course?.lessons?.reduce((acc, lesson) => acc + (lesson.duration || 0), 0) || 0;
   // حساب المجموع الإجمالي لكل الدروس
   const totalDurationMinutes = course?.lessons?.reduce((acc, lesson) => acc + (lesson.duration || 0), 0) || 0;
   

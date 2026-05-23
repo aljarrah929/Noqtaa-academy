@@ -25,8 +25,12 @@ export default function UploadVideo() {
   const [lessonTitle, setLessonTitle] = useState("");
   const [lessonDescription, setLessonDescription] = useState("");
   const [videoUid, setVideoUid] = useState<string | undefined>();
-  // حولناها لحقل فاضي عشان المعلم يعبيه يدوياً
-  const [lessonDuration, setLessonDuration] = useState<number | "">(""); 
+  
+  // ✨ حقول الوقت الثلاثة المنفصلة
+  const [hours, setHours] = useState<number | "">(""); 
+  const [minutes, setMinutes] = useState<number | "">(""); 
+  const [seconds, setSeconds] = useState<number | "">(""); 
+
   const [uploadComplete, setUploadComplete] = useState(false);
 
   // Only TEACHER and SUPER_ADMIN can upload videos
@@ -44,12 +48,15 @@ export default function UploadVideo() {
 
   const createLessonMutation = useMutation({
     mutationFn: async () => {
+      // ✨ الخدعة السحرية: نحسب إجمالي الثواني من الحقول الثلاثة قبل إرسالها للداتابيز
+      const totalSeconds = (Number(hours) || 0) * 3600 + (Number(minutes) || 0) * 60 + (Number(seconds) || 0);
+
       const response = await apiRequest("POST", `/api/courses/${courseId}/lessons`, {
         title: lessonTitle,
         contentType: "video",
         content: videoUid,
         orderIndex: (course?.lessons?.length || 0),
-        duration: Number(lessonDuration) || 0, // بنبعث المدة اللي كتبها المعلم
+        duration: totalSeconds, // بنبعث إجمالي الثواني
       });
       return response.json();
     },
@@ -83,8 +90,18 @@ export default function UploadVideo() {
     }
   };
 
-  // ما بيقدر يضغط حفظ إلا إذا عبى المدة
-  const canSave = lessonTitle.trim().length > 0 && uploadComplete && videoUid && lessonDuration !== "" && Number(lessonDuration) > 0;
+  // ✨ الخدعة السحرية للأوتوماتيك: التحويل من ثواني لـ (ساعات: دقائق: ثواني)
+  // وتعبيتها في الحقول الثلاثة تلقائياً
+  const handleDurationExtracted = (totalSecs: number) => {
+    const h = Math.floor(totalSecs / 3600);
+    const m = Math.floor((totalSecs % 3600) / 60);
+    const s = totalSecs % 60;
+    setHours(h);
+    setMinutes(m);
+    setSeconds(s);
+  };
+
+  const canSave = lessonTitle.trim().length > 0 && uploadComplete && videoUid;
 
   if (authLoading || (courseId && courseLoading)) {
     return (
@@ -230,21 +247,42 @@ export default function UploadVideo() {
               />
             </div>
 
-            {/* الحقل الجديد المضمون 100% لإدخال المدة */}
+            {/* ✨ حقول الوقت الثلاثة الجديدة المنظمة */}
             <div className="space-y-2">
               <Label htmlFor="lessonDuration" className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                مدة الفيديو (بالدقائق) *
+                مدة الفيديو (ساعات : دقائق : ثواني) *
               </Label>
-              <Input
-                id="lessonDuration"
-                type="number"
-                min="1"
-                placeholder="مثال: 15"
-                value={lessonDuration}
-                onChange={(e) => setLessonDuration(parseInt(e.target.value) || "")}
-                required
-              />
+              <div className="flex items-center gap-2 dir-ltr">
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="ساعات"
+                  value={hours}
+                  onChange={(e) => setHours(parseInt(e.target.value) || "")}
+                  className="text-center"
+                />
+                <span className="font-bold">:</span>
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  placeholder="دقائق"
+                  value={minutes}
+                  onChange={(e) => setMinutes(parseInt(e.target.value) || "")}
+                  className="text-center"
+                />
+                <span className="font-bold">:</span>
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  placeholder="ثواني"
+                  value={seconds}
+                  onChange={(e) => setSeconds(parseInt(e.target.value) || "")}
+                  className="text-center"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -254,7 +292,7 @@ export default function UploadVideo() {
                 value={videoUid}
                 onChange={handleVideoChange}
                 onUploadComplete={handleVideoUploadComplete}
-                onDurationExtracted={(mins) => setLessonDuration(mins)}
+                onDurationExtracted={handleDurationExtracted} // نربط دالة استخراج الوقت
               />
             </div>
 

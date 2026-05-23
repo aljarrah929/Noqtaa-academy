@@ -48,24 +48,23 @@ export function B2VideoUploader({
     const timestamp = new Date().toISOString();
     console.log(`[B2Upload ${timestamp}] ${message}`, data || "");
   };
-
-  // دالة استخراج الوقت الأوتوماتيكية
+// ✨ الخدعة السحرية: دالة استخراج الوقت الأوتوماتيكية بالثواني
   const extractDuration = (file: File) => {
     const video = document.createElement("video");
     video.preload = "metadata";
     video.onloadedmetadata = () => {
       window.URL.revokeObjectURL(video.src);
-      // بنقرب الوقت لأقرب دقيقة (مثلا 1:30 بتصير دقيقتين) عشان ما يكون صفر
-      const minutes = Math.ceil(video.duration / 60);
+      // هون صرنا نوخذ الوقت بالثواني بالضبط من الفيديو
+      const totalSeconds = Math.round(video.duration);
       if (onDurationExtracted) {
-        onDurationExtracted(minutes);
+        onDurationExtracted(totalSeconds); // نرسل إجمالي الثواني للواجهة
       }
-      log("Duration extracted automatically", { minutes });
+      log("Total duration extracted (seconds)", { totalSeconds });
     };
     video.onerror = () => log("Failed to extract duration from video");
     video.src = URL.createObjectURL(file);
   };
-
+  
   const uploadViaProxy = async (file: File): Promise<string> => {
     setUploadMethod("proxy");
     const formData = new FormData();
