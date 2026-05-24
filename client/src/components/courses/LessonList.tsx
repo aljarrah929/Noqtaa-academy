@@ -59,17 +59,15 @@ export function LessonList({ lessons, courseId, isEnrolled, isCourseLocked = fal
   }
 // ✨ الخدعة السحرية: تنسيق وقت الدرس رقمياً (ساعات:دقائق:ثواني)
   const formatLessonTime = (totalSeconds: number) => {
-    if (!totalSeconds) return "0s";
+    if (!totalSeconds) return "0:00";
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
     const s = totalSeconds % 60;
-
-    let parts = [];
-    if (h > 0) parts.push(`${h}h`);
-    if (m > 0) parts.push(`${m}m`);
-    if (s > 0) parts.push(`${s}s`);
-
-    return parts.join(" "); // النتيجة: 1h 55m 27s
+    
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
   // Determine if content should be accessible
   const canAccessContent = isEnrolled && !isCourseLocked;
@@ -137,7 +135,7 @@ export function LessonList({ lessons, courseId, isEnrolled, isCourseLocked = fal
                     {lesson.duration != null && lesson.duration > 0 && (
                       <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2 border-l pl-2 dark:border-slate-700 opacity-70">
                         <Clock className="w-3 h-3" />
-                        {lesson.duration} دقيقة
+                        <span dir="ltr">{formatLessonTime(lesson.duration)}</span>
                       </span>
                     )}
                   </div>
