@@ -196,6 +196,7 @@ export const joinRequests = pgTable(
     status: joinRequestStatusEnum("status").notNull().default("PENDING"),
     createdAt: timestamp("created_at").defaultNow(),
     reviewedAt: timestamp("reviewed_at"),
+    paymentMethod: varchar("payment_method", { length: 50 }).default("manual"),
   },
   (table) => [
     index("idx_join_request_course_student_status").on(table.courseId, table.studentId, table.status),

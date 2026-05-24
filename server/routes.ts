@@ -2443,6 +2443,7 @@ const college = await storage.getCollegeById((data as any).collegeId);
         receiptMime,
         receiptSize,
         status: "PENDING",
+        paymentMethod: req.body.paymentMethod || 'manual',
       });
       
       console.log("[JoinRequest] Created request:", joinRequest.id, "for course:", courseIdNum, "by student:", userId);
