@@ -213,11 +213,12 @@ export default function CourseDetail() {
                   </div>
                   
                   {/* هنا تم إضافة المجموع الإجمالي للوقت */}
-                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium">
-                    <Clock className="w-4 h-4" />
-                    <span>{formatDuration(totalDurationMinutes)}</span>
-                    <span dir="ltr" className="mr-1">{formatDuration(totalDurationSeconds)}</span>
-                  </div>
+                  <div className="flex items-center gap-1">
+  <Clock className="w-4 h-4 text-primary" />
+  <span dir="ltr" className="mr-1 text-primary text-sm">
+    {formatDuration(totalDurationSeconds)}
+  </span>
+</div>
 
                 </div>
               </CardContent>
