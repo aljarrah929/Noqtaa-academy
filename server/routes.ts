@@ -14,7 +14,7 @@ import OpenAI from "openai";
 import { sendEmail } from "./email";
 import { db } from "./db";
 import { eq, and, count, sql } from "drizzle-orm";
-import { users, courses, colleges } from "@shared/schema";
+import { users, courses, colleges, enrollments } from "@shared/schema";
 import { enrollmentRequests } from "@shared/schema";
 
 // Cloudflare R2 configuration
@@ -914,15 +914,11 @@ const college = await storage.getCollegeById((data as any).collegeId);
     try {
       const courseId = parseInt(req.params.id);
       const userId = req.user.id;
-      const { paymentMethod, receiptUrl } = req.body;
+      const { paymentMethod, receiptUrl, packageType } = req.body;
 
-      // 1. نتأكد إن الكورس موجود
       const course = await storage.getCourseById(courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
+      if (!course) return res.status(404).json({ message: "Course not found" });
 
-      // 2. نتأكد إنه الطالب مش باعت طلب قبل هيك وقيد الانتظار (عشان ما يكرر الطلب)
       const existingRequest = await db.query.enrollmentRequests.findFirst({
         where: and(
           eq(enrollmentRequests.userId, userId),
@@ -935,14 +931,15 @@ const college = await storage.getCollegeById((data as any).collegeId);
         return res.status(400).json({ message: "لديك طلب قيد المراجعة لهذا الكورس مسبقاً." });
       }
 
-      // 3. تخزين الطلب في الداتابيز (غرفة الانتظار)
+      // 🔥 حفظ البكج في طلبات السلة
       const [newRequest] = await db.insert(enrollmentRequests).values({
         userId,
         courseId,
         paymentMethod,
         receiptUrl: receiptUrl || null,
         amount: course.price || 0,
-        status: "pending"
+        status: "pending",
+        packageType: packageType || "all"
       }).returning();
 
       res.status(201).json(newRequest);
@@ -1023,8 +1020,19 @@ const college = await storage.getCollegeById((data as any).collegeId);
     try {
       const userId = req.user.id;
       const courseId = parseInt(req.params.courseId);
-      const enrolled = await storage.isEnrolled(userId, courseId);
-      res.json({ enrolled });
+      
+      // 🔥 جلب كل اشتراكات الطالب في هذا الكورس لمعرفة البكجات
+      const userEnrollments = await db.select()
+        .from(enrollments)
+        .where(and(
+          eq(enrollments.studentId, userId),
+          eq(enrollments.courseId, courseId)
+        ));
+
+      const packages = userEnrollments.map(e => e.packageType || "all");
+      const enrolled = packages.length > 0;
+
+      res.json({ enrolled, packages });
     } catch (error) {
       console.error("Error checking enrollment:", error);
       res.status(500).json({ message: "Failed to check enrollment" });
@@ -2381,60 +2389,32 @@ const college = await storage.getCollegeById((data as any).collegeId);
   });
   
   // Student - Create or update join request
+  // Student - Create or update join request
   app.post("/api/join-requests", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
       if (!user || user.role !== "STUDENT") {
-        console.log("[JoinRequest] Non-student attempted to create request:", userId);
         return res.status(403).json({ message: "Only students can submit join requests" });
       }
       
-      const { courseId, message, receiptKey, receiptMime, receiptSize } = req.body;
+      // 🔥 استقبلنا packageType هون
+      const { courseId, message, receiptKey, receiptMime, receiptSize, packageType } = req.body;
       
-      // Validate courseId
       if (!courseId || isNaN(parseInt(courseId))) {
         return res.status(400).json({ message: "Valid courseId is required" });
       }
       
       const courseIdNum = parseInt(courseId);
-      
-      // Check course exists
       const course = await storage.getCourseById(courseIdNum);
-      if (!course) {
-        console.log("[JoinRequest] Course not found:", courseIdNum);
-        return res.status(404).json({ message: "Course not found" });
-      }
+      if (!course) return res.status(404).json({ message: "Course not found" });
       
-      // Check if already enrolled
-      const enrolled = await storage.isEnrolled(userId, courseIdNum);
-      if (enrolled) {
-        console.log("[JoinRequest] User already enrolled:", userId, courseIdNum);
-        return res.status(400).json({ message: "You are already enrolled in this course" });
-      }
-      
-      // Check for existing pending request
-      const existingRequest = await storage.getStudentJoinRequestForCourse(userId, courseIdNum);
-      if (existingRequest && existingRequest.status === "PENDING") {
-        console.log("[JoinRequest] Pending request already exists:", existingRequest.id);
-        return res.status(400).json({ message: "You already have a pending request for this course" });
-      }
-      
-      // Validate receipt
       if (!receiptKey || !receiptMime || !receiptSize) {
         return res.status(400).json({ message: "Receipt file is required" });
       }
       
-      if (!JOIN_REQUEST_ALLOWED_TYPES.includes(receiptMime)) {
-        return res.status(400).json({ message: "Invalid file type. Allowed: JPG, PNG, PDF" });
-      }
-      
-      if (receiptSize > JOIN_REQUEST_MAX_FILE_SIZE) {
-        return res.status(400).json({ message: "File too large. Maximum size is 10 MB" });
-      }
-      
-      // Create the join request
+      // 🔥 حفظنا البكج مع الطلب
       const joinRequest = await storage.createJoinRequest({
         courseId: courseIdNum,
         studentId: userId,
@@ -2444,9 +2424,8 @@ const college = await storage.getCollegeById((data as any).collegeId);
         receiptSize,
         status: "PENDING",
         paymentMethod: req.body.paymentMethod || 'manual',
+        packageType: packageType || "all", 
       });
-      
-      console.log("[JoinRequest] Created request:", joinRequest.id, "for course:", courseIdNum, "by student:", userId);
       
       res.status(201).json({
         id: joinRequest.id,
@@ -2458,7 +2437,6 @@ const college = await storage.getCollegeById((data as any).collegeId);
       res.status(500).json({ message: "Failed to submit join request" });
     }
   });
-  
   // Student - Get presigned URL for receipt upload
   app.post("/api/join-requests/presign-receipt", isAuthenticated, async (req: any, res) => {
     try {
@@ -2614,14 +2592,13 @@ const college = await storage.getCollegeById((data as any).collegeId);
   });
   
   // Teacher/Admin - Approve join request
+  // Teacher/Admin - Approve join request
   app.post("/api/join-requests/:id/approve", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const requestId = parseInt(req.params.id);
       
-      if (isNaN(requestId)) {
-        return res.status(400).json({ message: "Invalid request ID" });
-      }
+      if (isNaN(requestId)) return res.status(400).json({ message: "Invalid request ID" });
       
       const user = await storage.getUser(userId);
       if (!user || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
@@ -2629,26 +2606,21 @@ const college = await storage.getCollegeById((data as any).collegeId);
       }
       
       const joinRequest = await storage.getJoinRequestById(requestId);
-      if (!joinRequest) {
-        console.log("[JoinRequest] Request not found:", requestId);
-        return res.status(404).json({ message: "Join request not found" });
-      }
+      if (!joinRequest) return res.status(404).json({ message: "Join request not found" });
       
       if (joinRequest.status !== "PENDING") {
         return res.status(400).json({ message: "This request has already been processed" });
       }
       
-      // Update status to approved
       await storage.updateJoinRequestStatus(requestId, "APPROVED");
       
-      // Create enrollment
+      // 🔥 هون السر: مررنا نوع البكج للـ Enrollment عشان الطالب يفتحله بس هاد البكج!
       await storage.createEnrollment({
         courseId: joinRequest.courseId,
         studentId: joinRequest.studentId,
         createdByUserId: userId,
+        packageType: joinRequest.packageType || "all" 
       });
-      
-      console.log("[JoinRequest] Approved request:", requestId, "enrolled student:", joinRequest.studentId);
       
       res.json({ message: "Request approved and student enrolled successfully" });
     } catch (error) {

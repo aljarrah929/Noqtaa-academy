@@ -132,24 +132,18 @@ export const enrollments = pgTable("enrollments", {
 // ==========================================
 // جدول طلبات الانضمام والدفع (غرفة الانتظار)
 // ==========================================
+// ==========================================
+// جدول طلبات الانضمام والدفع (غرفة الانتظار)
+// ==========================================
 export const enrollmentRequests = pgTable("enrollment_requests", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  // هون عدلناها لـ varchar عشان تطابق نظامك
   userId: varchar("user_id").notNull().references(() => users.id), 
   courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
-  
-  // حالة الطلب (قيد الانتظار، مقبول، مرفوض)
   status: varchar("status", { length: 50 }).notNull().default("pending"), 
-  
-  // طريقة الدفع (مثلاً: cliq, zain_cash, orange_money)
   paymentMethod: varchar("payment_method", { length: 50 }).notNull(), 
-  
-  // رابط صورة الوصل (لما يرفع سكرين شوت التحويل)
   receiptUrl: text("receipt_url"), 
-  
-  // المبلغ
   amount: integer("amount").notNull().default(0), 
-  
+  packageType: varchar("package_type", { length: 50 }).default("all"), // 🔥 السطر الجديد عشان نحفظ البكج
   createdAt: timestamp("created_at").defaultNow(),
 });
 
