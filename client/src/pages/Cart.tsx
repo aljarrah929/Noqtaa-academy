@@ -10,8 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { apiRequest } from "@/lib/queryClient";
-
+import { apiRequest, queryClient } from "@/lib/queryClient";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 const ALLOWED_EXTENSIONS = ".jpg, .jpeg, .png, .pdf";
@@ -80,6 +79,7 @@ export default function Cart() {
       }
 
       // 2. إرسال طلب انضمام لكل كورس بالسلة بنفس الوصل
+      // 2. إرسال طلب انضمام لكل كورس بالسلة بنفس الوصل
       for (const item of cart) {
         await apiRequest("POST", "/api/join-requests", {
           courseId: item.id,
@@ -89,7 +89,13 @@ export default function Cart() {
           receiptSize: size,
           paymentMethod: paymentMethod,
         });
+        
+        // 👇 هاد السطر السحري اللي بيمسح الذاكرة القديمة للكورس وبخليه يصير Pending
+        queryClient.invalidateQueries({ queryKey: ["/api/join-requests/me", item.id] });
       }
+
+      // مسح الذاكرة العامة للطلبات
+      queryClient.invalidateQueries({ queryKey: ["/api/join-requests/me"] });
 
       toast({
         title: "Order Submitted Successfully!",
