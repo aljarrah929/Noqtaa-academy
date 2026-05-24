@@ -42,18 +42,17 @@ export default function CourseDetail() {
 
   
   const formatDuration = (totalSeconds: number) => {
-    if (!totalSeconds) return "0 ثانية";
+    if (!totalSeconds) return "0s";
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
     const s = totalSeconds % 60;
 
     let parts = [];
-    if (h > 0) parts.push(`${h} ساعة`);
-    if (m > 0) parts.push(`${m} دقيقة`);
-    if (s > 0) parts.push(`${s} ثانية`);
+    if (h > 0) parts.push(`${h}h`);
+    if (m > 0) parts.push(`${m}m`);
+    if (s > 0) parts.push(`${s}s`);
 
-    // رح نجمعهم بنص واحد
-    return parts.join(" و ");
+    return parts.join(" "); // النتيجة: 1h 55m 27s
   };
 
   // المجموع صار يمثل إجمالي الثواني وليس الدقائق
@@ -217,7 +216,7 @@ export default function CourseDetail() {
                   <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium">
                     <Clock className="w-4 h-4" />
                     <span>{formatDuration(totalDurationMinutes)}</span>
-                    <span dir="rtl">{formatDuration(totalDurationSeconds)}</span>
+                    <span dir="ltr" className="mr-1">{formatDuration(totalDurationSeconds)}</span>
                   </div>
 
                 </div>
