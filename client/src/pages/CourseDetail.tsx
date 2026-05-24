@@ -61,17 +61,18 @@ export default function CourseDetail() {
 
   const totalDurationSeconds = course?.lessons?.reduce((acc, lesson) => acc + (lesson.duration || 0), 0) || 0;
   
-  const { data: enrollmentCheck } = useQuery<{ enrolled: boolean, packages?: string[] }>({
+  const { data: enrollmentCheck } = useQuery<{ enrolled: boolean }>({
     queryKey: ["/api/enrollments/check", courseId],
     enabled: !!courseId && isAuthenticated,
   });
 
   const isEnrolled = enrollmentCheck?.enrolled ?? false;
-  const userPackages = enrollmentCheck?.packages || [];
-
+  const userPackages = (enrollmentCheck as any)?.packages || []; // ضيف هاد السطر
   const { data: joinRequestStatus } = useQuery<{
     exists: boolean;
+    id?: number;
     status: "PENDING" | "APPROVED" | "REJECTED" | null;
+    createdAt?: string;
   }>({
     queryKey: ["/api/join-requests/me", courseId ? parseInt(courseId) : 0],
     queryFn: async () => {
@@ -82,17 +83,16 @@ export default function CourseDetail() {
     enabled: !!courseId && isAuthenticated && user?.role === "STUDENT" && !isEnrolled,
   });
 
-  // تجهيز خيارات البكجات والأسعار مع معاملة الأسعار كـ any للوصول للأعمدة الجديدة
-  const courseAny = course as any;
+  // تجهيز خيارات البكجات والأسعار
+  
   const packageOptions = [
-    { value: "all", label: "المادة كاملة (All)", price: courseAny?.price || 0 },
-    { value: "first", label: "مادة الفيرست (First)", price: courseAny?.priceFirst || 0 },
-    { value: "second", label: "مادة السكند (Second)", price: courseAny?.priceSecond || 0 },
-    { value: "mid", label: "مادة الميد (Mid)", price: courseAny?.priceMid || 0 },
-    { value: "final", label: "مادة الفاينل (Final)", price: courseAny?.priceFinal || 0 },
+    { value: "all", label: "المادة كاملة (All)", price: course?.price || 0 },
+    { value: "first", label: "مادة الفيرست (First)", price: (course as any)?.priceFirst || 0 },
+    { value: "second", label: "مادة السكند (Second)", price: (course as any)?.priceSecond || 0 },
+    { value: "mid", label: "مادة الميد (Mid)", price: (course as any)?.priceMid || 0 },
+    { value: "final", label: "مادة الفاينل (Final)", price: (course as any)?.priceFinal || 0 },
   ].filter(opt => opt.price > 0 || opt.value === "all")
-   .filter(opt => !userPackages.includes(opt.value) && !userPackages.includes("all"));
-
+   .filter(opt => !userPackages.includes(opt.value) && !userPackages.includes("all")); // هاد الفلتر بخفي البكجات المشتراة
   const currentSelection = packageOptions.find(opt => opt.value === selectedPackage) || packageOptions[0];
 
   const getCollegeBadgeColor = (slug?: string) => {
@@ -137,28 +137,67 @@ export default function CourseDetail() {
                     <Badge variant="secondary"><Lock className="w-3 h-3 mr-1" /> Not Enrolled</Badge>
                   ) : null}
                 </div>
-                <CardTitle className="text-2xl md:text-3xl">{course.title}</CardTitle>
+                <div className="flex flex-wrap items-center gap-4">
+                  <CardTitle className="text-2xl md:text-3xl">{course.title}</CardTitle>
+                  {course.price != null && course.price > 0 && (
+                    <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatPrice(course.price)}
+                    </span>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 {course.description && <p className="text-muted-foreground leading-relaxed mb-6">{course.description}</p>}
                 <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2"><BookOpen className="w-4 h-4" /><span>{course.lessons?.length || 0} lessons</span></div>
+                  <div className="flex items-center gap-2"><Users className="w-4 h-4" /><span>{course._count?.enrollments || 0} students</span></div>
                   <div className="flex items-center gap-1"><Clock className="w-4 h-4 text-primary" /><span dir="ltr" className="mr-1 text-primary text-sm">{formatDuration(totalDurationSeconds)}</span></div>
                 </div>
               </CardContent>
             </Card>
 
-            <LessonList
-              lessons={course?.lessons || []}
-              courseId={course.id}
-              isEnrolled={isEnrolled}
-              isCourseLocked={course.isLocked}
-              teacherEmail={course.teacher?.email || undefined}
-              userPackages={userPackages}
-            />
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Course Content</h2>
+              {course.lessons && course.lessons.length > 0 ? (
+                <LessonList
+                  lessons={course.lessons}
+                  courseId={course.id}
+                  isEnrolled={isEnrolled}
+                  isCourseLocked={course.isLocked}
+                  teacherEmail={course.teacher?.email || undefined}
+                />
+              ) : (
+                <Card><CardContent className="py-8 text-center"><BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-3" /><p className="text-muted-foreground">No lessons available yet.</p></CardContent></Card>
+              )}
+            </div>
+
+            {!isEnrolled && isAuthenticated && (
+              <LockedContentMessage teacherEmail={course.teacher?.email || undefined} teacherName={course.teacher ? `${course.teacher.firstName} ${course.teacher.lastName}` : undefined} />
+            )}
           </div>
 
           <div className="space-y-6">
+            <Card>
+              <CardHeader><CardTitle className="text-lg">Instructor</CardTitle></CardHeader>
+              <CardContent>
+                {course.teacher && (
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-14 w-14">
+                      <AvatarImage src={course.teacher.profileImageUrl || undefined} className="object-cover" />
+                      <AvatarFallback className="text-lg">{teacherInitials}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold">{course.teacher.firstName} {course.teacher.lastName}</h3>
+                      <p className="text-sm text-muted-foreground mb-3">Teacher</p>
+                      <Button variant="outline" size="sm" asChild className="w-full">
+                        <a href={`mailto:${course.teacher.email}?subject=Question about ${course.title}`}><Mail className="w-4 h-4 mr-2" /> Contact Teacher</a>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {!isAuthenticated && (
               <Card className="border-primary/50">
                 <CardContent className="py-6 text-center">
@@ -176,45 +215,93 @@ export default function CourseDetail() {
                     <>
                       <Clock className="w-10 h-10 mx-auto text-amber-500 mb-3" />
                       <h3 className="font-semibold mb-2">Request Pending</h3>
-                      <JoinRequestModal courseId={parseInt(courseId!)} courseTitle={course.title} trigger={<Button variant="outline" className="w-full">View Status</Button>} />
+                      <JoinRequestModal courseId={parseInt(courseId!)} courseTitle={course.title} trigger={<Button variant="outline" className="w-full"><Clock className="w-4 h-4 mr-2" /> View Status</Button>} />
+                    </>
+                  ) : joinRequestStatus?.exists && joinRequestStatus.status === "REJECTED" ? (
+                    <>
+                      <UserPlus className="w-10 h-10 mx-auto text-primary mb-3" />
+                      <h3 className="font-semibold mb-2">Request Rejected</h3>
+                      <JoinRequestModal courseId={parseInt(courseId!)} courseTitle={course.title} trigger={<Button className="w-full"><UserPlus className="w-4 h-4 mr-2" /> Submit New Request</Button>} />
                     </>
                   ) : (
                     <>
                       <UserPlus className="w-10 h-10 mx-auto text-primary mb-3" />
                       <h3 className="font-semibold mb-4">Want to Enroll?</h3>
                       
-                      {packageOptions.length > 0 && (
+                      {/* --- اختيار البكج --- */}
+                      {packageOptions.length > 1 && (
                         <div className="mb-4 text-start">
-                          <Label className="block mb-2 font-semibold">اختر القسم (Package)</Label>
-                          <Select value={selectedPackage} onValueChange={setSelectedPackage}>
-                            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                          <Label className="block mb-2 font-semibold">اختر القسم (Select Package)</Label>
+                          <Select value={selectedPackage} onValueChange={setSelectedPackage} dir="rtl">
+                            <SelectTrigger className="w-full bg-background">
+                              <SelectValue />
+                            </SelectTrigger>
                             <SelectContent>
-                              {packageOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                              {packageOptions.map(opt => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
-                          <p className="text-2xl font-bold text-emerald-600 mt-4">{formatPrice(currentSelection?.price || 0)}</p>
                         </div>
                       )}
 
-                      <div className="flex flex-col gap-3">
+                      {currentSelection && currentSelection.price > 0 && (
+                        <div className="p-3 bg-muted rounded-lg mb-4 border">
+                          <p className="text-sm text-muted-foreground mb-1">السعر الإجمالي:</p>
+                          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                            {formatPrice(currentSelection.price)}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col sm:flex-row gap-3">
                         <Button
                           variant={isInCart(course.id) ? "secondary" : "outline"}
-                          onClick={() => isInCart(course.id) ? removeFromCart(course.id) : addToCart({ 
-                            id: course.id, title: course.title, price: currentSelection.price,
-                            packageType: currentSelection.value, packageLabel: currentSelection.label 
-                          })}
+                          className="flex-1"
+                          onClick={() => 
+                            isInCart(course.id) 
+                              ? removeFromCart(course.id) 
+                              : addToCart({ 
+                                  id: course.id, 
+                                  title: course.title, 
+                                  price: currentSelection.price,
+                                  packageType: currentSelection.value,
+                                  packageLabel: currentSelection.label
+                                })
+                          }
                         >
-                          {isInCart(course.id) ? "In Cart" : "Add to Cart"}
+                          {isInCart(course.id) ? (
+                            <><Check className="w-4 h-4 mr-2 text-green-600" /> In Cart</>
+                          ) : (
+                            <><ShoppingCart className="w-4 h-4 mr-2" /> Add to Cart</>
+                          )}
                         </Button>
+
                         <JoinRequestModal
                           courseId={parseInt(courseId!)}
                           courseTitle={course.title}
                           packageType={currentSelection.value}
-                          trigger={<Button className="w-full">Buy Now</Button>}
+                          trigger={
+                            <Button className="flex-1">
+                              <UserPlus className="w-4 h-4 mr-2" /> Buy Now
+                            </Button>
+                          }
                         />
                       </div>
                     </>
                   )}
+                </CardContent>
+              </Card>
+            )}
+
+            {isEnrolled && (
+              <Card className="bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800">
+                <CardContent className="py-6 text-center">
+                  <CheckCircle className="w-10 h-10 mx-auto text-green-600 mb-3" />
+                  <h3 className="font-semibold mb-2 text-green-800 dark:text-green-400">You're Enrolled!</h3>
+                  <p className="text-sm text-green-700 dark:text-green-500">You have access to your purchased content.</p>
                 </CardContent>
               </Card>
             )}
