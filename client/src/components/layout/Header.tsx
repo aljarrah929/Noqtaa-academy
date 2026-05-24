@@ -2,6 +2,8 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/context/ThemeContext";
 import { Button } from "@/components/ui/button";
+import { ShoppingCart } from "lucide-react";
+import { useCart } from "@/hooks/useCart";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -94,7 +96,7 @@ export function Header() {
   } : undefined;
 
   const isCollegeThemed = !!(collegeTheme && user?.role === "STUDENT");
-
+  const { cart } = useCart();
   return (
     <header 
       className={`sticky top-0 z-50 border-b ${isCollegeThemed ? 'border-white/20' : 'border-border bg-background'}`}
@@ -241,7 +243,16 @@ export function Header() {
                 </Button>
               </Link>
             )}
-
+              <Link href="/cart">
+          <a className="relative inline-flex items-center p-2 hover:bg-accent rounded-full transition-colors cursor-pointer mr-2">
+            <ShoppingCart className="w-5 h-5 text-primary" />
+            {cart.length > 0 && (
+              <Badge className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 text-[10px] bg-red-500 text-white border-2 border-background">
+                {cart.length}
+              </Badge>
+            )}
+          </a>
+        </Link>
             <Button
               variant="ghost"
               size="icon"

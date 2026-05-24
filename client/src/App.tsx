@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
 import NotFound from "@/pages/not-found";
+import Cart from "@/pages/Cart";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
@@ -101,6 +102,7 @@ function Router() {
       <Route path="/onboarding" component={CollegeOnboarding} />
       <Route path="/profile" component={Profile} />
       <Route path="*" component={NotFound} />
+      <Route path="/cart" component={Cart} />
     </Switch>
   );
 }

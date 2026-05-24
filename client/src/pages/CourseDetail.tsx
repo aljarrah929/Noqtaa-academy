@@ -7,6 +7,8 @@ import { JoinRequestModal } from "@/components/courses/JoinRequestModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ShoppingCart, Check } from "lucide-react"; 
+import { useCart } from "@/hooks/useCart"; 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -29,6 +31,7 @@ export default function CourseDetail() {
   const courseId = params?.id;
   const [location] = useLocation();
   const { user, isAuthenticated } = useAuth();
+  const { addToCart, removeFromCart, isInCart } = useCart();
 
   const loginUrl = `/login?next=${encodeURIComponent(location)}`;
 
@@ -40,7 +43,6 @@ export default function CourseDetail() {
     refetchOnWindowFocus: true,
   });
 
-  
   const formatDuration = (totalSeconds: number) => {
     if (!totalSeconds) return "0s";
     const h = Math.floor(totalSeconds / 3600);
@@ -52,22 +54,18 @@ export default function CourseDetail() {
     if (m > 0) parts.push(`${m}m`);
     if (s > 0) parts.push(`${s}s`);
 
-    return parts.join(" "); // النتيجة: 1h 55m 27s
+    return parts.join(" "); 
   };
 
-  // المجموع صار يمثل إجمالي الثواني وليس الدقائق
   const totalDurationSeconds = course?.lessons?.reduce((acc, lesson) => acc + (lesson.duration || 0), 0) || 0;
-  // حساب المجموع الإجمالي لكل الدروس
-  const totalDurationMinutes = course?.lessons?.reduce((acc, lesson) => acc + (lesson.duration || 0), 0) || 0;
   
-  const { data: enrollmentCheck, isLoading: enrollmentLoading } = useQuery<{ enrolled: boolean }>({
+  const { data: enrollmentCheck } = useQuery<{ enrolled: boolean }>({
     queryKey: ["/api/enrollments/check", courseId],
     enabled: !!courseId && isAuthenticated,
   });
 
   const isEnrolled = enrollmentCheck?.enrolled ?? false;
 
-  // Check join request status for students
   const { data: joinRequestStatus } = useQuery<{
     exists: boolean;
     id?: number;
@@ -212,14 +210,12 @@ export default function CourseDetail() {
                     <span>{course._count?.enrollments || 0} students</span>
                   </div>
                   
-                  {/* هنا تم إضافة المجموع الإجمالي للوقت */}
                   <div className="flex items-center gap-1">
-  <Clock className="w-4 h-4 text-primary" />
-  <span dir="ltr" className="mr-1 text-primary text-sm">
-    {formatDuration(totalDurationSeconds)}
-  </span>
-</div>
-
+                    <Clock className="w-4 h-4 text-primary" />
+                    <span dir="ltr" className="mr-1 text-primary text-sm">
+                      {formatDuration(totalDurationSeconds)}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -371,19 +367,45 @@ export default function CourseDetail() {
                           Price: {formatPrice(course.price)}
                         </p>
                       )}
+                      
                       <p className="text-sm text-muted-foreground mb-4">
-                        Submit your payment receipt to request enrollment.
+                        You can buy this course directly, or add it to your cart to buy multiple courses.
                       </p>
-                      <JoinRequestModal
-                        courseId={parseInt(courseId!)}
-                        courseTitle={course.title}
-                        trigger={
-                          <Button className="w-full" data-testid="button-request-to-join">
-                            <UserPlus className="w-4 h-4 mr-2" />
-                            Request to Join
-                          </Button>
-                        }
-                      />
+
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <Button
+                          variant={isInCart(course.id) ? "secondary" : "outline"}
+                          className="flex-1"
+                          onClick={() => 
+                            isInCart(course.id) 
+                              ? removeFromCart(course.id) 
+                              : addToCart({ id: course.id, title: course.title, price: course.price || 0 })
+                          }
+                        >
+                          {isInCart(course.id) ? (
+                            <>
+                              <Check className="w-4 h-4 mr-2 text-green-600" />
+                              In Cart
+                            </>
+                          ) : (
+                            <>
+                              <ShoppingCart className="w-4 h-4 mr-2" />
+                              Add to Cart
+                            </>
+                          )}
+                        </Button>
+
+                        <JoinRequestModal
+                          courseId={parseInt(courseId!)}
+                          courseTitle={course.title}
+                          trigger={
+                            <Button className="flex-1" data-testid="button-request-to-join">
+                              <UserPlus className="w-4 h-4 mr-2" />
+                              Buy Now
+                            </Button>
+                          }
+                        />
+                      </div>
                     </>
                   )}
                 </CardContent>
