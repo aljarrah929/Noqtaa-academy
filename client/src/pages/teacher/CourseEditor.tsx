@@ -41,6 +41,7 @@ import { Link } from "wouter";
 import type { CourseWithRelations, College, Lesson, User, Major } from "@shared/schema";
 import { B2VideoUploader } from "@/components/B2VideoUploader";
 
+// --- Schema Updates ---
 const courseFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().optional(),
@@ -49,12 +50,19 @@ const courseFormSchema = z.object({
   majorId: z.string().min(1, "Major is required"),
   teacherId: z.string().min(1, "Teacher is required"),
   price: z.string().min(1, "Price is required"),
+  // ضفنا حقول الأسعار للبكجات هون وخليناها تقبل string عشان ما تضرب مع الـ Input
+  priceFirst: z.string().optional(),
+  priceSecond: z.string().optional(),
+  priceMid: z.string().optional(),
+  priceFinal: z.string().optional(),
 });
 
 const lessonFormSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
   contentType: z.enum(["video", "text", "link", "file"]),
   content: z.string().optional(),
+  // عشان نقدر نحدد الدرس لأي بكج
+  packageType: z.string().optional().default("all"),
 });
 
 type CourseFormValues = z.infer<typeof courseFormSchema>;
@@ -104,6 +112,11 @@ export default function CourseEditor() {
       majorId: "",
       teacherId: "",
       price: "0",
+      // أسعار البكجات مبدئياً صفر
+      priceFirst: "0",
+      priceSecond: "0",
+      priceMid: "0",
+      priceFinal: "0",
     },
   });
 
@@ -125,6 +138,7 @@ export default function CourseEditor() {
       title: "",
       contentType: "text",
       content: "",
+      packageType: "all",
     },
   });
 
@@ -138,6 +152,11 @@ export default function CourseEditor() {
         majorId: course.majorId ? String(course.majorId) : "",
         teacherId: course.teacherId || "",
         price: String(course.price || 0),
+        // جلب الأسعار المحفوظة بالداتابيز
+        priceFirst: String((course as any).priceFirst || 0),
+        priceSecond: String((course as any).priceSecond || 0),
+        priceMid: String((course as any).priceMid || 0),
+        priceFinal: String((course as any).priceFinal || 0),
       });
     }
   }, [course, courseForm]);
@@ -149,6 +168,10 @@ export default function CourseEditor() {
         collegeId: Number(data.collegeId),
         majorId: Number(data.majorId),
         price: Number(data.price),
+        priceFirst: Number(data.priceFirst || 0),
+        priceSecond: Number(data.priceSecond || 0),
+        priceMid: Number(data.priceMid || 0),
+        priceFinal: Number(data.priceFinal || 0),
       });
       return res.json();
     },
@@ -169,6 +192,10 @@ export default function CourseEditor() {
         collegeId: Number(data.collegeId),
         majorId: Number(data.majorId),
         price: Number(data.price),
+        priceFirst: Number(data.priceFirst || 0),
+        priceSecond: Number(data.priceSecond || 0),
+        priceMid: Number(data.priceMid || 0),
+        priceFinal: Number(data.priceFinal || 0),
       });
     },
     onSuccess: () => {
@@ -251,10 +278,11 @@ export default function CourseEditor() {
         title: lesson.title,
         contentType: lesson.contentType,
         content: lesson.content || "",
+        packageType: (lesson as any).packageType || "all",
       });
     } else {
       setEditingLesson(null);
-      lessonForm.reset({ title: "", contentType: "text", content: "" });
+      lessonForm.reset({ title: "", contentType: "text", content: "", packageType: "all" });
     }
     setLessonDialogOpen(true);
   };
@@ -432,13 +460,70 @@ export default function CourseEditor() {
                       </FormItem>
                     )}
                   />
-
+                  
+                  {/* --- حقول الأسعار للبكجات --- */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-6 p-4 border rounded-xl bg-muted/10">
+                    <FormField
+                      control={courseForm.control}
+                      name="priceFirst"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>سعر الفيرست</FormLabel>
+                          <FormControl>
+                            <Input type="number" min="0" placeholder="0" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="priceSecond"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>سعر السكند</FormLabel>
+                          <FormControl>
+                            <Input type="number" min="0" placeholder="0" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="priceMid"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>سعر الميد</FormLabel>
+                          <FormControl>
+                            <Input type="number" min="0" placeholder="0" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={courseForm.control}
+                      name="priceFinal"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>سعر الفاينل</FormLabel>
+                          <FormControl>
+                            <Input type="number" min="0" placeholder="0" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  {/* --- السعر الأساسي للمادة كاملة --- */}
                   <FormField
                     control={courseForm.control}
                     name="price"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Price (JOD)</FormLabel>
+                        <FormLabel>Price (سعر المادة كاملة)</FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 
@@ -480,7 +565,6 @@ export default function CourseEditor() {
                         <FormLabel>Course Thumbnail (غلاف المساق)</FormLabel>
                         <FormControl>
                           <div className="space-y-4">
-                            {/* عرض معاينة الصورة إذا كانت موجودة */}
                             {field.value && (
                               <div className="relative w-full max-w-xs aspect-[16/10] rounded-xl overflow-hidden border border-slate-200 shadow-sm group">
                                 <img src={field.value} alt="Course Thumbnail Preview" className="w-full h-full object-cover" />
@@ -496,7 +580,6 @@ export default function CourseEditor() {
                               </div>
                             )}
                             
-                            {/* منتقي الملفات والرفع التلقائي */}
                             <div className="flex items-center gap-3">
                               <Input
                                 type="file"
@@ -512,7 +595,6 @@ export default function CourseEditor() {
                                   formData.append("file", file);
 
                                   try {
-                                    // بنرفع الملف على مسار الصور بالـ Backend تبعك
                                     const res = await fetch("/api/b2/image/upload", {
                                       method: "POST",
                                       body: formData,
@@ -521,7 +603,6 @@ export default function CourseEditor() {
                                     if (!res.ok) throw new Error("Failed to upload image");
                                     const data = await res.json();
                                     
-                                    // تخزين الرابط الراجع في الـ Form State
                                     field.onChange(data.cdnUrl || data.url || "");
                                     toast({ title: "تم الرفع", description: "تم رفع غلاف المساق بنجاح." });
                                   } catch (err: any) {
@@ -580,9 +661,13 @@ export default function CourseEditor() {
                         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
                           {index + 1}
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 flex items-center gap-3">
                           <p className="font-medium truncate">{lesson.title}</p>
-                          <Badge variant="outline" className="text-xs mt-1">
+                          {/* عرض نوع البكج للدرس */}
+                          <Badge variant="secondary" className="text-[10px]">
+                            {((lesson as any).packageType || "all").toUpperCase()}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
                             {lesson.contentType}
                           </Badge>
                         </div>
@@ -618,6 +703,7 @@ export default function CourseEditor() {
         </div>
       </div>
 
+      {/* --- نافذة إضافة درس جديد --- */}
       <Dialog open={lessonDialogOpen} onOpenChange={setLessonDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -656,6 +742,32 @@ export default function CourseEditor() {
                         <SelectItem value="video">Video</SelectItem>
                         <SelectItem value="link">Link</SelectItem>
                         <SelectItem value="file">File</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* --- حقل تحديد نوع البكج --- */}
+              <FormField
+                control={lessonForm.control}
+                name="packageType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>الدرس تابع لأي قسم؟ (Package)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="اختر القسم" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="all">مادة كاملة (All)</SelectItem>
+                        <SelectItem value="first">مادة الفيرست (First)</SelectItem>
+                        <SelectItem value="second">مادة السكند (Second)</SelectItem>
+                        <SelectItem value="mid">مادة الميد (Mid)</SelectItem>
+                        <SelectItem value="final">مادة الفاينل (Final)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
