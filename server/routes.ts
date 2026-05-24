@@ -15,6 +15,7 @@ import { sendEmail } from "./email";
 import { db } from "./db";
 import { eq, and, count, sql } from "drizzle-orm";
 import { users, courses, colleges } from "@shared/schema";
+import { enrollmentRequests } from "@shared/schema";
 
 // Cloudflare R2 configuration
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -906,7 +907,50 @@ const college = await storage.getCollegeById((data as any).collegeId);
       res.status(500).json({ message: "Failed to create enrollment" });
     }
   });
+  // ==========================================
+  // مسار الدفع وطلب الانضمام (Checkout)
+  // ==========================================
+  app.post("/api/courses/:id/checkout", isAuthenticated, async (req: any, res) => {
+    try {
+      const courseId = parseInt(req.params.id);
+      const userId = req.user.id;
+      const { paymentMethod, receiptUrl } = req.body;
 
+      // 1. نتأكد إن الكورس موجود
+      const course = await storage.getCourseById(courseId);
+      if (!course) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+
+      // 2. نتأكد إنه الطالب مش باعت طلب قبل هيك وقيد الانتظار (عشان ما يكرر الطلب)
+      const existingRequest = await db.query.enrollmentRequests.findFirst({
+        where: and(
+          eq(enrollmentRequests.userId, userId),
+          eq(enrollmentRequests.courseId, courseId),
+          eq(enrollmentRequests.status, "pending")
+        )
+      });
+
+      if (existingRequest) {
+        return res.status(400).json({ message: "لديك طلب قيد المراجعة لهذا الكورس مسبقاً." });
+      }
+
+      // 3. تخزين الطلب في الداتابيز (غرفة الانتظار)
+      const [newRequest] = await db.insert(enrollmentRequests).values({
+        userId,
+        courseId,
+        paymentMethod,
+        receiptUrl: receiptUrl || null,
+        amount: course.price || 0,
+        status: "pending"
+      }).returning();
+
+      res.status(201).json(newRequest);
+    } catch (error) {
+      console.error("❌ Checkout error:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء معالجة الطلب" });
+    }
+  });
   // Teacher can remove students from their own courses
   app.delete("/api/courses/:courseId/enrollments/:studentId", isAuthenticated, async (req: any, res) => {
     try {
