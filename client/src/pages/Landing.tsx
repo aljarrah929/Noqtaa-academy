@@ -17,13 +17,13 @@ const heroImages = [
   //{ src: "/images/hero-pharmacy.png", alt: "Pharmacy" },
   //{ src: "/images/hero-engineering.png", alt: "Engineering" },
   //{ src: "/images/hero-it.png", alt: "IT" },
-  { src: "/images/pic1.png" },
-  { src: "/images/pic2.png" },
-  { src: "/images/pic3.png" },
-  { src: "/images/pic4.png" },
-  { src: "/images/pic5.png" },
-  { src: "/images/pic6.png" },
-  { src: "/images/pic7.png" },
+  { src: "/images/pic1.png" , alt: "Noqtaa"},
+  { src: "/images/pic2.png" , alt: "Noqtaa"},
+  { src: "/images/pic3.png" , alt: "Noqtaa"},
+  { src: "/images/pic4.png" , alt: "Noqtaa"},
+  { src: "/images/pic5.png" , alt: "Noqtaa"},
+  { src: "/images/pic6.png" , alt: "Noqtaa"},
+  { src: "/images/pic7.png" , alt: "Noqtaa"},
 ];
 
 const iconMap: Record<string, LucideIcon> = {
