@@ -123,7 +123,45 @@ export const enrollments = pgTable("enrollments", {
   createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
+// ==========================================
+// جدول طلبات الانضمام والدفع (غرفة الانتظار)
+// ==========================================
+export const enrollmentRequests = pgTable("enrollment_requests", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  // هون عدلناها لـ varchar عشان تطابق نظامك
+  userId: varchar("user_id").notNull().references(() => users.id), 
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  
+  // حالة الطلب (قيد الانتظار، مقبول، مرفوض)
+  status: varchar("status", { length: 50 }).notNull().default("pending"), 
+  
+  // طريقة الدفع (مثلاً: cliq, zain_cash, orange_money)
+  paymentMethod: varchar("payment_method", { length: 50 }).notNull(), 
+  
+  // رابط صورة الوصل (لما يرفع سكرين شوت التحويل)
+  receiptUrl: text("receipt_url"), 
+  
+  // المبلغ
+  amount: integer("amount").notNull().default(0), 
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
+// تعريف العلاقات
+export const enrollmentRequestsRelations = relations(enrollmentRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [enrollmentRequests.userId],
+    references: [users.id],
+  }),
+  course: one(courses, {
+    fields: [enrollmentRequests.courseId],
+    references: [courses.id],
+  }),
+}));
+
+export const insertEnrollmentRequestSchema = createInsertSchema(enrollmentRequests);
+export type EnrollmentRequest = typeof enrollmentRequests.$inferSelect;
+export type InsertEnrollmentRequest = typeof enrollmentRequests.$inferInsert;
 // Course Approval Logs table
 export const courseApprovalLogs = pgTable("course_approval_logs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
