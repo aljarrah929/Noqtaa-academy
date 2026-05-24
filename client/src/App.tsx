@@ -101,8 +101,9 @@ function Router() {
       <Route path="/accountant/enrollments" component={AccountantDashboard} />
       <Route path="/onboarding" component={CollegeOnboarding} />
       <Route path="/profile" component={Profile} />
-      <Route path="*" component={NotFound} />
       <Route path="/cart" component={Cart} />
+      <Route path="*" component={NotFound} />
+      
     </Switch>
   );
 }
