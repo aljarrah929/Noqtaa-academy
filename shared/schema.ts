@@ -101,6 +101,10 @@ export const courses = pgTable("courses", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   likesCount: integer("likes_count").default(0),
+  priceFirst: integer("price_first"),
+  priceSecond: integer("price_second"),
+  priceMid: integer("price_mid"),
+  priceFinal: integer("price_final"),
 });
 
 // Lessons table
@@ -113,6 +117,7 @@ export const lessons = pgTable("lessons", {
   orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
   duration: integer("duration").default(0),
+  packageType: varchar("package_type", { length: 50 }).default("all"),
 });
 
 // Enrollments table
@@ -122,6 +127,7 @@ export const enrollments = pgTable("enrollments", {
   studentId: varchar("student_id").notNull().references(() => users.id),
   createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
+  packageType: varchar("package_type", { length: 50 }).default("all"),
 });
 // ==========================================
 // جدول طلبات الانضمام والدفع (غرفة الانتظار)
@@ -197,6 +203,7 @@ export const joinRequests = pgTable(
     createdAt: timestamp("created_at").defaultNow(),
     reviewedAt: timestamp("reviewed_at"),
     paymentMethod: varchar("payment_method", { length: 50 }).default("manual"),
+    packageType: varchar("package_type", { length: 50 }).default("all"),
   },
   (table) => [
     index("idx_join_request_course_student_status").on(table.courseId, table.studentId, table.status),
