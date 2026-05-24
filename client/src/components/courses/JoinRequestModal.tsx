@@ -32,6 +32,7 @@ interface JoinRequestModalProps {
   courseId: number;
   courseTitle: string;
   trigger: React.ReactNode;
+  packageType?: string;
 }
 
 interface JoinRequestStatus {
@@ -47,7 +48,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 const ALLOWED_EXTENSIONS = ".jpg, .jpeg, .png, .pdf";
 
-export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequestModalProps) {
+export function JoinRequestModal({ courseId, courseTitle, trigger, packageType }: JoinRequestModalProps) {
   const [open, setOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
@@ -116,6 +117,7 @@ export function JoinRequestModal({ courseId, courseTitle, trigger }: JoinRequest
           receiptMime: mime,
           receiptSize: size,
           paymentMethod, // أضفنا طريقة الدفع هون
+          packageType: packageType || "all",
         });
         
         const result = await createRes.json();

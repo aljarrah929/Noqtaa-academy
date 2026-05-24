@@ -88,6 +88,7 @@ export default function Cart() {
           receiptMime: mime,
           receiptSize: size,
           paymentMethod: paymentMethod,
+          packageType: item.packageType || "all",
         });
         
         // 👇 هاد السطر السحري اللي بيمسح الذاكرة القديمة للكورس وبخليه يصير Pending
@@ -141,6 +142,7 @@ export default function Cart() {
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex flex-col">
                       <h3 className="font-semibold text-lg">{item.title}</h3>
+                      {item.packageLabel && <span className="text-sm text-muted-foreground">{item.packageLabel}</span>}
                       <span className="text-primary font-bold">{formatPrice(item.price)}</span>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => removeFromCart(item.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50">

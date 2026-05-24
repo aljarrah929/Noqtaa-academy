@@ -4,6 +4,8 @@ export interface CartItem {
   id: number;
   title: string;
   price: number;
+  packageType?: string; 
+  packageLabel?: string;
 }
 
 export function useCart() {
