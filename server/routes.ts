@@ -502,13 +502,18 @@ const college = await storage.getCollegeById((data as any).collegeId);
   });
 
   app.post("/api/courses", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const user = await storage.getUser(userId);
-      if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
-        return res.status(403).json({ message: "Only admins can create courses" });
-      }
-      const data = insertCourseSchema.parse({ ...req.body, teacherId: req.body.teacherId || userId });
+  try {
+    const userId = req.user.id;
+    const user = await storage.getUser(userId);
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && user.role !== "TEACHER")) {
+      return res.status(403).json({ message: "Only admins and teachers can create courses" });
+    }
+        const isAdmin = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+const data = insertCourseSchema.parse({ 
+  ...req.body, 
+  teacherId: isAdmin ? (req.body.teacherId || userId) : userId, // الأستاذ يصير هو التيتشر تلقائياً
+  status: isAdmin ? (req.body.status || "DRAFT") : "DRAFT" // الأستاذ دايماً يبدأ DRAFT
+});
       const course = await storage.createCourse(data);
       res.status(201).json(course);
     } catch (error) {
