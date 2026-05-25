@@ -104,14 +104,24 @@ export function LessonList({
                       </CardContent>
                     </Link>
                   ) : (
-                    <CardContent className="p-3 flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center border"><Lock className="w-4 h-4 text-muted-foreground" /></div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm text-muted-foreground">{lesson.title}</h4>
-                        <p className="text-[10px] text-destructive mt-1">🔒 يجب الاشتراك في هذا القسم للمشاهدة</p>
-                      </div>
-                    </CardContent>
-                  )}
+  <CardContent className="p-3 flex items-center gap-4">
+    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center border">
+      <Lock className="w-4 h-4 text-muted-foreground" />
+    </div>
+    <div className="flex-1">
+      <h4 className="font-medium text-sm text-muted-foreground">{lesson.title}</h4>
+      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1">{getContentTypeIcon(lesson.contentType)} {lesson.contentType}</span>
+        {lesson.duration > 0 && (
+          <span className="flex items-center gap-1 border-l pl-2 dark:border-slate-700">
+            <Clock className="w-3 h-3" /> {formatLessonTime(lesson.duration)}
+          </span>
+        )}
+      </div>
+      <p className="text-[10px] text-destructive mt-1">You must subscribe to this section to view it🔒</p>
+    </div>
+  </CardContent>
+)}
                 </Card>
               ))}
             </div>
