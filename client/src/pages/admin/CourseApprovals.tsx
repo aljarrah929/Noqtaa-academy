@@ -6,6 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Check, X, FileCheck, Eye, Pencil, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -25,7 +36,6 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Check, X, FileCheck, Eye, Pencil } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations } from "@shared/schema";
 
@@ -58,7 +68,22 @@ export default function CourseApprovals() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
+   const [courseToDelete, setCourseToDelete] = useState<CourseWithRelations | null>(null);
 
+const deleteMutation = useMutation({
+  mutationFn: async (courseId: number) => {
+    await apiRequest("DELETE", `/api/courses/${courseId}`);
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/pending"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+    toast({ title: "Course Deleted", description: "The course has been deleted." });
+    setCourseToDelete(null);
+  },
+  onError: (error: Error) => {
+    toast({ title: "Error", description: error.message, variant: "destructive" });
+  },
+});
   const openDialog = (course: CourseWithRelations, actionType: "approve" | "reject") => {
     setSelectedCourse(course);
     setAction(actionType);
@@ -84,7 +109,26 @@ export default function CourseApprovals() {
     if (!teacher) return "T";
     return `${teacher.firstName?.[0] || ""}${teacher.lastName?.[0] || ""}`.toUpperCase() || "T";
   };
-
+<AlertDialog open={!!courseToDelete} onOpenChange={() => setCourseToDelete(null)}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Delete Course</AlertDialogTitle>
+      <AlertDialogDescription>
+        هل أنت متأكد من حذف كورس "{courseToDelete?.title}"؟ هاد الإجراء لا يمكن التراجع عنه وسيحذف كل الدروس والتسجيلات المرتبطة.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      <AlertDialogAction
+        onClick={() => courseToDelete && deleteMutation.mutate(courseToDelete.id)}
+        className="bg-destructive hover:bg-destructive/90"
+        disabled={deleteMutation.isPending}
+      >
+        {deleteMutation.isPending ? "Deleting..." : "Delete"}
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
   return (
     <DashboardLayout title="Course Approvals">
       <div className="max-w-6xl mx-auto">
@@ -166,6 +210,15 @@ export default function CourseApprovals() {
                               asChild
                               data-testid={`button-edit-${course.id}`}
                             >
+                              <Button
+  variant="outline"
+  size="sm"
+  onClick={() => setCourseToDelete(course)}
+  className="text-red-700 hover:text-red-800 hover:bg-red-50"
+>
+  <Trash2 className="w-4 h-4 mr-1" />
+  Delete
+</Button>
                               <Link href={`/admin/courses/${course.id}/edit`}>
                                 <Pencil className="w-4 h-4" />
                               </Link>
