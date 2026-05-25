@@ -131,7 +131,7 @@ export default function ManageCourses() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Course</AlertDialogTitle>
             <AlertDialogDescription>
-              هل أنت متأكد من حذف كورس "<strong>{courseToDelete?.title}</strong>"؟ هاد الإجراء لا يمكن التراجع عنه وسيحذف كل الدروس والتسجيلات المرتبطة.
+             Are you sure you want to delete this course "<strong>{courseToDelete?.title}</strong>"? This action cannot be undone, and it will permanently remove all associated lessons and recordings.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
