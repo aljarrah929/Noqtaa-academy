@@ -125,42 +125,34 @@ export default function UploadVideo() {
                 )} />
 
                 <div className="space-y-2">
-                  <FormLabel>* مدة الفيديو (ساعات : دقائق : ثواني)</FormLabel>
-                  <div className="flex gap-2 items-center text-muted-foreground" dir="ltr">
-                    <Input type="number" min="0" value={hours || ""} onChange={e => setHours(Number(e.target.value))} placeholder="ساعات" className="text-center" /> :
-                    <Input type="number" min="0" max="59" value={minutes || ""} onChange={e => setMinutes(Number(e.target.value))} placeholder="دقائق" className="text-center" /> :
-                    <Input type="number" min="0" max="59" value={seconds || ""} onChange={e => setSeconds(Number(e.target.value))} placeholder="ثواني" className="text-center" />
-                  </div>
-                </div>
+                  <FormField control={form.control} name="content" render={({ field }) => (
+  <FormItem>
+    <FormLabel>Video File *</FormLabel>
+    <FormControl>
+      <B2VideoUploader 
+        courseId={courseId} 
+        value={field.value} 
+        onChange={field.onChange}
+        onDurationExtracted={(totalSeconds) => {
+          extractedDurationRef.current = totalSeconds;
+          setHours(Math.floor(totalSeconds / 3600));
+          setMinutes(Math.floor((totalSeconds % 3600) / 60));
+          setSeconds(totalSeconds % 60);
+        }}
+      />
+    </FormControl>
+    <FormMessage />
+  </FormItem>
+)} />
 
-                <FormField control={form.control} name="content" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Video File *</FormLabel>
-                    <FormControl>
-                     <B2VideoUploader 
-  courseId={courseId} 
-  value={field.value} 
-  onChange={field.onChange}
-  onDurationExtracted={(totalSeconds) => {
-    extractedDurationRef.current = totalSeconds;
-    // حدّث الحقول اليدوية عشان تظهر للمعلم
-    setHours(Math.floor(totalSeconds / 3600));
-    setMinutes(Math.floor((totalSeconds % 3600) / 60));
-    setSeconds(totalSeconds % 60);
-  }}
-/>
-هيك لما المعلم يرفع الفيديو، المدة بتنسحب تلقائياً وبتنحفظ بالـ form وبتظهر بالحقول اليدوية.
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <div className="flex justify-end gap-3 pt-4">
-                  <Link href={`/teacher/courses/${courseId}/content`}><Button type="button" variant="outline">Cancel</Button></Link>
-                  <Button type="submit" disabled={createLessonMutation.isPending || !form.watch("content")}>
-                    {createLessonMutation.isPending ? "Saving..." : "Save Lesson"}
-                  </Button>
-                </div>
+<div className="flex justify-end gap-3 pt-4">
+  <Link href={`/teacher/courses/${courseId}/content`}>
+    <Button type="button" variant="outline">Cancel</Button>
+  </Link>
+  <Button type="submit" disabled={createLessonMutation.isPending || !form.watch("content")}>
+    {createLessonMutation.isPending ? "Saving..." : "Save Lesson"}
+  </Button>
+</div>            </div>
               </form>
             </Form>
           </CardContent>
