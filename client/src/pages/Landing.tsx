@@ -12,18 +12,23 @@ import { GraduationCap, BookOpen, Users, Award, ArrowRight, Building2, Trophy, S
 import type { CourseWithRelations, College, FeaturedProfile } from "@shared/schema";
 import { BRAND_NAME, BRAND_COPYRIGHT } from "@/lib/branding";
 import { useTranslation } from "react-i18next";
+import pic1 from "@/assets/pic1.png";
+import pic2 from "@/assets/pic2.png";
+import pic3 from "@/assets/pic3.png";
+import pic4 from "@/assets/pic4.png";
+import pic5 from "@/assets/pic5.png";
+import pic6 from "@/assets/pic6.png";
+import pic7 from "@/assets/pic7.png";
 import logoUrl from "@/assets/logo.png";
+import logoDarkUrl from "@/assets/logo-dark.png";
 const heroImages = [
-  //{ src: "/images/hero-pharmacy.png", alt: "Pharmacy" },
-  //{ src: "/images/hero-engineering.png", alt: "Engineering" },
-  //{ src: "/images/hero-it.png", alt: "IT" },
-  { src: "/images/pic1.png" , alt: "Noqtaa"},
-  { src: "/images/pic2.png" , alt: "Noqtaa"},
-  { src: "/images/pic3.png" , alt: "Noqtaa"},
-  { src: "/images/pic4.png" , alt: "Noqtaa"},
-  { src: "/images/pic5.png" , alt: "Noqtaa"},
-  { src: "/images/pic6.png" , alt: "Noqtaa"},
-  { src: "/images/pic7.png" , alt: "Noqtaa"},
+  { src: pic1, alt: "Noqtaa" },
+  { src: pic2, alt: "Noqtaa" },
+  { src: pic3, alt: "Noqtaa" },
+  { src: pic4, alt: "Noqtaa" },
+  { src: pic5, alt: "Noqtaa" },
+  { src: pic6, alt: "Noqtaa" },
+  { src: pic7, alt: "Noqtaa" },
 ];
 
 const iconMap: Record<string, LucideIcon> = {
@@ -368,10 +373,15 @@ export default function Landing() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <img 
-                src={logoUrl} 
-                alt={BRAND_NAME} 
-                className="w-10 h-10 object-contain rounded-md" 
-             />
+  src={logoUrl}
+  alt={BRAND_NAME} 
+  className="w-10 h-10 object-contain rounded-md dark:hidden" 
+/>
+<img 
+  src={logoDarkUrl}
+  alt={BRAND_NAME} 
+  className="w-10 h-10 object-contain rounded-md hidden dark:block" 
+/>
               <span className="font-semibold">{BRAND_NAME}</span>
             </div>
             <p className="text-sm text-muted-foreground">

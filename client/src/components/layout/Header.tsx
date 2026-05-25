@@ -20,11 +20,13 @@ import { BRAND_NAME } from "@/lib/branding";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import logoUrl from "@/assets/logo.png";
+import logoDarkUrl from "@/assets/logo-dark.png"
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "@/components/LanguageToggle";
 
 function BrandIcon({ className, isCollegeThemed }: { className?: string; isCollegeThemed?: boolean }) {
   const [hasError, setHasError] = useState(false);
+  const { isDark } = useTheme();
   
   if (hasError) {
     return <GraduationCap className={`w-6 h-6 ${isCollegeThemed ? 'text-white' : 'text-primary'}`} />;
@@ -32,7 +34,7 @@ function BrandIcon({ className, isCollegeThemed }: { className?: string; isColle
   
   return (
     <img 
-      src={logoUrl} 
+      src={isDark ? logoDarkUrl : logoUrl} 
       alt="Noqtaa Academy" 
       className={className}
       onError={() => setHasError(true)}
