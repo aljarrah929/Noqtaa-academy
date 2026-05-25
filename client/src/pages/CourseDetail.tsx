@@ -68,6 +68,19 @@ export default function CourseDetail() {
 
   const isEnrolled = enrollmentCheck?.enrolled ?? false;
   const userPackages = (enrollmentCheck as any)?.packages || [];
+  // بعد سطر userPackages، أضف هاد الحساب:
+const availablePackages = [
+  { value: "first", price: (course as any)?.priceFirst },
+  { value: "second", price: (course as any)?.priceSecond },
+  { value: "mid", price: (course as any)?.priceMid },
+  { value: "final", price: (course as any)?.priceFinal },
+].filter(p => p.price > 0).map(p => p.value);
+
+// الطالب اشترى كل شي إذا:
+// 1. عنده "all"
+// 2. أو اشترى كل الـ packages المتاحة
+const hasAllPackages = userPackages.includes("all") || 
+  (availablePackages.length > 0 && availablePackages.every(p => userPackages.includes(p)));
   const { data: joinRequestStatus } = useQuery<{
     exists: boolean;
     id?: number;
@@ -209,7 +222,8 @@ export default function CourseDetail() {
               </Card>
             )}
 
-            {isAuthenticated && user?.role === "STUDENT" && packageOptions.length > 0 && (
+            {isAuthenticated && user?.role === "STUDENT" && packageOptions.length > 0 && !hasAllPackages && (
+
 
               <Card className="border-primary/50">
                 <CardContent className="py-6 text-center">
@@ -298,7 +312,7 @@ export default function CourseDetail() {
               </Card>
             )}
 
-            {isEnrolled && packageOptions.length === 0 && (
+            {isEnrolled && (packageOptions.length === 0 || hasAllPackages) && (
   <Card className="bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800">
     <CardContent className="py-6 text-center">
       <CheckCircle className="w-10 h-10 mx-auto text-green-600 mb-3" />
