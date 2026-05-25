@@ -12,6 +12,7 @@ interface LessonListProps {
   isCourseLocked?: boolean;
   teacherEmail?: string;
   userPackages?: string[]; 
+  isAdmin?: boolean;
 }
 
 export function LessonList({ 
@@ -20,7 +21,8 @@ export function LessonList({
   isEnrolled, 
   isCourseLocked = false, 
   teacherEmail,
-  userPackages = [] 
+  userPackages = [] ,
+  isAdmin = false,
 }: LessonListProps) {
 
   const getContentTypeIcon = (contentType: string) => {
@@ -71,7 +73,9 @@ export function LessonList({
     <div className="space-y-6">
       {sortedKeys.map((pkg) => {
         // التحقق من الصلاحية (معاه البكج الشامل، أو هاد البكج تحديداً)
-        const hasAccess = isEnrolled && !isCourseLocked && (userPackages.includes("all") || userPackages.includes(pkg));
+        const hasAccess = isAdmin || (isEnrolled && !isCourseLocked && (userPackages.includes("all") || userPackages.includes(pkg)));
+
+        
 
         return (
           <div key={pkg} className="border rounded-xl overflow-hidden bg-card shadow-sm">

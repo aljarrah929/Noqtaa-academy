@@ -179,6 +179,7 @@ const hasAllPackages = userPackages.includes("all") ||
                     isCourseLocked={course.isLocked}
                     teacherEmail={course.teacher?.email || undefined}
                     userPackages={userPackages}
+                    isAdmin={user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"}
 />
               ) : (
                 <Card><CardContent className="py-8 text-center"><BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-3" /><p className="text-muted-foreground">No lessons available yet.</p></CardContent></Card>
