@@ -692,16 +692,17 @@ const college = await storage.getCollegeById((data as any).collegeId);
       }
       
       const data = insertLessonSchema.parse({ ...req.body, courseId });
+
+const lessonData = {
+  ...data,
+  duration: req.body.duration ? Number(req.body.duration) : 0,
+  packageType: req.body.packageType || "all",
+};
+
+console.log("👉 2. Data going to Database:", lessonData);
+const lesson = await storage.createLesson(lessonData);
+
       
-      const lessonData = {
-        ...data,
-        duration: req.body.duration ? Number(req.body.duration) : 0
-      };
-
-      // 📸 كاميرا 2: شو الرقم اللي رح ينبعث للداتابيز؟
-      console.log("👉 2. Data going to Database:", lessonData); 
-
-      const lesson = await storage.createLesson(lessonData);
       res.status(201).json(lesson);
     } catch (error) {
       console.error("❌ Error creating lesson:", error);
