@@ -186,12 +186,6 @@ const deleteMutation = useMutation({
                               </Link>
                             </Button>
                             <Button
-                              variant="ghost"
-                              size="sm"
-                              asChild
-                              data-testid={`button-edit-${course.id}`}
-                            >
-                              <Button
   variant="outline"
   size="sm"
   onClick={() => setCourseToDelete(course)}
@@ -200,10 +194,17 @@ const deleteMutation = useMutation({
   <Trash2 className="w-4 h-4 mr-1" />
   Delete
 </Button>
-                              <Link href={`/admin/courses/${course.id}/edit`}>
-                                <Pencil className="w-4 h-4" />
-                              </Link>
-                            </Button>
+
+<Button
+  variant="ghost"
+  size="sm"
+  asChild
+  data-testid={`button-edit-${course.id}`}
+>
+  <Link href={`/admin/courses/${course.id}/edit`}>
+    <Pencil className="w-4 h-4" />
+  </Link>
+</Button>
                             <Button
                               variant="outline"
                               size="sm"
