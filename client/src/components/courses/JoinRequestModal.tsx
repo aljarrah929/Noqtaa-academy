@@ -61,10 +61,13 @@ export function JoinRequestModal({ courseId, courseTitle, trigger, packageType }
   const { data: status, isLoading: statusLoading, refetch: refetchStatus } = useQuery<JoinRequestStatus>({
     queryKey: ["/api/join-requests/me", courseId],
     queryFn: async () => {
-      const res = await fetch(`/api/join-requests/me?courseId=${courseId}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch status");
-      return res.json();
-    },
+  const res = await fetch(
+    `/api/join-requests/me?courseId=${courseId}&packageType=${packageType || "all"}`, 
+    { credentials: "include" }
+  );
+  if (!res.ok) throw new Error("Failed to fetch status");
+  return res.json();
+},
     enabled: open,
     staleTime: 0,
     refetchOnMount: "always",

@@ -2405,35 +2405,40 @@ app.get("/api/join-requests", isAuthenticated, async (req: any, res) => {
 });
   // Student - Get my join request status for a course
   app.get("/api/join-requests/me", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const courseId = parseInt(req.query.courseId as string);
-      
-      if (isNaN(courseId)) {
-        console.log("[JoinRequest] Invalid courseId:", req.query.courseId);
-        return res.status(400).json({ message: "Valid courseId is required" });
-      }
-      
-      const request = await storage.getStudentJoinRequestForCourse(userId, courseId);
-      
-      if (!request) {
-        return res.json({ exists: false, status: null });
-      }
-      
-      res.json({
-        exists: true,
-        id: request.id,
-        status: request.status,
-        message: request.message,
-        createdAt: request.createdAt,
-        reviewedAt: request.reviewedAt,
-      });
-    } catch (error) {
-      console.error("[JoinRequest] Error fetching status:", error);
-      res.status(500).json({ message: "Failed to fetch join request status" });
+  try {
+    const userId = req.user.id;
+    const courseId = parseInt(req.query.courseId as string);
+    const packageType = req.query.packageType as string || null;
+    
+    if (isNaN(courseId)) {
+      return res.status(400).json({ message: "Valid courseId is required" });
     }
-  });
-  
+    
+    // جيب آخر طلب للطالب
+    const request = await storage.getStudentJoinRequestForCourse(userId, courseId);
+    
+    if (!request) {
+      return res.json({ exists: false, status: null });
+    }
+
+    // إذا في packageType محدد، تحقق إنو الطلب هو لنفس البكج
+    if (packageType && request.packageType !== packageType && request.packageType !== "all") {
+      return res.json({ exists: false, status: null });
+    }
+    
+    res.json({
+      exists: true,
+      id: request.id,
+      status: request.status,
+      message: request.message,
+      createdAt: request.createdAt,
+      reviewedAt: request.reviewedAt,
+    });
+  } catch (error) {
+    console.error("[JoinRequest] Error fetching status:", error);
+    res.status(500).json({ message: "Failed to fetch join request status" });
+  }
+});
   // Student - Create or update join request
   // Student - Create or update join request
   app.post("/api/join-requests", isAuthenticated, async (req: any, res) => {
