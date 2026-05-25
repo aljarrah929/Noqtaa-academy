@@ -67,7 +67,7 @@ export default function CourseDetail() {
   });
 
   const isEnrolled = enrollmentCheck?.enrolled ?? false;
-  const userPackages = (enrollmentCheck as any)?.packages || []; // ضيف هاد السطر
+  const userPackages = (enrollmentCheck as any)?.packages || [];
   const { data: joinRequestStatus } = useQuery<{
     exists: boolean;
     id?: number;
@@ -160,12 +160,13 @@ export default function CourseDetail() {
               <h2 className="text-xl font-semibold mb-4">Course Content</h2>
               {course.lessons && course.lessons.length > 0 ? (
                 <LessonList
-                  lessons={course.lessons}
-                  courseId={course.id}
-                  isEnrolled={isEnrolled}
-                  isCourseLocked={course.isLocked}
-                  teacherEmail={course.teacher?.email || undefined}
-                />
+                    lessons={course.lessons}
+                    courseId={course.id}
+                    isEnrolled={isEnrolled}
+                    isCourseLocked={course.isLocked}
+                    teacherEmail={course.teacher?.email || undefined}
+                    userPackages={userPackages}
+/>
               ) : (
                 <Card><CardContent className="py-8 text-center"><BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-3" /><p className="text-muted-foreground">No lessons available yet.</p></CardContent></Card>
               )}
