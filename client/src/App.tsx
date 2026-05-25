@@ -31,6 +31,7 @@ import UploadFile from "@/pages/teacher/UploadFile";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import CourseApprovals from "@/pages/admin/CourseApprovals";
 import TeachersList from "@/pages/admin/TeachersList";
+import ManageCourses from "@/pages/admin/ManageCourses";
 import UserManagement from "@/pages/admin/UserManagement";
 import CollegeManagement from "@/pages/admin/CollegeManagement";
 import FeaturedProfilesManagement from "@/pages/admin/FeaturedProfilesManagement";
@@ -102,6 +103,7 @@ function Router() {
       <Route path="/onboarding" component={CollegeOnboarding} />
       <Route path="/profile" component={Profile} />
       <Route path="/cart" component={Cart} />
+      <Route path="/admin/courses" component={ManageCourses} />
       <Route path="*" component={NotFound} />
       
     </Switch>

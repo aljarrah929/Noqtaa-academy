@@ -103,6 +103,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     { href: "/admin/approvals", label: t("sidebar.approvals"), icon: FileCheck },
     { href: "/admin/requests", label: t("sidebar.joinRequests"), icon: UserPlus },
     { href: "/admin/teachers", label: t("sidebar.teachers"), icon: Users },
+    { href: "/admin/courses", label: "Manage Courses", icon: BookOpen },
   ];
 
   const superAdminMenuItems = [
