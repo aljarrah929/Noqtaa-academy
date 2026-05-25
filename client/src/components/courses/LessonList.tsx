@@ -2,180 +2,130 @@ import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Video, 
-  FileText, 
-  Link as LinkIcon, 
-  File, 
-  Lock, 
-  ChevronRight,
-  Play,
-  Clock // ضفنا أيقونة الساعة هون
-} from "lucide-react";
+import { Video, FileText, Link as LinkIcon, File, Lock, Play, Clock, FolderOpen } from "lucide-react";
 import type { Lesson } from "@shared/schema";
 
 interface LessonListProps {
-  lessons: Lesson[];
+  lessons: any[]; // any to avoid strict type errors
   courseId: number;
   isEnrolled: boolean;
   isCourseLocked?: boolean;
   teacherEmail?: string;
+  userPackages?: string[]; 
 }
 
-export function LessonList({ lessons, courseId, isEnrolled, isCourseLocked = false, teacherEmail }: LessonListProps) {
+export function LessonList({ 
+  lessons, 
+  courseId, 
+  isEnrolled, 
+  isCourseLocked = false, 
+  teacherEmail,
+  userPackages = [] 
+}: LessonListProps) {
+
   const getContentTypeIcon = (contentType: string) => {
     switch (contentType) {
-      case "video":
-        return <Video className="w-5 h-5" />;
-      case "text":
-        return <FileText className="w-5 h-5" />;
-      case "link":
-        return <LinkIcon className="w-5 h-5" />;
-      case "file":
-        return <File className="w-5 h-5" />;
-      default:
-        return <FileText className="w-5 h-5" />;
+      case "video": return <Video className="w-4 h-4" />;
+      case "text": return <FileText className="w-4 h-4" />;
+      case "link": return <LinkIcon className="w-4 h-4" />;
+      case "file": return <File className="w-4 h-4" />;
+      default: return <FileText className="w-4 h-4" />;
     }
   };
 
-  const getContentTypeLabel = (contentType: string) => {
-    return contentType.charAt(0).toUpperCase() + contentType.slice(1);
-  };
-
-  const sortedLessons = [...lessons].sort((a, b) => a.orderIndex - b.orderIndex);
-
-  if (lessons.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center">
-          <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="font-medium text-lg mb-2">No lessons yet</h3>
-          <p className="text-muted-foreground">
-            This course doesn't have any lessons yet.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-// ✨ الخدعة السحرية: تنسيق وقت الدرس رقمياً (ساعات:دقائق:ثواني)
   const formatLessonTime = (totalSeconds: number) => {
     if (!totalSeconds) return "0:00";
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
     const s = totalSeconds % 60;
-    
-    if (h > 0) {
-      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m}:${s.toString().padStart(2, '0')}`;
   };
-  // Determine if content should be accessible
-  const canAccessContent = isEnrolled && !isCourseLocked;
+
+  if (!lessons || lessons.length === 0) {
+    return (
+      <Card><CardContent className="py-12 text-center"><FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" /><h3 className="font-medium text-lg mb-2">لا يوجد محتوى بعد</h3></CardContent></Card>
+    );
+  }
+
+  // تجميع الدروس حسب البكج
+  const groupedLessons = lessons.reduce((acc: Record<string, any[]>, lesson: any) => {
+    const pkg = lesson.packageType || "all";
+    if (!acc[pkg]) acc[pkg] = [];
+    acc[pkg].push(lesson);
+    return acc;
+  }, {});
+
+  const packageNames: Record<string, string> = {
+    first: "مادة الفيرست",
+    second: "مادة السكند",
+    mid: "مادة الميد",
+    final: "مادة الفاينل",
+    all: "مادة شاملة / أخرى"
+  };
+
+  // ترتيب الأقسام
+  const sortOrder = ["first", "second", "mid", "final", "all"];
+  const sortedKeys = Object.keys(groupedLessons).sort((a, b) => sortOrder.indexOf(a) - sortOrder.indexOf(b));
 
   return (
-    <div className="space-y-2">
-      {sortedLessons.map((lesson, index) => (
-        <Card 
-          key={lesson.id} 
-          className={`group ${canAccessContent ? 'hover-elevate cursor-pointer' : ''}`}
-          data-testid={`card-lesson-${lesson.id}`}
-        >
-          {canAccessContent ? (
-            <Link href={`/courses/${courseId}/lessons/${lesson.id}`}>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-sm font-medium text-primary">{index + 1}</span>
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium truncate" data-testid={`text-lesson-title-${lesson.id}`}>
-                        {lesson.title}
-                      </h4>
-                      <Badge variant="outline" className="flex-shrink-0">
-                        {getContentTypeIcon(lesson.contentType)}
-                        <span className="ml-1 text-xs">{getContentTypeLabel(lesson.contentType)}</span>
-                      </Badge>
-                      
-                      {/* عرض مدة الفيديو للدرس المفتوح */}
-                      {lesson.duration != null && lesson.duration > 0 && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2 border-l pl-2 dark:border-slate-700">
-                          <Clock className="w-3 h-3" />
-                          <span dir="ltr">{formatLessonTime(lesson.duration)}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
+    <div className="space-y-6">
+      {sortedKeys.map((pkg) => {
+        // التحقق من الصلاحية (معاه البكج الشامل، أو هاد البكج تحديداً)
+        const hasAccess = isEnrolled && !isCourseLocked && (userPackages.includes("all") || userPackages.includes(pkg));
 
-                  <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Play className="w-5 h-5 text-primary" />
-                  </div>
-                </div>
-              </CardContent>
-            </Link>
-          ) : (
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                  <Lock className="w-4 h-4 text-muted-foreground" />
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-medium truncate text-muted-foreground" data-testid={`text-lesson-title-${lesson.id}`}>
-                      {lesson.title}
-                    </h4>
-                    <Badge variant="outline" className="flex-shrink-0 opacity-50">
-                      {getContentTypeIcon(lesson.contentType)}
-                      <span className="ml-1 text-xs">{getContentTypeLabel(lesson.contentType)}</span>
-                    </Badge>
-
-                    {/* عرض مدة الفيديو للدرس المقفول */}
-                    {lesson.duration != null && lesson.duration > 0 && (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2 border-l pl-2 dark:border-slate-700 opacity-70">
-                        <Clock className="w-3 h-3" />
-                        {lesson.duration} دقيقة
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {isEnrolled && isCourseLocked ? "Course locked by instructor" : "Content locked"}
-                  </p>
-                </div>
-
-                <div className="flex-shrink-0">
-                  <Lock className="w-5 h-5 text-muted-foreground" />
-                </div>
-              </div>
-            </CardContent>
-          )}
-        </Card>
-      ))}
+        return (
+          <div key={pkg} className="border rounded-xl overflow-hidden bg-card shadow-sm">
+            <div className="bg-primary/5 p-4 border-b flex items-center justify-between">
+              <h3 className="font-bold text-lg flex items-center gap-2 text-primary">
+                <FolderOpen className="w-5 h-5" /> {packageNames[pkg] || pkg.toUpperCase()}
+              </h3>
+              <Badge variant="secondary">{groupedLessons[pkg].length} دروس</Badge>
+            </div>
+            
+            <div className="p-3 space-y-2">
+              {groupedLessons[pkg].sort((a, b) => a.orderIndex - b.orderIndex).map((lesson, index) => (
+                <Card key={lesson.id} className={`group border-0 shadow-none bg-transparent ${hasAccess ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-70'}`}>
+                  {hasAccess ? (
+                    <Link href={`/courses/${courseId}/lessons/${lesson.id}`}>
+                      <CardContent className="p-3 flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary border border-primary/20">{index + 1}</div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">{lesson.title}</h4>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">{getContentTypeIcon(lesson.contentType)} {lesson.contentType}</span>
+                            {lesson.duration > 0 && <span className="flex items-center gap-1 border-l pl-2 dark:border-slate-700"><Clock className="w-3 h-3" /> {formatLessonTime(lesson.duration)}</span>}
+                          </div>
+                        </div>
+                        <Play className="w-5 h-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </CardContent>
+                    </Link>
+                  ) : (
+                    <CardContent className="p-3 flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center border"><Lock className="w-4 h-4 text-muted-foreground" /></div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm text-muted-foreground">{lesson.title}</h4>
+                        <p className="text-[10px] text-destructive mt-1">🔒 يجب الاشتراك في هذا القسم للمشاهدة</p>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 export function LockedContentMessage({ teacherEmail, teacherName }: { teacherEmail?: string; teacherName?: string }) {
   return (
-    <Card className="border-dashed">
+    <Card className="border-dashed bg-muted/30">
       <CardContent className="py-12 text-center">
-        <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-6">
-          <Lock className="w-10 h-10 text-muted-foreground" />
-        </div>
-        <h3 className="font-semibold text-xl mb-2">Content Locked</h3>
-        <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-          You must be enrolled in this course to view lesson content. Contact the teacher to request enrollment.
-        </p>
-        {teacherEmail && (
-          <Button asChild data-testid="button-contact-teacher">
-            <a 
-              href={`mailto:${teacherEmail}?subject=Enrollment Request&body=Hello${teacherName ? ` ${teacherName}` : ''},%0D%0A%0D%0AI would like to request enrollment in your course.%0D%0A%0D%0AThank you.`}
-            >
-              Contact Teacher
-            </a>
-          </Button>
-        )}
+        <Lock className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-50" />
+        <h3 className="font-semibold text-lg mb-2">محتوى مقفول</h3>
+        <p className="text-sm text-muted-foreground mb-6">يجب الاشتراك في البكج المناسب لمشاهدة الدروس.</p>
+        {teacherEmail && <Button asChild variant="outline"><a href={`mailto:${teacherEmail}`}>Contact Teacher</a></Button>}
       </CardContent>
     </Card>
   );

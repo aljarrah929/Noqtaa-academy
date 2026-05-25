@@ -715,47 +715,26 @@ const college = await storage.getCollegeById((data as any).collegeId);
       const userId = req.user.id;
       
       const lesson = await storage.getLessonById(id);
-      if (!lesson) {
-        return res.status(404).json({ message: "Lesson not found" });
-      }
+      if (!lesson) return res.status(404).json({ message: "Lesson not found" });
       
-      // Get course to check access
       const course = await storage.getCourseById(lesson.courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
+      if (!course) return res.status(404).json({ message: "Course not found" });
       
-      // Check if user has access to content
       const user = await storage.getUser(userId);
       let hasAccess = false;
       let isCourseLocked = false;
       
-      console.log("[Lesson Access Debug]", {
-        lessonId: id,
-        userId,
-        userRole: user?.role,
-        courseTeacherId: course.teacherId,
-        courseIsLocked: course.isLocked,
-        lessonContent: lesson.content?.substring(0, 100),
-        lessonContentType: lesson.contentType,
-      });
-      
       if (user) {
         if (user.role === "SUPER_ADMIN") {
-          // Super admins have access to all content
           hasAccess = true;
         } else if (user.role === "ADMIN") {
-          // Admins have access to content in their college
           hasAccess = user.collegeId === course.collegeId;
         } else if (user.role === "TEACHER") {
-          // Teachers have access to their own courses
           hasAccess = course.teacherId === userId;
         } else {
-          // Students need to be enrolled AND course not locked
+          // رجعنا الكود الأصلي هون عشان نصلح الخراب
           const enrolled = await storage.isEnrolled(userId, lesson.courseId);
-          console.log("[Lesson Access Debug] Student enrollment check:", { userId, courseId: lesson.courseId, enrolled });
           if (enrolled && course.isLocked) {
-            // Enrolled but course is locked by teacher
             isCourseLocked = true;
             hasAccess = false;
           } else {
@@ -764,28 +743,22 @@ const college = await storage.getCollegeById((data as any).collegeId);
         }
       }
       
-      console.log("[Lesson Access Debug] Final access decision:", { hasAccess, isCourseLocked });
-      
-      // If course is locked for this enrolled student
       if (isCourseLocked) {
         const { content, ...lessonWithoutContent } = lesson;
         return res.json({ ...lessonWithoutContent, content: null, locked: true, courseLocked: true });
       }
       
-      // If no access, return lesson without content (for metadata/navigation)
       if (!hasAccess) {
         const { content, ...lessonWithoutContent } = lesson;
         return res.json({ ...lessonWithoutContent, content: null, locked: true });
       }
       
-      console.log("[Lesson Access Debug] Returning full lesson with content:", { lessonId: id, contentLength: lesson.content?.length });
       res.json(lesson);
     } catch (error) {
       console.error("Error fetching lesson:", error);
       res.status(500).json({ message: "Failed to fetch lesson" });
     }
   });
-
   app.patch("/api/lessons/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -915,23 +888,37 @@ const college = await storage.getCollegeById((data as any).collegeId);
       const courseId = parseInt(req.params.id);
       const userId = req.user.id;
       const { paymentMethod, receiptUrl, packageType } = req.body;
+      const requestedPackage = packageType || "all";
 
       const course = await storage.getCourseById(courseId);
       if (!course) return res.status(404).json({ message: "Course not found" });
 
+      // 🔥 التأكد إن الطالب ما معاه هاد البكج
+      // بدل السطر اللي بيعطيك إيرور بهاد السطر:
+      // 🔥 الحل: استخدم lesson.courseId بدل المتغير غير المعرف
+    const userEnrollments = await db.select().from(enrollments)
+     .where(and(eq(enrollments.studentId, userId), eq(enrollments.courseId, courseId)));
+
+    const ownedPackages = userEnrollments.map(e => e.packageType || "all");
+
+    if (ownedPackages.includes("all") || ownedPackages.includes(requestedPackage)) {
+       return res.status(400).json({ message: "أنت تملك هذا القسم مسبقاً!" });
+    }
+
+      // التأكد من عدم وجود طلب قيد الانتظار لنفس البكج
       const existingRequest = await db.query.enrollmentRequests.findFirst({
         where: and(
           eq(enrollmentRequests.userId, userId),
           eq(enrollmentRequests.courseId, courseId),
-          eq(enrollmentRequests.status, "pending")
+          eq(enrollmentRequests.status, "pending"),
+          eq(enrollmentRequests.packageType, requestedPackage)
         )
       });
 
       if (existingRequest) {
-        return res.status(400).json({ message: "لديك طلب قيد المراجعة لهذا الكورس مسبقاً." });
+        return res.status(400).json({ message: "لديك طلب قيد المراجعة لهذا القسم مسبقاً." });
       }
 
-      // 🔥 حفظ البكج في طلبات السلة
       const [newRequest] = await db.insert(enrollmentRequests).values({
         userId,
         courseId,
@@ -939,7 +926,7 @@ const college = await storage.getCollegeById((data as any).collegeId);
         receiptUrl: receiptUrl || null,
         amount: course.price || 0,
         status: "pending",
-        packageType: packageType || "all"
+        packageType: requestedPackage
       }).returning();
 
       res.status(201).json(newRequest);
@@ -947,8 +934,7 @@ const college = await storage.getCollegeById((data as any).collegeId);
       console.error("❌ Checkout error:", error);
       res.status(500).json({ message: "حدث خطأ أثناء معالجة الطلب" });
     }
-  });
-  // Teacher can remove students from their own courses
+  });// Teacher can remove students from their own courses
   app.delete("/api/courses/:courseId/enrollments/:studentId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -2553,45 +2539,68 @@ const college = await storage.getCollegeById((data as any).collegeId);
   });
   
   // Teacher/Admin - Get all join requests for their courses
-  app.get("/api/join-requests", isAuthenticated, async (req: any, res) => {
+ // Student - Create or update join request
+  app.post("/api/join-requests", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       
-      if (!user) {
-        return res.status(401).json({ message: "User not found" });
+      if (!user || user.role !== "STUDENT") {
+        return res.status(403).json({ message: "Only students can submit join requests" });
       }
       
-      let requests: any[] = [];
+      const { courseId, message, receiptKey, receiptMime, receiptSize, packageType } = req.body;
       
-      if (user.role === "TEACHER") {
-        requests = await storage.getJoinRequestsByTeacher(userId);
-      } else if (user.role === "ADMIN" || user.role === "SUPER_ADMIN") {
-        // Admins can see all join requests, optionally filtered by courseId
-        const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : undefined;
-        if (courseId) {
-          requests = await storage.getJoinRequestsByCourse(courseId);
-        } else {
-          // Get all courses, then get requests for each
-          const courses = await storage.getCourses();
-          for (const course of courses) {
-            const courseRequests = await storage.getJoinRequestsByCourse(course.id);
-            requests.push(...courseRequests);
-          }
-        }
-      } else {
-        return res.status(403).json({ message: "Access denied" });
+      if (!courseId || isNaN(parseInt(courseId))) {
+        return res.status(400).json({ message: "Valid courseId is required" });
       }
       
-      console.log("[JoinRequest] Fetched", requests.length, "requests for user:", userId);
-      res.json(requests);
+      const courseIdNum = parseInt(courseId);
+      const course = await storage.getCourseById(courseIdNum);
+      if (!course) return res.status(404).json({ message: "Course not found" });
+      
+      // 🔥 فحص البكج الصحيح انحط هون (مكانه الصح)
+      const userEnrollments = await db.select().from(enrollments)
+        .where(and(eq(enrollments.studentId, userId), eq(enrollments.courseId, courseIdNum)));
+      
+      const ownedPackages = userEnrollments.map(e => e.packageType || "all");
+      const requestedPackage = packageType || "all";
+
+      if (ownedPackages.includes("all") || ownedPackages.includes(requestedPackage)) {
+        return res.status(400).json({ message: "أنت تملك هذا القسم مسبقاً!" });
+      }
+      
+      const existingRequest = await storage.getStudentJoinRequestForCourse(userId, courseIdNum);
+      if (existingRequest && existingRequest.status === "PENDING" && (existingRequest.packageType === requestedPackage || existingRequest.packageType === "all")) {
+        return res.status(400).json({ message: "لديك طلب قيد المراجعة لهذا القسم مسبقاً." });
+      }
+      
+      if (!receiptKey || !receiptMime || !receiptSize) {
+        return res.status(400).json({ message: "Receipt file is required" });
+      }
+      
+      const joinRequest = await storage.createJoinRequest({
+        courseId: courseIdNum,
+        studentId: userId,
+        message: message || null,
+        receiptKey,
+        receiptMime,
+        receiptSize,
+        status: "PENDING",
+        paymentMethod: req.body.paymentMethod || 'manual',
+        packageType: requestedPackage,
+      });
+      
+      res.status(201).json({
+        id: joinRequest.id,
+        status: joinRequest.status,
+        message: "Join request submitted successfully",
+      });
     } catch (error) {
-      console.error("[JoinRequest] Error fetching requests:", error);
-      res.status(500).json({ message: "Failed to fetch join requests" });
+      console.error("[JoinRequest] Error creating request:", error);
+      res.status(500).json({ message: "Failed to submit join request" });
     }
-  });
-  
-  // Teacher/Admin - Approve join request
+  }); // Teacher/Admin - Approve join request
   // Teacher/Admin - Approve join request
   app.post("/api/join-requests/:id/approve", isAuthenticated, async (req: any, res) => {
     try {

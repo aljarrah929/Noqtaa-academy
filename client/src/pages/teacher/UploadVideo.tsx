@@ -1,324 +1,153 @@
 import { useState } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { B2VideoUploader } from "@/components/B2VideoUploader";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Video, CheckCircle, ShieldAlert, BookOpen, Clock } from "lucide-react";
-import type { CourseWithRelations } from "@shared/schema";
+import { ArrowLeft, Video as VideoIcon } from "lucide-react";
+import { B2VideoUploader } from "@/components/B2VideoUploader";
+
+const uploadVideoSchema = z.object({
+  title: z.string().min(1, "Title is required").max(255),
+  description: z.string().optional(),
+  content: z.string().min(1, "Video is required"),
+  duration: z.number().min(0).default(0),
+  packageType: z.string().default("all"), // 🔥 ضفنا البكج هون
+});
+
+type UploadVideoValues = z.infer<typeof uploadVideoSchema>;
 
 export default function UploadVideo() {
   const [, params] = useRoute("/teacher/courses/:courseId/upload-video");
-  const courseId = params?.courseId;
-  const [, navigate] = useLocation();
+  const courseId = parseInt(params?.courseId || "0");
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, isLoading: authLoading } = useAuth();
 
-  const [lessonTitle, setLessonTitle] = useState("");
-  const [lessonDescription, setLessonDescription] = useState("");
-  const [videoUid, setVideoUid] = useState<string | undefined>();
-  
-  // ✨ حقول الوقت الثلاثة المنفصلة
-  const [hours, setHours] = useState<number | "">(""); 
-  const [minutes, setMinutes] = useState<number | "">(""); 
-  const [seconds, setSeconds] = useState<number | "">(""); 
+  const [hours, setHours] = useState<number>(0);
+  const [minutes, setMinutes] = useState<number>(0);
+  const [seconds, setSeconds] = useState<number>(0);
 
-  const [uploadComplete, setUploadComplete] = useState(false);
+  const form = useForm<UploadVideoValues>({
+    resolver: zodResolver(uploadVideoSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      content: "",
+      duration: 0,
+      packageType: "all", // 🔥 القيمة الافتراضية
+    },
+  });
 
-  // Only TEACHER and SUPER_ADMIN can upload videos
-  const canUpload = user?.role === "TEACHER" || user?.role === "SUPER_ADMIN";
-
-  const { data: course, isLoading: courseLoading } = useQuery<CourseWithRelations>({
+  const { data: course } = useQuery({
     queryKey: ["/api/courses", courseId],
     enabled: !!courseId,
   });
 
-  const { data: teacherCourses, isLoading: coursesLoading } = useQuery<CourseWithRelations[]>({
-    queryKey: ["/api/teacher/courses"],
-    enabled: !courseId && canUpload,
-  });
-
   const createLessonMutation = useMutation({
-    mutationFn: async () => {
-      // ✨ الخدعة السحرية: نحسب إجمالي الثواني من الحقول الثلاثة قبل إرسالها للداتابيز
-      const totalSeconds = (Number(hours) || 0) * 3600 + (Number(minutes) || 0) * 60 + (Number(seconds) || 0);
-
-      const response = await apiRequest("POST", `/api/courses/${courseId}/lessons`, {
-        title: lessonTitle,
+    mutationFn: async (data: UploadVideoValues) => {
+      const totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+      const res = await apiRequest("POST", `/api/courses/${courseId}/lessons`, {
+        title: data.title,
         contentType: "video",
-        content: videoUid,
-        orderIndex: (course?.lessons?.length || 0),
-        duration: totalSeconds, // بنبعث إجمالي الثواني
+        content: data.content,
+        duration: totalSeconds,
+        packageType: data.packageType, // 🔥 نبعث البكج للسيرفر
       });
-      return response.json();
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/teacher/courses"] });
-      toast({
-        title: "Lesson Created",
-        description: "Your video lesson has been saved successfully.",
-      });
-      navigate(`/teacher/courses/${courseId}/content`);
+      toast({ title: "تم الرفع بنجاح", description: "تمت إضافة الفيديو للكورس." });
+      setLocation(`/teacher/courses/${courseId}/content`);
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create lesson",
-        variant: "destructive",
-      });
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
     },
   });
 
-  const handleVideoUploadComplete = (uid: string) => {
-    setVideoUid(uid);
-    setUploadComplete(true);
-  };
-
-  const handleVideoChange = (uid: string | undefined) => {
-    setVideoUid(uid);
-    if (!uid) {
-      setUploadComplete(false);
-    }
-  };
-
-  // ✨ الخدعة السحرية للأوتوماتيك: التحويل من ثواني لـ (ساعات: دقائق: ثواني)
-  // وتعبيتها في الحقول الثلاثة تلقائياً
-  const handleDurationExtracted = (totalSecs: number) => {
-    const h = Math.floor(totalSecs / 3600);
-    const m = Math.floor((totalSecs % 3600) / 60);
-    const s = totalSecs % 60;
-    setHours(h);
-    setMinutes(m);
-    setSeconds(s);
-  };
-
-  const canSave = lessonTitle.trim().length > 0 && uploadComplete && videoUid;
-
-  if (authLoading || (courseId && courseLoading)) {
-    return (
-      <DashboardLayout title="Upload Video">
-        <div className="max-w-2xl mx-auto">
-          <Skeleton className="h-8 w-48 mb-6" />
-          <Skeleton className="h-96 rounded-lg" />
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!canUpload) {
-    return (
-      <DashboardLayout title="Access Denied">
-        <div className="max-w-2xl mx-auto">
-          <Card className="py-16">
-            <CardContent className="text-center">
-              <ShieldAlert className="w-16 h-16 mx-auto text-destructive mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-              <p className="text-muted-foreground mb-6">
-                Only teachers can upload video lessons.
-              </p>
-              <Button asChild>
-                <Link href="/dashboard">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Dashboard
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!courseId) {
-    return (
-      <DashboardLayout title="Upload Video">
-        <div className="max-w-2xl mx-auto">
-          <Button variant="ghost" asChild className="mb-6" data-testid="button-back">
-            <Link href="/teacher">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
-            </Link>
-          </Button>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Video className="w-5 h-5" />
-                Upload Video Lesson
-              </CardTitle>
-              <CardDescription>
-                Select a course to add a video lesson
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {coursesLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-16 rounded-lg" />
-                  <Skeleton className="h-16 rounded-lg" />
-                  <Skeleton className="h-16 rounded-lg" />
-                </div>
-              ) : teacherCourses && teacherCourses.length > 0 ? (
-                <div className="space-y-3">
-                  {teacherCourses.map((c) => (
-                    <Link
-                      key={c.id}
-                      href={`/teacher/courses/${c.id}/upload-video`}
-                      className="w-full p-4 text-left rounded-lg border hover-elevate active-elevate-2 flex items-center gap-3"
-                      data-testid={`button-select-course-${c.id}`}
-                    >
-                      <BookOpen className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-medium truncate">{c.title}</h3>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {c.lessons?.length || 0} lessons
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground mb-4">
-                    No courses available. Ask an admin to create a course for you.
-                  </p>
-                  <Button variant="outline" asChild>
-                    <Link href="/teacher">Back to Dashboard</Link>
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
   return (
     <DashboardLayout title="Upload Video Lesson">
-      <div className="max-w-2xl mx-auto">
-        <Button variant="ghost" asChild className="mb-6" data-testid="button-back">
-          <Link href="/teacher/courses">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to My Courses
-          </Link>
-        </Button>
+      <div className="max-w-3xl mx-auto space-y-6">
+        <Link href={`/teacher/courses/${courseId}/content`}>
+          <Button variant="ghost" className="mb-2"><ArrowLeft className="w-4 h-4 mr-2" /> Back to My Courses</Button>
+        </Link>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Video className="w-5 h-5" />
-              Upload Video Lesson
-            </CardTitle>
-            <CardDescription>
-              Add a new video lesson to <strong>{course?.title}</strong>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="lessonTitle">Lesson Title *</Label>
-              <Input
-                id="lessonTitle"
-                placeholder="Enter lesson title"
-                value={lessonTitle}
-                onChange={(e) => setLessonTitle(e.target.value)}
-                data-testid="input-lesson-title"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="lessonDescription">Description (optional)</Label>
-              <Textarea
-                id="lessonDescription"
-                placeholder="Enter lesson description"
-                value={lessonDescription}
-                onChange={(e) => setLessonDescription(e.target.value)}
-                rows={3}
-                data-testid="input-lesson-description"
-              />
-            </div>
-
-            {/* ✨ حقول الوقت الثلاثة الجديدة المنظمة */}
-            <div className="space-y-2">
-              <Label htmlFor="lessonDuration" className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                مدة الفيديو (ساعات : دقائق : ثواني) *
-              </Label>
-              <div className="flex items-center gap-2 dir-ltr">
-                <Input
-                  type="number"
-                  min="0"
-                  placeholder="ساعات"
-                  value={hours}
-                  onChange={(e) => setHours(parseInt(e.target.value) || "")}
-                  className="text-center"
-                />
-                <span className="font-bold">:</span>
-                <Input
-                  type="number"
-                  min="0"
-                  max="59"
-                  placeholder="دقائق"
-                  value={minutes}
-                  onChange={(e) => setMinutes(parseInt(e.target.value) || "")}
-                  className="text-center"
-                />
-                <span className="font-bold">:</span>
-                <Input
-                  type="number"
-                  min="0"
-                  max="59"
-                  placeholder="ثواني"
-                  value={seconds}
-                  onChange={(e) => setSeconds(parseInt(e.target.value) || "")}
-                  className="text-center"
-                />
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <VideoIcon className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Upload Video Lesson</h2>
+                <p className="text-sm text-muted-foreground">Add a new video lesson to <span className="font-semibold text-foreground">{(course as any)?.title}</span></p>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Video File *</Label>
-              <B2VideoUploader
-                courseId={parseInt(courseId || "0")}
-                value={videoUid}
-                onChange={handleVideoChange}
-                onUploadComplete={handleVideoUploadComplete}
-                onDurationExtracted={handleDurationExtracted} // نربط دالة استخراج الوقت
-              />
-            </div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((d) => createLessonMutation.mutate(d))} className="space-y-5">
+                <FormField control={form.control} name="title" render={({ field }) => (
+                  <FormItem><FormLabel>Lesson Title *</FormLabel><FormControl><Input placeholder="Enter lesson title" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
 
-            {uploadComplete && videoUid && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300">
-                <CheckCircle className="w-5 h-5" />
-                <span className="text-sm font-medium">Video uploaded successfully</span>
-              </div>
-            )}
+                {/* 🔥 قائمة اختيار البكج */}
+                <FormField control={form.control} name="packageType" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>القسم التابع له هذا الفيديو *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="اختر القسم" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="all">المادة كاملة (All)</SelectItem>
+                        <SelectItem value="first">مادة الفيرست (First)</SelectItem>
+                        <SelectItem value="second">مادة السكند (Second)</SelectItem>
+                        <SelectItem value="mid">مادة الميد (Mid)</SelectItem>
+                        <SelectItem value="final">مادة الفاينل (Final)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t">
-              <Button
-                variant="outline"
-                asChild
-                data-testid="button-cancel"
-              >
-                <Link href="/teacher/courses">Cancel</Link>
-              </Button>
-              <Button
-                onClick={() => createLessonMutation.mutate()}
-                disabled={!canSave || createLessonMutation.isPending}
-                data-testid="button-save-lesson"
-              >
-                {createLessonMutation.isPending ? "Saving..." : "Save Lesson"}
-              </Button>
-            </div>
+                <FormField control={form.control} name="description" render={({ field }) => (
+                  <FormItem><FormLabel>Description (optional)</FormLabel><FormControl><Textarea placeholder="Enter lesson description" className="min-h-24" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+
+                <div className="space-y-2">
+                  <FormLabel>* مدة الفيديو (ساعات : دقائق : ثواني)</FormLabel>
+                  <div className="flex gap-2 items-center text-muted-foreground" dir="ltr">
+                    <Input type="number" min="0" value={hours || ""} onChange={e => setHours(Number(e.target.value))} placeholder="ساعات" className="text-center" /> :
+                    <Input type="number" min="0" max="59" value={minutes || ""} onChange={e => setMinutes(Number(e.target.value))} placeholder="دقائق" className="text-center" /> :
+                    <Input type="number" min="0" max="59" value={seconds || ""} onChange={e => setSeconds(Number(e.target.value))} placeholder="ثواني" className="text-center" />
+                  </div>
+                </div>
+
+                <FormField control={form.control} name="content" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Video File *</FormLabel>
+                    <FormControl>
+                      <B2VideoUploader courseId={courseId} value={field.value} onChange={field.onChange} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <Link href={`/teacher/courses/${courseId}/content`}><Button type="button" variant="outline">Cancel</Button></Link>
+                  <Button type="submit" disabled={createLessonMutation.isPending || !form.watch("content")}>
+                    {createLessonMutation.isPending ? "Saving..." : "Save Lesson"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
           </CardContent>
         </Card>
       </div>

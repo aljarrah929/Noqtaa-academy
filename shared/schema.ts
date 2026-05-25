@@ -129,9 +129,7 @@ export const enrollments = pgTable("enrollments", {
   createdAt: timestamp("created_at").defaultNow(),
   packageType: varchar("package_type", { length: 50 }).default("all"),
 });
-// ==========================================
-// جدول طلبات الانضمام والدفع (غرفة الانتظار)
-// ==========================================
+
 // ==========================================
 // جدول طلبات الانضمام والدفع (غرفة الانتظار)
 // ==========================================
@@ -143,7 +141,7 @@ export const enrollmentRequests = pgTable("enrollment_requests", {
   paymentMethod: varchar("payment_method", { length: 50 }).notNull(), 
   receiptUrl: text("receipt_url"), 
   amount: integer("amount").notNull().default(0), 
-  packageType: varchar("package_type", { length: 50 }).default("all"), // 🔥 السطر الجديد عشان نحفظ البكج
+  packageType: varchar("package_type", { length: 50 }).default("all"), 
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -162,6 +160,7 @@ export const enrollmentRequestsRelations = relations(enrollmentRequests, ({ one 
 export const insertEnrollmentRequestSchema = createInsertSchema(enrollmentRequests);
 export type EnrollmentRequest = typeof enrollmentRequests.$inferSelect;
 export type InsertEnrollmentRequest = typeof enrollmentRequests.$inferInsert;
+
 // Course Approval Logs table
 export const courseApprovalLogs = pgTable("course_approval_logs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -381,22 +380,18 @@ export const joinRequestsRelations = relations(joinRequests, ({ one }) => ({
 
 // Insert schemas
 export const insertUniversitySchema = createInsertSchema(universities).omit({
-  id: true,
   createdAt: true,
 });
 
 export const insertCollegeSchema = createInsertSchema(colleges).omit({
-  id: true,
   createdAt: true,
 });
 
 export const insertMajorSchema = createInsertSchema(majors).omit({
-  id: true,
   createdAt: true,
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
   passwordHash: true,
   createdAt: true,
   updatedAt: true,
@@ -443,56 +438,46 @@ export const resetPasswordSchema = z.object({
 });
 
 export const insertCourseSchema = createInsertSchema(courses).omit({
-  id: true,
   createdAt: true,
   updatedAt: true,
 });
 
 export const insertLessonSchema = createInsertSchema(lessons).omit({
-  id: true,
   createdAt: true,
 });
 
 export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({
-  id: true,
   createdAt: true,
 });
 
 export const insertCourseApprovalLogSchema = createInsertSchema(courseApprovalLogs).omit({
-  id: true,
   createdAt: true,
 });
 
 export const insertJoinRequestSchema = createInsertSchema(joinRequests).omit({
-  id: true,
   createdAt: true,
   reviewedAt: true,
 });
 
 export const insertFeaturedProfileSchema = createInsertSchema(featuredProfiles).omit({
-  id: true,
   createdAt: true,
   updatedAt: true,
 });
 
 export const insertHomeStatsSchema = createInsertSchema(homeStats).omit({
-  id: true,
   updatedAt: true,
 });
 
 export const updateHomeStatsSchema = createInsertSchema(homeStats).omit({
-  id: true,
   updatedAt: true,
   updatedByUserId: true,
 });
 
 export const insertQuizQuestionSchema = createInsertSchema(quizQuestions).omit({
-  id: true,
   createdAt: true,
 });
 
 export const updateAdminDashboardStatsConfigSchema = createInsertSchema(adminDashboardStatsConfig).omit({
-  id: true,
   updatedAt: true,
   updatedByUserId: true,
 }).extend({

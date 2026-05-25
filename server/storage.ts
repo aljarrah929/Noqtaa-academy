@@ -161,16 +161,18 @@ export interface IStorage {
   getAdminDashboardStatsConfig(): Promise<AdminDashboardStatsConfig | undefined>;
   getOrCreateAdminDashboardStatsConfig(): Promise<AdminDashboardStatsConfig>;
   updateAdminDashboardStatsConfig(data: UpdateAdminDashboardStatsConfig, userId: string): Promise<AdminDashboardStatsConfig>;
-  createJoinRequest(data: InsertJoinRequest): Promise<JoinRequest>;
   getJoinRequestById(id: number): Promise<JoinRequestWithRelations | undefined>;
   getJoinRequestsByCourse(courseId: number): Promise<JoinRequestWithRelations[]>;
   getJoinRequestsByTeacher(teacherId: string): Promise<JoinRequestWithRelations[]>;
-  getStudentJoinRequestForCourse(studentId: string, courseId: number): Promise<JoinRequest | undefined>;
   hasPendingJoinRequest(studentId: string, courseId: number): Promise<boolean>;
   hasApprovedJoinRequest(studentId: string, courseId: number): Promise<boolean>;
-  updateJoinRequestStatus(id: number, status: JoinRequest["status"]): Promise<JoinRequest | undefined>;
   getTeacherCourses(teacherId: string): Promise<{ id: number; title: string; price: number; status: string; studentsCount: number }[]>;
   getTeacherStudents(teacherId: string): Promise<{ studentId: string; name: string; email: string; phone: string; courseName: string }[]>;
+  getStudentJoinRequestForCourse(studentId: string, courseId: number): Promise<JoinRequest | undefined>;
+  createEnrollment(data: InsertEnrollment): Promise<Enrollment>;
+  updateJoinRequestStatus(id: number, status: string): Promise<JoinRequest>;
+  createJoinRequest(data: InsertJoinRequest): Promise<JoinRequest>;
+  getJoinRequestById(id: number): Promise<JoinRequest | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -178,6 +180,11 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
+async createJoinRequest(data: InsertJoinRequest): Promise<JoinRequest> {
+    const [request] = await db.insert(joinRequests).values(data).returning();
+    return request;
+  }
+
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
@@ -705,9 +712,14 @@ export class DatabaseStorage implements IStorage {
     return !!enrollment;
   }
 
-  async createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment> {
-    const [created] = await db.insert(enrollments).values(enrollment).returning();
-    return created;
+  async createEnrollment(data: InsertEnrollment): Promise<Enrollment> {
+    const [enrollment] = await db.insert(enrollments).values({
+      courseId: data.courseId,
+      studentId: data.studentId,
+      createdByUserId: data.createdByUserId,
+      packageType: (data as any).packageType || "all"
+    }).returning();
+    return enrollment;
   }
 
   async deleteEnrollment(id: number): Promise<void> {
@@ -918,10 +930,7 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async createJoinRequest(data: InsertJoinRequest): Promise<JoinRequest> {
-    const [joinRequest] = await db.insert(joinRequests).values(data).returning();
-    return joinRequest;
-  }
+  
 
   async getJoinRequestById(id: number): Promise<JoinRequestWithRelations | undefined> {
     const result = await db
@@ -1012,10 +1021,9 @@ export class DatabaseStorage implements IStorage {
     return !!request;
   }
 
-  async updateJoinRequestStatus(id: number, status: JoinRequest["status"]): Promise<JoinRequest | undefined> {
-    const [updated] = await db
-      .update(joinRequests)
-      .set({ status, reviewedAt: new Date() })
+  async updateJoinRequestStatus(id: number, status: string): Promise<JoinRequest> {
+    const [updated] = await db.update(joinRequests)
+      .set({ status: status as any, reviewedAt: new Date() })
       .where(eq(joinRequests.id, id))
       .returning();
     return updated;
