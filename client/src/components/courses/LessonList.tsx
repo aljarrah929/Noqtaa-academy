@@ -83,7 +83,7 @@ export function LessonList({
               <h3 className="font-bold text-lg flex items-center gap-2 text-primary">
                 <FolderOpen className="w-5 h-5" /> {packageNames[pkg] || pkg.toUpperCase()}
               </h3>
-              <Badge variant="secondary">{groupedLessons[pkg].length} دروس</Badge>
+              <Badge variant="secondary">{groupedLessons[pkg].length} Lesson</Badge>
             </div>
             
             <div className="p-3 space-y-2">
@@ -137,8 +137,8 @@ export function LockedContentMessage({ teacherEmail, teacherName }: { teacherEma
     <Card className="border-dashed bg-muted/30">
       <CardContent className="py-12 text-center">
         <Lock className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-50" />
-        <h3 className="font-semibold text-lg mb-2">محتوى مقفول</h3>
-        <p className="text-sm text-muted-foreground mb-6">يجب الاشتراك في البكج المناسب لمشاهدة الدروس.</p>
+        <h3 className="font-semibold text-lg mb-2">Locked content </h3>
+        <p className="text-sm text-muted-foreground mb-6">You must subscribe to the appropriate package to watch the lessons.</p>
         {teacherEmail && <Button asChild variant="outline"><a href={`mailto:${teacherEmail}`}>Contact Teacher</a></Button>}
       </CardContent>
     </Card>
