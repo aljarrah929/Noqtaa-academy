@@ -13,8 +13,8 @@ import { PDFParse } from "pdf-parse";
 import OpenAI from "openai";
 import { sendEmail } from "./email";
 import { db } from "./db";
-import { eq, and, count, sql } from "drizzle-orm";
-import { users, courses, colleges, enrollments } from "@shared/schema";
+import { eq, and, count, sql, desc } from "drizzle-orm";
+import { users, courses, colleges, enrollments, joinRequests } from "@shared/schema";
 import { enrollmentRequests } from "@shared/schema";
 
 // Cloudflare R2 configuration
@@ -2342,7 +2342,67 @@ const college = await storage.getCollegeById((data as any).collegeId);
   // Configuration
   const JOIN_REQUEST_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
   const JOIN_REQUEST_ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
-  
+  // Admin/Teacher - Get all join requests
+app.get("/api/join-requests", isAuthenticated, async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await storage.getUser(userId);
+    
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+    
+    let requests;
+    
+    if (user.role === "SUPER_ADMIN") {
+      // السوبر أدمن يشوف كل الطلبات
+      requests = await db
+        .select()
+        .from(joinRequests)
+        .leftJoin(users, eq(joinRequests.studentId, users.id))
+        .leftJoin(colleges, eq(users.collegeId, colleges.id))
+        .leftJoin(courses, eq(joinRequests.courseId, courses.id))
+        .orderBy(desc(joinRequests.createdAt));
+        
+    } else if (user.role === "ADMIN") {
+      // الأدمن يشوف طلبات كليته بس
+      requests = await db
+        .select()
+        .from(joinRequests)
+        .leftJoin(users, eq(joinRequests.studentId, users.id))
+        .leftJoin(colleges, eq(users.collegeId, colleges.id))
+        .innerJoin(courses, eq(joinRequests.courseId, courses.id))
+        .where(eq(courses.collegeId, user.collegeId!))
+        .orderBy(desc(joinRequests.createdAt));
+        
+    } else if (user.role === "TEACHER") {
+      // المعلم يشوف طلبات كورساته بس
+      requests = await db
+        .select()
+        .from(joinRequests)
+        .leftJoin(users, eq(joinRequests.studentId, users.id))
+        .leftJoin(colleges, eq(users.collegeId, colleges.id))
+        .innerJoin(courses, eq(joinRequests.courseId, courses.id))
+        .where(eq(courses.teacherId, userId))
+        .orderBy(desc(joinRequests.createdAt));
+        
+    } else {
+      return res.status(403).json({ message: "Access denied" });
+    }
+    
+    const formatted = requests.map(row => ({
+      ...row.join_requests,
+      student: row.users ? { 
+        ...row.users, 
+        college: row.colleges || undefined 
+      } : undefined,
+      course: row.courses || undefined,
+    }));
+    
+    res.json(formatted);
+  } catch (error) {
+    console.error("[JoinRequests] Error fetching all requests:", error);
+    res.status(500).json({ message: "Failed to fetch join requests" });
+  }
+});
   // Student - Get my join request status for a course
   app.get("/api/join-requests/me", isAuthenticated, async (req: any, res) => {
     try {
