@@ -96,7 +96,20 @@ export default function TeacherDashboard() {
               </CardContent>
             </Link>
           </Card>
-
+            <Card className="hover-elevate">
+  <Link href="/teacher/courses/new">
+    <CardContent className="pt-6 flex items-center gap-4">
+      <div className="p-3 bg-primary/10 rounded-full">
+        <BookOpen className="w-6 h-6 text-primary" />
+      </div>
+      <div>
+        <h3 className="font-semibold">Create Course</h3>
+        <p className="text-sm text-muted-foreground">Add a new course</p>
+      </div>
+      <ArrowRight className="w-5 h-5 ml-auto text-muted-foreground" />
+    </CardContent>
+  </Link>
+</Card>
           <Card className="hover-elevate">
             <Link href="/teacher/upload-video">
               <CardContent className="pt-6 flex items-center gap-4">

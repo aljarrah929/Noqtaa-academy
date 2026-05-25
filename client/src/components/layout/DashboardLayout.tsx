@@ -94,8 +94,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     { href: "/teacher", label: t("nav.dashboard"), icon: LayoutDashboard },
     { href: "/teacher/courses", label: t("sidebar.myCourses"), icon: BookOpen },
     { href: "/teacher/join-requests", label: t("sidebar.joinRequests"), icon: UserPlus },
-    { href: "/teacher/upload-video", label: t("sidebar.uploadVideos"), icon: Video },
-    { href: "/teacher/upload-file", label: t("sidebar.addFile"), icon: FileUp },
+    { href: "/teacher/courses/new", label: "Create Course", icon: GraduationCap },
   ];
 
   const adminMenuItems = [
