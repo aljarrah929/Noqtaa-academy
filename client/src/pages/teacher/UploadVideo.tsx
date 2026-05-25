@@ -107,7 +107,7 @@ export default function UploadVideo() {
                   <FormItem>
                     <FormLabel>القسم التابع له هذا الفيديو *</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="اختر القسم" /></SelectTrigger></FormControl>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select Section" /></SelectTrigger></FormControl>
                       <SelectContent>
                         <SelectItem value="all">Full material (All)</SelectItem>
                         <SelectItem value="first"> First material (First)</SelectItem>

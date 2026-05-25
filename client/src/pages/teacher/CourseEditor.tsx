@@ -780,7 +780,7 @@ export default function CourseEditor() {
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="اختر القسم" />
+                          <SelectValue placeholder="Select Section" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>

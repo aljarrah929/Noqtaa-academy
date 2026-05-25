@@ -248,7 +248,7 @@ const hasAllPackages = userPackages.includes("all") ||
                       {/* --- اختيار البكج --- */}
                       {packageOptions.length > 1 && (
                         <div className="mb-4 text-start">
-                          <Label className="block mb-2 font-semibold">اختر القسم (Select Package)</Label>
+                          <Label className="block mb-2 font-semibold"> (Select Package)</Label>
                           <Select value={selectedPackage} onValueChange={setSelectedPackage} dir="rtl">
                             <SelectTrigger className="w-full bg-background">
                               <SelectValue />
@@ -266,7 +266,7 @@ const hasAllPackages = userPackages.includes("all") ||
 
                       {currentSelection && currentSelection.price > 0 && (
                         <div className="p-3 bg-muted rounded-lg mb-4 border">
-                          <p className="text-sm text-muted-foreground mb-1">السعر الإجمالي:</p>
+                          <p className="text-sm text-muted-foreground mb-1">Total Price:</p>
                           <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                             {formatPrice(currentSelection.price)}
                           </p>
