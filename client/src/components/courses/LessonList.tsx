@@ -58,11 +58,11 @@ export function LessonList({
   }, {});
 
   const packageNames: Record<string, string> = {
-    first: "مادة الفيرست",
-    second: "مادة السكند",
-    mid: "مادة الميد",
-    final: "مادة الفاينل",
-    all: "مادة شاملة / أخرى"
+    first: "First material",
+    second: "Second material",
+    mid: "Midterm material",
+    final: "Final material",
+    all: "Other"
   };
 
   // ترتيب الأقسام

@@ -99,11 +99,11 @@ const hasAllPackages = userPackages.includes("all") ||
   // تجهيز خيارات البكجات والأسعار
   
   const packageOptions = [
-    { value: "all", label: "المادة كاملة (All)", price: course?.price || 0 },
-    { value: "first", label: "مادة الفيرست (First)", price: (course as any)?.priceFirst || 0 },
-    { value: "second", label: "مادة السكند (Second)", price: (course as any)?.priceSecond || 0 },
-    { value: "mid", label: "مادة الميد (Mid)", price: (course as any)?.priceMid || 0 },
-    { value: "final", label: "مادة الفاينل (Final)", price: (course as any)?.priceFinal || 0 },
+    { value: "all", label: "Full material  (All)", price: course?.price || 0 },
+    { value: "first", label: "First material (First)", price: (course as any)?.priceFirst || 0 },
+    { value: "second", label: "Second material (Second)", price: (course as any)?.priceSecond || 0 },
+    { value: "mid", label: "Midterm material (Mid)", price: (course as any)?.priceMid || 0 },
+    { value: "final", label: "Final material  (Final)", price: (course as any)?.priceFinal || 0 },
   ].filter(opt => opt.price > 0 || opt.value === "all")
    .filter(opt => !userPackages.includes(opt.value) && !userPackages.includes("all")); // هاد الفلتر بخفي البكجات المشتراة
   const currentSelection = packageOptions.find(opt => opt.value === selectedPackage) || packageOptions[0];

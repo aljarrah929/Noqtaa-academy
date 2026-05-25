@@ -109,11 +109,11 @@ export default function UploadVideo() {
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl><SelectTrigger><SelectValue placeholder="اختر القسم" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        <SelectItem value="all">المادة كاملة (All)</SelectItem>
-                        <SelectItem value="first">مادة الفيرست (First)</SelectItem>
-                        <SelectItem value="second">مادة السكند (Second)</SelectItem>
-                        <SelectItem value="mid">مادة الميد (Mid)</SelectItem>
-                        <SelectItem value="final">مادة الفاينل (Final)</SelectItem>
+                        <SelectItem value="all">Full material (All)</SelectItem>
+                        <SelectItem value="first"> First material (First)</SelectItem>
+                        <SelectItem value="second">Second material  (Second)</SelectItem>
+                        <SelectItem value="mid">Midterm material  (Mid)</SelectItem>
+                        <SelectItem value="final">Final material  (Final)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

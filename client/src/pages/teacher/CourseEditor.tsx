@@ -544,7 +544,7 @@ export default function CourseEditor() {
                     name="price"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Price (سعر المادة كاملة)</FormLabel>
+                        <FormLabel>Price (Price of Full material)</FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 
@@ -784,11 +784,11 @@ export default function CourseEditor() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="all">مادة كاملة (All)</SelectItem>
-                        <SelectItem value="first">مادة الفيرست (First)</SelectItem>
-                        <SelectItem value="second">مادة السكند (Second)</SelectItem>
-                        <SelectItem value="mid">مادة الميد (Mid)</SelectItem>
-                        <SelectItem value="final">مادة الفاينل (Final)</SelectItem>
+                        <SelectItem value="all">Full material (All)</SelectItem>
+                        <SelectItem value="first">First material (First)</SelectItem>
+                        <SelectItem value="second">Second material  (Second)</SelectItem>
+                        <SelectItem value="mid">Midterm material  (Mid)</SelectItem>
+                        <SelectItem value="final">Final material (Final)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
