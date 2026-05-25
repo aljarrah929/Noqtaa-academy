@@ -84,14 +84,11 @@ export default function LessonDetail() {
 };
   const sortedLessons = course?.lessons?.sort((a, b) => a.orderIndex - b.orderIndex) || [];
   const currentIndex = sortedLessons.findIndex(l => l.id === Number(lessonId));
-  const prevLesson = sortedLessons
-  .slice(0, currentIndex)
-  .reverse()
-  .find(l => hasAccessToLesson(l)) || null;
+  const prevLesson = currentIndex > 0 ? sortedLessons[currentIndex - 1] : null;
+const nextLesson = currentIndex < sortedLessons.length - 1 ? sortedLessons[currentIndex + 1] : null;
 
-const nextLesson = sortedLessons
-  .slice(currentIndex + 1)
-  .find(l => hasAccessToLesson(l)) || null;
+const prevLessonAccessible = prevLesson ? hasAccessToLesson(prevLesson) : false;
+const nextLessonAccessible = nextLesson ? hasAccessToLesson(nextLesson) : false;
   
   const getContentTypeIcon = (contentType?: string) => {
     switch (contentType) {
@@ -358,30 +355,41 @@ const nextLesson = sortedLessons
 
         <div className="flex items-center justify-between gap-4">
           {prevLesson ? (
-            <Button variant="outline" asChild data-testid="button-prev-lesson">
-              <Link href={`/courses/${courseId}/lessons/${prevLesson.id}`}>
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Previous: {prevLesson.title}
-              </Link>
-            </Button>
-          ) : (
-            <div />
-          )}
-          
-          {nextLesson ? (
-            <Button asChild data-testid="button-next-lesson">
-              <Link href={`/courses/${courseId}/lessons/${nextLesson.id}`}>
-                Next: {nextLesson.title}
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Link>
-            </Button>
-          ) : (
-            <Button variant="outline" asChild>
-              <Link href={`/courses/${courseId}`}>
-                Back to Course
-              </Link>
-            </Button>
-          )}
+  prevLessonAccessible ? (
+    <Button variant="outline" asChild>
+      <Link href={`/courses/${courseId}/lessons/${prevLesson.id}`}>
+        <ChevronLeft className="w-4 h-4 mr-1" />
+        Previous: {prevLesson.title}
+      </Link>
+    </Button>
+  ) : (
+    <Button variant="outline" disabled>
+      <Lock className="w-4 h-4 mr-1" />
+      Previous: {prevLesson.title}
+    </Button>
+  )
+) : <div />}
+
+{nextLesson ? (
+  nextLessonAccessible ? (
+    <Button asChild>
+      <Link href={`/courses/${courseId}/lessons/${nextLesson.id}`}>
+        Next: {nextLesson.title}
+        <ChevronRight className="w-4 h-4 ml-1" />
+      </Link>
+    </Button>
+  ) : (
+    <Button disabled>
+      <Lock className="w-4 h-4 mr-1" />
+      Next: {nextLesson.title}
+    </Button>
+  )
+) : (
+  <Button variant="outline" asChild>
+    <Link href={`/courses/${courseId}`}>Back to Course</Link>
+  </Button>
+)}
+         
         </div>
       </div>
     </div>
