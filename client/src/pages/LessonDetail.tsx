@@ -77,7 +77,11 @@ export default function LessonDetail() {
   const isContentLocked = lesson?.locked === true;
   const isCourseLocked = course?.isLocked === true;
   const isLoading = courseLoading || lessonLoading || enrollmentLoading;
-
+   const hasAccessToLesson = (lesson: any) => {
+  if (!isEnrolled) return false;
+  const lessonPkg = lesson.packageType || "all";
+  return userPackages.includes("all") || userPackages.includes(lessonPkg);
+};
   const sortedLessons = course?.lessons?.sort((a, b) => a.orderIndex - b.orderIndex) || [];
   const currentIndex = sortedLessons.findIndex(l => l.id === Number(lessonId));
   const prevLesson = sortedLessons
@@ -88,11 +92,7 @@ export default function LessonDetail() {
 const nextLesson = sortedLessons
   .slice(currentIndex + 1)
   .find(l => hasAccessToLesson(l)) || null;
-  const hasAccessToLesson = (lesson: any) => {
-  if (!isEnrolled) return false;
-  const lessonPkg = lesson.packageType || "all";
-  return userPackages.includes("all") || userPackages.includes(lessonPkg);
-};
+  
   const getContentTypeIcon = (contentType?: string) => {
     switch (contentType) {
       case "video":
