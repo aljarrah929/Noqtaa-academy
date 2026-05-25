@@ -701,8 +701,6 @@ const lessonData = {
 
 console.log("👉 2. Data going to Database:", lessonData);
 const lesson = await storage.createLesson(lessonData);
-
-      
       res.status(201).json(lesson);
     } catch (error) {
       console.error("❌ Error creating lesson:", error);
@@ -729,7 +727,7 @@ const lesson = await storage.createLesson(lessonData);
         if (user.role === "SUPER_ADMIN") {
           hasAccess = true;
         } else if (user.role === "ADMIN") {
-          hasAccess = user.collegeId === course.collegeId;
+          hasAccess = true;
         } else if (user.role === "TEACHER") {
           hasAccess = course.teacherId === userId;
         } else {
