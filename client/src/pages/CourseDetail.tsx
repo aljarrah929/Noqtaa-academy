@@ -209,7 +209,8 @@ export default function CourseDetail() {
               </Card>
             )}
 
-            {isAuthenticated && !isEnrolled && user?.role === "STUDENT" && (
+            {isAuthenticated && user?.role === "STUDENT" && packageOptions.length > 0 && (
+
               <Card className="border-primary/50">
                 <CardContent className="py-6 text-center">
                   {joinRequestStatus?.exists && joinRequestStatus.status === "PENDING" ? (
@@ -297,15 +298,16 @@ export default function CourseDetail() {
               </Card>
             )}
 
-            {isEnrolled && (
-              <Card className="bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800">
-                <CardContent className="py-6 text-center">
-                  <CheckCircle className="w-10 h-10 mx-auto text-green-600 mb-3" />
-                  <h3 className="font-semibold mb-2 text-green-800 dark:text-green-400">You're Enrolled!</h3>
-                  <p className="text-sm text-green-700 dark:text-green-500">You have access to your purchased content.</p>
-                </CardContent>
-              </Card>
-            )}
+            {isEnrolled && packageOptions.length === 0 && (
+  <Card className="bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800">
+    <CardContent className="py-6 text-center">
+      <CheckCircle className="w-10 h-10 mx-auto text-green-600 mb-3" />
+      <h3 className="font-semibold mb-2 text-green-800 dark:text-green-400">You're Enrolled!</h3>
+      <p className="text-sm text-green-700 dark:text-green-500">You have access to your purchased content.</p>
+    </CardContent>
+  </Card>
+)}
+            
           </div>
         </div>
       </div>
