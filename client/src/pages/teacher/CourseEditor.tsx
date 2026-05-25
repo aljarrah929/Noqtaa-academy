@@ -74,8 +74,9 @@ export default function CourseEditor() {
   const matchEdit = matchAdminEdit || matchTeacherEdit;
   const editParams = adminEditParams || teacherEditParams;
   const [matchNew] = useRoute("/admin/courses/new");
+  const [matchTeacherNew] = useRoute("/teacher/courses/new");
   const [, setLocation] = useLocation();
-  const isNew = matchNew;
+  const isNew = matchNew || matchTeacherNew;
   const courseId = editParams?.id;
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
@@ -176,10 +177,14 @@ export default function CourseEditor() {
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
-      toast({ title: "Course Created", description: "The course has been created." });
-      setLocation(`/admin/courses/${data.id}/edit`);
-    },
+  queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+  toast({ title: "Course Created", description: "The course has been created." });
+  if (isAdmin) {
+    setLocation(`/admin/courses/${data.id}/edit`);
+  } else {
+    setLocation(`/teacher/courses/${data.id}/edit`);
+  }
+},
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
@@ -314,22 +319,22 @@ export default function CourseEditor() {
     );
   }
 
-  if (isNew && !isAdmin) {
-    return (
-      <DashboardLayout title="Access Denied">
-        <div className="max-w-4xl mx-auto text-center py-16">
-          <ShieldAlert className="w-16 h-16 mx-auto text-destructive mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-          <p className="text-muted-foreground mb-6">
-            Only administrators can create new courses.
-          </p>
-          <Button asChild>
-            <Link href="/">Go Home</Link>
-          </Button>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  if (isNew && !isAdmin && user?.role !== "TEACHER") {
+  return (
+    <DashboardLayout title="Access Denied">
+      <div className="max-w-4xl mx-auto text-center py-16">
+        <ShieldAlert className="w-16 h-16 mx-auto text-destructive mb-4" />
+        <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+        <p className="text-muted-foreground mb-6">
+          You don't have permission to create courses.
+        </p>
+        <Button asChild>
+          <Link href="/">Go Home</Link>
+        </Button>
+      </div>
+    </DashboardLayout>
+  );
+}
 
   if (courseLoading && !isNew) {
     return (
