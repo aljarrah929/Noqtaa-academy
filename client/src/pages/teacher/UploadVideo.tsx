@@ -124,7 +124,7 @@ export default function UploadVideo() {
                   <FormItem><FormLabel>Description (optional)</FormLabel><FormControl><Textarea placeholder="Enter lesson description" className="min-h-24" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
 
-                <div className="space-y-2">
+               <div className="space-y-2">
   <FormLabel>* مدة الفيديو (ساعات : دقائق : ثواني)</FormLabel>
   <p className="text-xs text-muted-foreground">
     يتم ملء الوقت تلقائياً بعد رفع الفيديو، أو يمكنك إدخاله يدوياً
@@ -135,6 +135,7 @@ export default function UploadVideo() {
     <Input type="number" min="0" max="59" value={seconds || ""} onChange={e => setSeconds(Number(e.target.value))} placeholder="ثواني" className="text-center" />
   </div>
 </div>
+
 
 <FormField control={form.control} name="content" render={({ field }) => (
   <FormItem>
