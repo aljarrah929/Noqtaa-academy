@@ -109,26 +109,7 @@ const deleteMutation = useMutation({
     if (!teacher) return "T";
     return `${teacher.firstName?.[0] || ""}${teacher.lastName?.[0] || ""}`.toUpperCase() || "T";
   };
-<AlertDialog open={!!courseToDelete} onOpenChange={() => setCourseToDelete(null)}>
-  <AlertDialogContent>
-    <AlertDialogHeader>
-      <AlertDialogTitle>Delete Course</AlertDialogTitle>
-      <AlertDialogDescription>
-        هل أنت متأكد من حذف كورس "{courseToDelete?.title}"؟ هاد الإجراء لا يمكن التراجع عنه وسيحذف كل الدروس والتسجيلات المرتبطة.
-      </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-      <AlertDialogCancel>Cancel</AlertDialogCancel>
-      <AlertDialogAction
-        onClick={() => courseToDelete && deleteMutation.mutate(courseToDelete.id)}
-        className="bg-destructive hover:bg-destructive/90"
-        disabled={deleteMutation.isPending}
-      >
-        {deleteMutation.isPending ? "Deleting..." : "Delete"}
-      </AlertDialogAction>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
+
   return (
     <DashboardLayout title="Course Approvals">
       <div className="max-w-6xl mx-auto">
@@ -307,6 +288,28 @@ const deleteMutation = useMutation({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AlertDialog open={!!courseToDelete} onOpenChange={() => setCourseToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Course</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف كورس "{courseToDelete?.title}"؟ هاد الإجراء لا يمكن التراجع عنه.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => courseToDelete && deleteMutation.mutate(courseToDelete.id)}
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </DashboardLayout>
   );
+   
 }
