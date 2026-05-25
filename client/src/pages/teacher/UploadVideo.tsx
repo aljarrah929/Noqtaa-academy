@@ -54,7 +54,7 @@ export default function UploadVideo() {
 
   const createLessonMutation = useMutation({
     mutationFn: async (data: UploadVideoValues) => {
-      const totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+      const totalSeconds = form.getValues("duration") || 0;
       const res = await apiRequest("POST", `/api/courses/${courseId}/lessons`, {
         title: data.title,
         contentType: "video",
@@ -134,7 +134,19 @@ export default function UploadVideo() {
                   <FormItem>
                     <FormLabel>Video File *</FormLabel>
                     <FormControl>
-                      <B2VideoUploader courseId={courseId} value={field.value} onChange={field.onChange} />
+                     <B2VideoUploader 
+  courseId={courseId} 
+  value={field.value} 
+  onChange={field.onChange}
+  onDurationExtracted={(totalSeconds) => {
+    form.setValue("duration", totalSeconds);
+    // حدّث الحقول اليدوية كمان عشان تظهر للمعلم
+    setHours(Math.floor(totalSeconds / 3600));
+    setMinutes(Math.floor((totalSeconds % 3600) / 60));
+    setSeconds(totalSeconds % 60);
+  }}
+/>
+هيك لما المعلم يرفع الفيديو، المدة بتنسحب تلقائياً وبتنحفظ بالـ form وبتظهر بالحقول اليدوية.
                     </FormControl>
                     <FormMessage />
                   </FormItem>
