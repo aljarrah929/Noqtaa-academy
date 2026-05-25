@@ -125,7 +125,18 @@ export default function UploadVideo() {
                 )} />
 
                 <div className="space-y-2">
-                  <FormField control={form.control} name="content" render={({ field }) => (
+  <FormLabel>* مدة الفيديو (ساعات : دقائق : ثواني)</FormLabel>
+  <p className="text-xs text-muted-foreground">
+    يتم ملء الوقت تلقائياً بعد رفع الفيديو، أو يمكنك إدخاله يدوياً
+  </p>
+  <div className="flex gap-2 items-center text-muted-foreground" dir="ltr">
+    <Input type="number" min="0" value={hours || ""} onChange={e => setHours(Number(e.target.value))} placeholder="ساعات" className="text-center" /> :
+    <Input type="number" min="0" max="59" value={minutes || ""} onChange={e => setMinutes(Number(e.target.value))} placeholder="دقائق" className="text-center" /> :
+    <Input type="number" min="0" max="59" value={seconds || ""} onChange={e => setSeconds(Number(e.target.value))} placeholder="ثواني" className="text-center" />
+  </div>
+</div>
+
+<FormField control={form.control} name="content" render={({ field }) => (
   <FormItem>
     <FormLabel>Video File *</FormLabel>
     <FormControl>
@@ -152,7 +163,7 @@ export default function UploadVideo() {
   <Button type="submit" disabled={createLessonMutation.isPending || !form.watch("content")}>
     {createLessonMutation.isPending ? "Saving..." : "Save Lesson"}
   </Button>
-</div>            </div>
+          </div>
               </form>
             </Form>
           </CardContent>
