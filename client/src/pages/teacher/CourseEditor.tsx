@@ -142,7 +142,13 @@ export default function CourseEditor() {
       packageType: "all",
     },
   });
-
+    useEffect(() => {
+  if (isNew && user && user.role === "TEACHER") {
+    courseForm.setValue("teacherId", user.id);
+    if (user.collegeId) courseForm.setValue("collegeId", String(user.collegeId));
+    if (user.majorId) courseForm.setValue("majorId", String(user.majorId));
+  }
+}, [isNew, user]);
   useEffect(() => {
     if (course) {
       courseForm.reset({
@@ -441,30 +447,40 @@ export default function CourseEditor() {
                     )}
                   />
 
-                  <FormField
-                    control={courseForm.control}
-                    name="teacherId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Teacher</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-teacher">
-                              <SelectValue placeholder="Select a teacher" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {teachers?.map((teacher) => (
-                              <SelectItem key={teacher.id} value={teacher.id}>
-                                {teacher.firstName} {teacher.lastName} ({teacher.email})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {isAdmin ? (
+  <FormField
+    control={courseForm.control}
+    name="teacherId"
+    render={({ field }) => (
+      <FormItem>
+        <FormLabel>Teacher</FormLabel>
+        <Select onValueChange={field.onChange} value={field.value}>
+          <FormControl>
+            <SelectTrigger data-testid="select-teacher">
+              <SelectValue placeholder="Select a teacher" />
+            </SelectTrigger>
+          </FormControl>
+          <SelectContent>
+            {teachers?.map((teacher) => (
+              <SelectItem key={teacher.id} value={teacher.id}>
+                {teacher.firstName} {teacher.lastName} ({teacher.email})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FormMessage />
+      </FormItem>
+    )}
+  />
+) : (
+  <div className="space-y-2">
+    <label className="text-sm font-medium">Teacher</label>
+    <div className="flex items-center gap-2 p-3 rounded-md border bg-muted/50">
+      <span className="text-sm">{user?.firstName} {user?.lastName}</span>
+      <span className="text-xs text-muted-foreground">({user?.email})</span>
+    </div>
+  </div>
+)}
                   
                   {/* --- حقول الأسعار للبكجات --- */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-6 p-4 border rounded-xl bg-muted/10">
