@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -31,7 +31,7 @@ export default function UploadVideo() {
   const courseId = parseInt(params?.courseId || "0");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-
+  const extractedDurationRef = useRef<number>(0);
   const [hours, setHours] = useState<number>(0);
   const [minutes, setMinutes] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
@@ -54,16 +54,19 @@ export default function UploadVideo() {
 
   const createLessonMutation = useMutation({
     mutationFn: async (data: UploadVideoValues) => {
-      const totalSeconds = form.getValues("duration") || 0;
-      const res = await apiRequest("POST", `/api/courses/${courseId}/lessons`, {
-        title: data.title,
-        contentType: "video",
-        content: data.content,
-        duration: totalSeconds,
-        packageType: data.packageType, // 🔥 نبعث البكج للسيرفر
-      });
-      return res.json();
-    },
+  // استخدم المدة المستخرجة أو الحقول اليدوية
+  const manualSeconds = (hours * 3600) + (minutes * 60) + seconds;
+  const totalSeconds = manualSeconds > 0 ? manualSeconds : extractedDurationRef.current;
+  
+  const res = await apiRequest("POST", `/api/courses/${courseId}/lessons`, {
+    title: data.title,
+    contentType: "video",
+    content: data.content,
+    duration: totalSeconds,
+    packageType: data.packageType,
+  });
+  return res.json();
+},
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/courses", courseId] });
       toast({ title: "تم الرفع بنجاح", description: "تمت إضافة الفيديو للكورس." });
@@ -139,8 +142,8 @@ export default function UploadVideo() {
   value={field.value} 
   onChange={field.onChange}
   onDurationExtracted={(totalSeconds) => {
-    form.setValue("duration", totalSeconds);
-    // حدّث الحقول اليدوية كمان عشان تظهر للمعلم
+    extractedDurationRef.current = totalSeconds;
+    // حدّث الحقول اليدوية عشان تظهر للمعلم
     setHours(Math.floor(totalSeconds / 3600));
     setMinutes(Math.floor((totalSeconds % 3600) / 60));
     setSeconds(totalSeconds % 60);
