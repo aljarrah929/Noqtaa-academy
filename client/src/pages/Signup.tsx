@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Form,
@@ -38,6 +39,8 @@ export default function Signup() {
   const [otpCode, setOtpCode] = useState("");
   const [otpError, setOtpError] = useState("");
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { t } = useTranslation();
 
   const form = useForm<SignupInput>({
@@ -369,12 +372,21 @@ export default function Signup() {
                         <FormItem>
                           <FormLabel>{t("auth.password")}</FormLabel>
                           <FormControl>
-                            <Input
-                              type="password"
-                              placeholder={t("auth.passwordPlaceholder")}
-                              {...field}
-                              data-testid="input-password"
-                            />
+                            <div className="relative">
+  <Input
+    type={showPassword ? "text" : "password"}
+    placeholder={t("auth.passwordPlaceholder")}
+    {...field}
+    data-testid="input-password"
+  />
+  <button
+    type="button"
+    onClick={() => setShowPassword(v => !v)}
+    className="absolute inset-y-0 left-3 flex items-center text-muted-foreground hover:text-foreground"
+  >
+    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+  </button>
+</div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -388,12 +400,21 @@ export default function Signup() {
                         <FormItem>
                           <FormLabel>{t("auth.confirmPassword")}</FormLabel>
                           <FormControl>
-                            <Input
-                              type="password"
-                              placeholder={t("auth.confirmPasswordPlaceholder")}
-                              {...field}
-                              data-testid="input-confirm-password"
-                            />
+                            <div className="relative">
+  <Input
+    type={showConfirmPassword ? "text" : "password"}
+    placeholder={t("auth.confirmPasswordPlaceholder")}
+    {...field}
+    data-testid="input-confirm-password"
+  />
+  <button
+    type="button"
+    onClick={() => setShowConfirmPassword(v => !v)}
+    className="absolute inset-y-0 left-3 flex items-center text-muted-foreground hover:text-foreground"
+  >
+    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+  </button>
+</div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
