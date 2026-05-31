@@ -378,11 +378,12 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     placeholder={t("auth.passwordPlaceholder")}
     {...field}
     data-testid="input-password"
+    className="pr-10"
   />
   <button
     type="button"
     onClick={() => setShowPassword(v => !v)}
-    className="absolute inset-y-0 left-3 flex items-center text-muted-foreground hover:text-foreground"
+    className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
   >
     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
   </button>
@@ -400,17 +401,18 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
                         <FormItem>
                           <FormLabel>{t("auth.confirmPassword")}</FormLabel>
                           <FormControl>
-                            <div className="relative">
+                           <div className="relative">
   <Input
     type={showConfirmPassword ? "text" : "password"}
     placeholder={t("auth.confirmPasswordPlaceholder")}
     {...field}
     data-testid="input-confirm-password"
+    className="pr-10"
   />
   <button
     type="button"
     onClick={() => setShowConfirmPassword(v => !v)}
-    className="absolute inset-y-0 left-3 flex items-center text-muted-foreground hover:text-foreground"
+    className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
   >
     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
   </button>
