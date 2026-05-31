@@ -498,8 +498,44 @@ async createJoinRequest(data: InsertJoinRequest): Promise<JoinRequest> {
   }
 
   async deleteCollege(id: number): Promise<void> {
-    await db.delete(colleges).where(eq(colleges.id, id));
+  // 1. جيب كل الكورسات المرتبطة بالكلية
+  const collegeCoursesData = await db.select({ id: courses.id })
+    .from(courses)
+    .where(eq(courses.collegeId, id));
+  const courseIds = collegeCoursesData.map(c => c.id);
+
+  if (courseIds.length > 0) {
+    // 2. احذف الـ enrollments المرتبطة بالكورسات
+    await db.delete(enrollments)
+      .where(sql`${enrollments.courseId} IN ${courseIds}`);
+
+    // 3. احذف الـ lessons المرتبطة بالكورسات
+    await db.delete(lessons)
+      .where(sql`${lessons.courseId} IN ${courseIds}`);
+
+    // 4. احذف الـ joinRequests المرتبطة بالكورسات
+    await db.delete(joinRequests)
+      .where(sql`${joinRequests.courseId} IN ${courseIds}`);
+
+    // 5. احذف الـ courseApprovalLogs المرتبطة بالكورسات
+    await db.delete(courseApprovalLogs)
+      .where(sql`${courseApprovalLogs.courseId} IN ${courseIds}`);
+
+    // 6. احذف الكورسات نفسها
+    await db.delete(courses).where(eq(courses.collegeId, id));
   }
+
+  // 7. احذف الـ majors المرتبطة بالكلية
+  await db.delete(majors).where(eq(majors.collegeId, id));
+
+  // 8. فك ربط اليوزرز عن الكلية بدل ما تحذفهم
+  await db.update(users)
+    .set({ collegeId: null })
+    .where(eq(users.collegeId, id));
+
+  // 9. أخيراً احذف الكلية
+  await db.delete(colleges).where(eq(colleges.id, id));
+}
 
   async getCourses(collegeId?: number, status?: Course["status"], majorId?: number, universityId?: number): Promise<CourseWithRelations[]> {
     const results = await db
