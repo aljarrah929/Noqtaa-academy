@@ -401,18 +401,18 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
                         <FormItem>
                           <FormLabel>{t("auth.confirmPassword")}</FormLabel>
                           <FormControl>
-                           <div className="relative">
+                          <div className="relative">
   <Input
     type={showConfirmPassword ? "text" : "password"}
     placeholder={t("auth.confirmPasswordPlaceholder")}
     {...field}
     data-testid="input-confirm-password"
-    className="pr-10"
+    className="ltr:pr-10 rtl:pl-10"
   />
   <button
     type="button"
     onClick={() => setShowConfirmPassword(v => !v)}
-    className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
+    className="absolute inset-y-0 ltr:right-3 rtl:left-3 flex items-center text-muted-foreground hover:text-foreground"
   >
     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
   </button>
