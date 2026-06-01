@@ -211,6 +211,7 @@ export const featuredProfiles = pgTable("featured_profiles", {
   title: varchar("title", { length: 80 }),
   bio: text("bio"),
   imageUrl: varchar("image_url", { length: 500 }),
+  profileUrl: varchar("profile_url", { length: 500 }),
   isActive: boolean("is_active").notNull().default(true),
   sortOrder: integer("sort_order").notNull().default(0),
   createdByUserId: varchar("created_by_user_id").references(() => users.id),

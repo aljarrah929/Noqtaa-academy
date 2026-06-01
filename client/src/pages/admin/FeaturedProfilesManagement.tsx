@@ -38,6 +38,7 @@ const profileFormSchema = z.object({
   title: z.string().max(80, "Title must be 80 characters or less").optional().nullable(),
   bio: z.string().max(800, "Bio must be 800 characters or less").optional().nullable(),
   imageUrl: z.string().url("Must be a valid URL").optional().nullable().or(z.literal("")),
+  profileUrl: z.string().url().optional().nullable().or(z.literal("")), // ← أضف هاد
   isActive: z.boolean().default(true),
   sortOrder: z.coerce.number().int().default(0),
 });
@@ -60,6 +61,7 @@ export default function FeaturedProfilesManagement() {
       title: "",
       bio: "",
       imageUrl: "",
+      profileUrl: "",
       isActive: true,
       sortOrder: 0,
     },
@@ -142,6 +144,7 @@ export default function FeaturedProfilesManagement() {
         title: profile.title || "",
         bio: profile.bio || "",
         imageUrl: profile.imageUrl || "",
+        profileUrl: profile.profileUrl || "",
         isActive: profile.isActive,
         sortOrder: profile.sortOrder,
       });
@@ -152,6 +155,7 @@ export default function FeaturedProfilesManagement() {
         title: "",
         bio: "",
         imageUrl: "",
+        profileUrl: "",
         isActive: true,
         sortOrder: (profiles?.length || 0) + 1,
       });
@@ -419,7 +423,23 @@ export default function FeaturedProfilesManagement() {
     </FormItem>
   )}
 />
-
+               <FormField
+  control={form.control}
+  name="profileUrl"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>رابط الصفحة الشخصية</FormLabel>
+      <FormControl>
+        <Input
+          placeholder="https://..."
+          value={field.value || ""}
+          onChange={(e) => field.onChange(e.target.value)}
+        />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
               <FormField
                 control={form.control}
                 name="sortOrder"
@@ -456,7 +476,7 @@ export default function FeaturedProfilesManagement() {
                   </FormItem>
                 )}
               />
-
+               
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={closeDialog}>
                   Cancel

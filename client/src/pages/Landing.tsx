@@ -40,14 +40,18 @@ const iconMap: Record<string, LucideIcon> = {
 // =====================
 const CARD_COLORS = ["#2d6a4f", "#c1440e", "#1b4332", "#c1440e", "#2d6a4f", "#c1440e", "#1b4332"];
 
+
 function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  const isRTL = (text: string) => /[\u0600-\u06FF]/.test(text);
 
   return (
     <div className="flex gap-3 overflow-x-auto pb-4" style={{ scrollbarWidth: "none" }}>
       {profiles.map((profile, index) => {
         const isActive = activeIndex === index;
         const bgColor = CARD_COLORS[index % CARD_COLORS.length];
+        const textDir = isRTL(profile.name) ? "rtl" : "ltr";
 
         return (
           <div
@@ -63,30 +67,28 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
             }}
             data-testid={`card-team-member-${profile.id}`}
           >
-            {/* الصورة تملأ الكارت كامل بدون overlay */}
+            {/* الصورة تملأ الكارت */}
             {profile.imageUrl && (
               <img
                 src={profile.imageUrl}
                 alt={profile.name}
                 className="absolute inset-0 w-full h-full object-cover object-top"
-                style={{
-                  objectPosition: isActive ? "right center" : "center top",
-                  transition: "object-position 0.5s ease",
-                }}
               />
             )}
 
-            {/* لما يكون مفتوح: overlay داكن على الجانب الأيسر فقط */}
+            {/* overlay داكن لما يكون مفتوح */}
             {isActive && (
               <div
                 className="absolute inset-0"
                 style={{
-                  background: "linear-gradient(to right, rgba(0,0,0,0.85) 45%, transparent 75%)",
+                  background: textDir === "rtl"
+                    ? "linear-gradient(to left, rgba(0,0,0,0.85) 45%, transparent 75%)"
+                    : "linear-gradient(to right, rgba(0,0,0,0.85) 45%, transparent 75%)",
                 }}
               />
             )}
 
-            {/* لما يكون مغلق: gradient خفيف من الأسفل للاسم فقط */}
+            {/* gradient خفيف للاسم لما يكون مغلق */}
             {!isActive && (
               <div
                 className="absolute inset-0"
@@ -96,19 +98,34 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
               />
             )}
 
-            {/* المعلومات لما يكون مفتوح — على اليسار */}
+            {/* المعلومات لما يكون مفتوح */}
             {isActive && (
               <div
-                className="absolute top-0 bottom-0 left-0 flex flex-col justify-center p-6 text-white z-10"
-                style={{ width: "55%" }}
-                dir="rtl"
+                className={`absolute top-0 bottom-0 flex flex-col justify-center p-5 text-white z-10 ${textDir === "rtl" ? "right-0" : "left-0"}`}
+                dir={textDir}
+                style={{ width: "52%" }}
               >
-                <h3 className="text-lg font-bold leading-tight mb-2">{profile.name}</h3>
+                <h3
+                  className="text-base font-bold leading-tight mb-2"
+                  style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}
+                >
+                  {profile.name}
+                </h3>
                 {profile.title && (
-                  <p className="text-sm font-semibold mb-3 opacity-90">{profile.title}</p>
+                  <p
+                    className="text-xs font-semibold mb-3 opacity-95"
+                    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
+                  >
+                    {profile.title}
+                  </p>
                 )}
                 {profile.bio && (
-                  <p className="text-xs leading-relaxed opacity-85 line-clamp-6">{profile.bio}</p>
+                  <p
+                    className="text-xs leading-relaxed opacity-90"
+                    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
+                  >
+                    {profile.bio}
+                  </p>
                 )}
               </div>
             )}
@@ -116,8 +133,10 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
             {/* الاسم بالأسفل لما يكون مغلق */}
             {!isActive && (
               <div className="absolute bottom-3 left-0 right-0 text-center px-2 z-10">
-                <p className="text-white text-xs font-bold truncate"
-                  style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}>
+                <p
+                  className="text-white text-xs font-bold truncate"
+                  style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}
+                >
                   {profile.name}
                 </p>
               </div>
@@ -127,8 +146,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
       })}
     </div>
   );
-}
-// =====================
+}// =====================
 // Landing Page
 // =====================
 export default function Landing() {
