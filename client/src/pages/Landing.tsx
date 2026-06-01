@@ -56,67 +56,72 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
             onMouseLeave={() => setActiveIndex(null)}
             className="flex-shrink-0 rounded-3xl overflow-hidden relative"
             style={{
-              width: isActive ? "320px" : "140px",
-              height: "360px",
+              width: isActive ? "420px" : "150px",
+              height: "380px",
               backgroundColor: bgColor,
-              transition: "width 0.5s ease",
-              cursor: "default",
+              transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)",
             }}
             data-testid={`card-team-member-${profile.id}`}
           >
-            {/* الصورة */}
+            {/* الصورة تملأ الكارت كامل بدون overlay */}
             {profile.imageUrl && (
               <img
                 src={profile.imageUrl}
                 alt={profile.name}
-                className="absolute bottom-0 left-0 right-0 w-full object-cover object-top"
-                style={{ height: isActive ? "60%" : "80%" }}
-              />
-            )}
-
-            {/* Gradient من الأسفل دايماً */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(to top, ${bgColor} 20%, ${bgColor}99 50%, transparent 100%)`,
-              }}
-            />
-
-            {/* Gradient من الأعلى لما يكون مفتوح */}
-            {isActive && (
-              <div
-                className="absolute inset-0"
+                className="absolute inset-0 w-full h-full object-cover object-top"
                 style={{
-                  background: `linear-gradient(to bottom, ${bgColor}dd 40%, transparent 70%)`,
+                  objectPosition: isActive ? "right center" : "center top",
+                  transition: "object-position 0.5s ease",
                 }}
               />
             )}
 
-            {/* المعلومات لما يكون مفتوح */}
+            {/* لما يكون مفتوح: overlay داكن على الجانب الأيسر فقط */}
             {isActive && (
-              <div className="absolute top-0 left-0 right-0 p-5 text-white z-10" dir="rtl">
-                <h3 className="text-base font-bold leading-tight mb-1 drop-shadow-lg">{profile.name}</h3>
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: "linear-gradient(to right, rgba(0,0,0,0.85) 45%, transparent 75%)",
+                }}
+              />
+            )}
+
+            {/* لما يكون مغلق: gradient خفيف من الأسفل للاسم فقط */}
+            {!isActive && (
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: "linear-gradient(to top, rgba(0,0,0,0.7) 20%, transparent 60%)",
+                }}
+              />
+            )}
+
+            {/* المعلومات لما يكون مفتوح — على اليسار */}
+            {isActive && (
+              <div
+                className="absolute top-0 bottom-0 left-0 flex flex-col justify-center p-6 text-white z-10"
+                style={{ width: "55%" }}
+                dir="rtl"
+              >
+                <h3 className="text-lg font-bold leading-tight mb-2">{profile.name}</h3>
                 {profile.title && (
-                  <p className="text-xs font-semibold mb-2 opacity-90 drop-shadow">{profile.title}</p>
+                  <p className="text-sm font-semibold mb-3 opacity-90">{profile.title}</p>
                 )}
                 {profile.bio && (
-                  <p className="text-xs leading-relaxed opacity-90 drop-shadow overflow-y-auto max-h-32"
-                    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
-                    {profile.bio}
-                  </p>
+                  <p className="text-xs leading-relaxed opacity-85 line-clamp-6">{profile.bio}</p>
                 )}
               </div>
             )}
 
-            {/* الاسم بالأسفل دايماً */}
-            <div className="absolute bottom-3 left-0 right-0 text-center px-2 z-10">
-              {!isActive && (
-                <p className="text-white text-xs font-bold truncate drop-shadow-lg"
+            {/* الاسم بالأسفل لما يكون مغلق */}
+            {!isActive && (
+              <div className="absolute bottom-3 left-0 right-0 text-center px-2 z-10">
+                <p className="text-white text-xs font-bold truncate"
                   style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}>
                   {profile.name}
                 </p>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         );
       })}
