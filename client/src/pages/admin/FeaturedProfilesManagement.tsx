@@ -371,23 +371,54 @@ export default function FeaturedProfilesManagement() {
               />
 
               <FormField
-                control={form.control}
-                name="imageUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Image URL</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="https://..." 
-                        {...field}
-                        value={field.value || ""}
-                        data-testid="input-profile-image"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+  control={form.control}
+  name="imageUrl"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>صورة الشخص</FormLabel>
+      <FormControl>
+        <div className="space-y-3">
+          {field.value && (
+            <div className="relative w-24 h-24 rounded-xl overflow-hidden border">
+              <img src={field.value} alt="preview" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => field.onChange("")}
+                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+              >✕</button>
+            </div>
+          )}
+          <Input
+            type="file"
+            accept="image/*"
+            className="cursor-pointer"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const formData = new FormData();
+              formData.append("file", file);
+              try {
+                const res = await fetch("/api/b2/image/upload", { method: "POST", body: formData });
+                if (!res.ok) throw new Error("Upload failed");
+                const data = await res.json();
+                field.onChange(data.cdnUrl || "");
+              } catch {
+                toast({ title: "فشل رفع الصورة", variant: "destructive" });
+              }
+            }}
+          />
+          <Input
+            placeholder="أو أدخل رابط الصورة مباشرة..."
+            value={field.value || ""}
+            onChange={(e) => field.onChange(e.target.value)}
+            data-testid="input-profile-image"
+          />
+        </div>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
 
               <FormField
                 control={form.control}

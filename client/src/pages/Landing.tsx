@@ -52,7 +52,8 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
         return (
           <div
             key={profile.id}
-            onClick={() => setActiveIndex(isActive ? null : index)}
+            onMouseEnter={() => setActiveIndex(index)}
+            onMouseLeave={() => setActiveIndex(null)}
             className="cursor-pointer flex-shrink-0 rounded-3xl overflow-hidden relative"
             style={{
               width: isActive ? "320px" : "140px",
@@ -88,7 +89,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
               <div className="absolute top-0 left-0 right-0 p-5 text-white" dir="rtl">
                 <h3 className="text-lg font-bold leading-tight mb-1">{profile.name}</h3>
                 {profile.title && <p className="text-sm opacity-85 mb-2 font-medium">{profile.title}</p>}
-                {profile.bio && <p className="text-xs opacity-75 leading-relaxed line-clamp-4">{profile.bio}</p>}
+                {profile.bio && <p className="text-xs opacity-75 leading-relaxed overflow-y-auto max-h-40">{profile.bio}</p>}
               </div>
             )}
 
