@@ -58,13 +58,18 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
             key={profile.id}
             onMouseEnter={() => setActiveIndex(index)}
             onMouseLeave={() => setActiveIndex(null)}
-            className="flex-shrink-0 rounded-3xl overflow-hidden relative"
-            style={{
-              width: isActive ? "420px" : "150px",
-              height: "380px",
-              backgroundColor: bgColor,
-              transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)",
-            }}
+                    onClick={() => {
+  if (profile.profileUrl && isActive) {
+    window.open(profile.profileUrl, "_blank");
+  }
+}}
+style={{
+  width: isActive ? "420px" : "150px",
+  height: "380px",
+  backgroundColor: bgColor,
+  transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)",
+  cursor: isActive && profile.profileUrl ? "pointer" : "default",
+}}
             data-testid={`card-team-member-${profile.id}`}
           >
             {/* الصورة تملأ الكارت */}
@@ -105,28 +110,27 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
                 dir={textDir}
                 style={{ width: "52%" }}
               >
-                <h3
-                  className="text-base font-bold leading-tight mb-2"
-                  style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}
-                >
-                  {profile.name}
-                </h3>
-                {profile.title && (
-                  <p
-                    className="text-xs font-semibold mb-3 opacity-95"
-                    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
-                  >
-                    {profile.title}
-                  </p>
-                )}
-                {profile.bio && (
-                  <p
-  className="text-xs leading-relaxed opacity-90 line-clamp-5"
-  style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
->
-  {profile.bio}
-</p>
-                )}
+                {/* الاسم والمسمى فوق */}
+<div>
+  <h3 className="text-base font-bold leading-tight mb-1"
+    style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}>
+    {profile.name}
+  </h3>
+  {profile.title && (
+    <p className="text-xs font-semibold opacity-95"
+      style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
+      {profile.title}
+    </p>
+  )}
+</div>
+
+{/* البايو بالأسفل */}
+{profile.bio && (
+  <p className="text-xs leading-relaxed opacity-90 line-clamp-4"
+    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
+    {profile.bio}
+  </p>
+)}
               </div>
             )}
 
