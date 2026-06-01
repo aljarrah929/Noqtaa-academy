@@ -40,7 +40,6 @@ const iconMap: Record<string, LucideIcon> = {
 // =====================
 const CARD_COLORS = ["#2d6a4f", "#c1440e", "#1b4332", "#c1440e", "#2d6a4f", "#c1440e", "#1b4332"];
 
-
 function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
@@ -58,21 +57,22 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
             key={profile.id}
             onMouseEnter={() => setActiveIndex(index)}
             onMouseLeave={() => setActiveIndex(null)}
-                    onClick={() => {
-  if (profile.profileUrl && isActive) {
-    window.open(profile.profileUrl, "_blank");
-  }
-}}
-style={{
-  width: isActive ? "420px" : "150px",
-  height: "380px",
-  backgroundColor: bgColor,
-  transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)",
-  cursor: isActive && profile.profileUrl ? "pointer" : "default",
-}}
+            onClick={() => {
+              if (profile.profileUrl && isActive) {
+                window.open(profile.profileUrl, "_blank");
+              }
+            }}
+            className="flex-shrink-0 rounded-3xl overflow-hidden relative"
+            style={{
+              width: isActive ? "420px" : "150px",
+              height: "380px",
+              backgroundColor: bgColor,
+              transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)",
+              cursor: isActive && profile.profileUrl ? "pointer" : "default",
+            }}
             data-testid={`card-team-member-${profile.id}`}
           >
-            {/* الصورة تملأ الكارت */}
+            {/* الصورة محدودة داخل الكارت */}
             {profile.imageUrl && (
               <img
                 src={profile.imageUrl}
@@ -87,8 +87,8 @@ style={{
                 className="absolute inset-0"
                 style={{
                   background: textDir === "rtl"
-                    ? "linear-gradient(to left, rgba(0,0,0,0.85) 45%, transparent 75%)"
-                    : "linear-gradient(to right, rgba(0,0,0,0.85) 45%, transparent 75%)",
+                    ? "linear-gradient(to left, rgba(0,0,0,0.82) 42%, transparent 72%)"
+                    : "linear-gradient(to right, rgba(0,0,0,0.82) 42%, transparent 72%)",
                 }}
               />
             )}
@@ -106,31 +106,37 @@ style={{
             {/* المعلومات لما يكون مفتوح */}
             {isActive && (
               <div
-                className={`absolute top-0 bottom-0 flex flex-col justify-end p-5 text-white z-10 ${textDir === "rtl" ? "right-0" : "left-0"}`}
+                className={`absolute inset-y-0 flex flex-col justify-between p-5 text-white z-10 ${textDir === "rtl" ? "right-0" : "left-0"}`}
                 dir={textDir}
-                style={{ width: "52%" }}
+                style={{ width: "48%" }}
               >
                 {/* الاسم والمسمى فوق */}
-<div>
-  <h3 className="text-base font-bold leading-tight mb-1"
-    style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}>
-    {profile.name}
-  </h3>
-  {profile.title && (
-    <p className="text-xs font-semibold opacity-95"
-      style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
-      {profile.title}
-    </p>
-  )}
-</div>
+                <div>
+                  <h3
+                    className="text-sm font-bold leading-tight mb-1"
+                    style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}
+                  >
+                    {profile.name}
+                  </h3>
+                  {profile.title && (
+                    <p
+                      className="text-xs font-semibold opacity-95"
+                      style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
+                    >
+                      {profile.title}
+                    </p>
+                  )}
+                </div>
 
-{/* البايو بالأسفل */}
-{profile.bio && (
-  <p className="text-xs leading-relaxed opacity-90 line-clamp-4"
-    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
-    {profile.bio}
-  </p>
-)}
+                {/* البايو بالأسفل */}
+                {profile.bio && (
+                  <p
+                    className="text-xs leading-relaxed opacity-90 line-clamp-4"
+                    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
+                  >
+                    {profile.bio}
+                  </p>
+                )}
               </div>
             )}
 
