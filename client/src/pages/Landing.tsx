@@ -3,10 +3,9 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CourseCard, CourseCardSkeleton } from "@/components/courses/CourseCard";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GraduationCap, BookOpen, Users, Award, ArrowRight, Building2, Trophy, Star, Target, type LucideIcon } from "lucide-react";
 import type { CourseWithRelations, College, FeaturedProfile } from "@shared/schema";
@@ -21,6 +20,7 @@ import pic6 from "@/assets/pic6.png";
 import pic7 from "@/assets/pic7.png";
 import logoUrl from "@/assets/logo.png";
 import logoDarkUrl from "@/assets/logo-dark.png";
+
 const heroImages = [
   { src: pic1, alt: "Noqtaa" },
   { src: pic2, alt: "Noqtaa" },
@@ -32,16 +32,81 @@ const heroImages = [
 ];
 
 const iconMap: Record<string, LucideIcon> = {
-  BookOpen,
-  Users,
-  GraduationCap,
-  Award,
-  Building2,
-  Trophy,
-  Star,
-  Target,
+  BookOpen, Users, GraduationCap, Award, Building2, Trophy, Star, Target,
 };
 
+// =====================
+// TeamCarousel Component
+// =====================
+const CARD_COLORS = ["#2d6a4f", "#c1440e", "#1b4332", "#c1440e", "#2d6a4f", "#c1440e", "#1b4332"];
+
+function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-4" style={{ scrollbarWidth: "none" }}>
+      {profiles.map((profile, index) => {
+        const isActive = activeIndex === index;
+        const bgColor = CARD_COLORS[index % CARD_COLORS.length];
+
+        return (
+          <div
+            key={profile.id}
+            onClick={() => setActiveIndex(isActive ? null : index)}
+            className="cursor-pointer flex-shrink-0 rounded-3xl overflow-hidden relative"
+            style={{
+              width: isActive ? "320px" : "140px",
+              height: "360px",
+              backgroundColor: bgColor,
+              transition: "width 0.5s ease",
+            }}
+            data-testid={`card-team-member-${profile.id}`}
+          >
+            {profile.imageUrl ? (
+              <img
+                src={profile.imageUrl}
+                alt={profile.name}
+                className="absolute bottom-0 left-0 right-0 w-full object-cover object-top"
+                style={{ height: isActive ? "65%" : "82%" }}
+              />
+            ) : (
+              <div className="absolute bottom-0 left-0 right-0 w-full h-4/5 flex items-center justify-center">
+                <span className="text-white/50 text-5xl font-bold">{profile.name[0]}</span>
+              </div>
+            )}
+
+            <div
+              className="absolute inset-0"
+              style={{
+                background: isActive
+                  ? `linear-gradient(to bottom, ${bgColor}ee 35%, transparent 65%)`
+                  : `linear-gradient(to top, ${bgColor}cc 15%, transparent 50%)`,
+              }}
+            />
+
+            {isActive && (
+              <div className="absolute top-0 left-0 right-0 p-5 text-white" dir="rtl">
+                <h3 className="text-lg font-bold leading-tight mb-1">{profile.name}</h3>
+                {profile.title && <p className="text-sm opacity-85 mb-2 font-medium">{profile.title}</p>}
+                {profile.bio && <p className="text-xs opacity-75 leading-relaxed line-clamp-4">{profile.bio}</p>}
+              </div>
+            )}
+
+            {!isActive && (
+              <div className="absolute bottom-3 left-0 right-0 text-center px-2">
+                <p className="text-white text-xs font-semibold truncate">{profile.name}</p>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// =====================
+// Landing Page
+// =====================
 export default function Landing() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const { t } = useTranslation();
@@ -88,36 +153,20 @@ export default function Landing() {
 
   const featuredCourses = courses?.slice(0, 3) || [];
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   const getCollegeGradient = (slug: string) => {
     switch (slug) {
-      case "pharmacy":
-        return "from-emerald-500 to-emerald-700";
-      case "engineering":
-        return "from-blue-500 to-blue-700";
-      case "it":
-        return "from-purple-500 to-purple-700";
-      default:
-        return "from-primary to-primary/80";
+      case "pharmacy": return "from-emerald-500 to-emerald-700";
+      case "engineering": return "from-blue-500 to-blue-700";
+      case "it": return "from-purple-500 to-purple-700";
+      default: return "from-primary to-primary/80";
     }
-  };
-
-  const getCollegeIcon = (slug: string) => {
-    return <Building2 className="w-8 h-8" />;
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
+      {/* Hero Section */}
       <section className="relative overflow-hidden min-h-[500px] md:min-h-[600px]">
         {heroImages.map((image, index) => (
           <div
@@ -125,11 +174,7 @@ export default function Landing() {
             className="absolute inset-0 transition-opacity duration-[800ms] ease-in-out"
             style={{ opacity: currentSlide === index ? 1 : 0 }}
           >
-            <img
-              src={image.src}
-              alt={image.alt}
-              className="w-full h-full object-cover"
-            />
+            <img src={image.src} alt={image.alt} className="w-full h-full object-cover" />
           </div>
         ))}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
@@ -153,9 +198,7 @@ export default function Landing() {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20" asChild data-testid="button-login-hero">
-                <Link href="/login">
-                  {t("landing.getStarted")}
-                </Link>
+                <Link href="/login">{t("landing.getStarted")}</Link>
               </Button>
             </div>
             <div className="flex justify-center gap-2 mt-8">
@@ -163,11 +206,7 @@ export default function Landing() {
                 <button
                   key={index}
                   onClick={() => setCurrentSlide(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                    currentSlide === index 
-                      ? "bg-white scale-110" 
-                      : "bg-white/40 hover:bg-white/60"
-                  }`}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${currentSlide === index ? "bg-white scale-110" : "bg-white/40 hover:bg-white/60"}`}
                   aria-label={`Go to slide ${index + 1}`}
                   data-testid={`hero-dot-${index}`}
                 />
@@ -177,6 +216,7 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Stats Section */}
       <section className="py-16 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -203,15 +243,13 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Colleges Section */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">{t("landing.ourColleges")}</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              {t("landing.ourCollegesDesc")}
-            </p>
+            <p className="text-muted-foreground max-w-2xl mx-auto">{t("landing.ourCollegesDesc")}</p>
           </div>
-          
           {collegesLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
@@ -225,21 +263,15 @@ export default function Landing() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {colleges?.map((college) => (
-                <Card 
-                  key={college.id} 
-                  className="overflow-hidden hover-elevate group"
-                  data-testid={`card-college-${college.slug}`}
-                >
+                <Card key={college.id} className="overflow-hidden hover-elevate group" data-testid={`card-college-${college.slug}`}>
                   <div className={`h-24 bg-gradient-to-r ${getCollegeGradient(college.slug)} flex items-center justify-center`}>
                     <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-white">
-                      {getCollegeIcon(college.slug)}
+                      <Building2 className="w-8 h-8" />
                     </div>
                   </div>
                   <CardContent className="p-6 text-center">
                     <h3 className="text-xl font-semibold mb-2">{college.name}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {t("landing.exploreCourses", { college: college.name })}
-                    </p>
+                    <p className="text-sm text-muted-foreground mb-4">{t("landing.exploreCourses", { college: college.name })}</p>
                     <Button variant="outline" size="sm" asChild>
                       <Link href={`/courses?college=${college.slug}`}>
                         {t("landing.viewCourses")}
@@ -254,14 +286,13 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Featured Courses Section */}
       <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between mb-12">
             <div>
               <h2 className="text-3xl md:text-4xl font-bold mb-2">{t("landing.featuredCourses")}</h2>
-              <p className="text-muted-foreground">
-                {t("landing.popularCourses")}
-              </p>
+              <p className="text-muted-foreground">{t("landing.popularCourses")}</p>
             </div>
             <Button variant="outline" asChild className="hidden md:flex">
               <Link href="/courses">
@@ -270,21 +301,14 @@ export default function Landing() {
               </Link>
             </Button>
           </div>
-          
           {coursesLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <CourseCardSkeleton key={i} />
-              ))}
+              {[1, 2, 3].map((i) => <CourseCardSkeleton key={i} />)}
             </div>
           ) : featuredCourses.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {featuredCourses.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  actionHref={`/courses/${course.id}`}
-                />
+                <CourseCard key={course.id} course={course} actionHref={`/courses/${course.id}`} />
               ))}
             </div>
           ) : (
@@ -292,13 +316,10 @@ export default function Landing() {
               <CardContent className="text-center">
                 <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="font-medium text-lg mb-2">{t("landing.noCoursesYet")}</h3>
-                <p className="text-muted-foreground">
-                  {t("landing.checkBackSoon")}
-                </p>
+                <p className="text-muted-foreground">{t("landing.checkBackSoon")}</p>
               </CardContent>
             </Card>
           )}
-
           <div className="mt-8 text-center md:hidden">
             <Button variant="outline" asChild>
               <Link href="/courses">
@@ -310,146 +331,100 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Team Section */}
       {(profilesLoading || (featuredProfiles && featuredProfiles.length > 0)) && (
-        <section className="py-20">
+        <section className="py-20 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="text-team-title">{t("landing.platformTeam")}</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                {t("landing.platformTeamDesc")}
-              </p>
+            <div className="flex flex-col md:flex-row items-start justify-between gap-6 mb-12" dir="rtl">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-bold mb-3" data-testid="text-team-title">
+                  {t("landing.platformTeam")}
+                </h2>
+                <p className="text-muted-foreground max-w-md">{t("landing.platformTeamDesc")}</p>
+              </div>
             </div>
-            
             {profilesLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <Card key={i} className="p-6">
-                    <div className="flex flex-col items-center text-center">
-                      <Skeleton className="w-24 h-24 rounded-full mb-4" />
-                      <Skeleton className="w-32 h-5 mb-2" />
-                      <Skeleton className="w-24 h-4 mb-3" />
-                      <Skeleton className="w-full h-16" />
-                    </div>
-                  </Card>
+              <div className="flex gap-4 pb-4">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <Skeleton key={i} className="min-w-[140px] h-[360px] rounded-3xl flex-shrink-0" />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuredProfiles?.map((profile) => (
-                  <Card 
-                    key={profile.id} 
-                    className="p-6"
-                    data-testid={`card-team-member-${profile.id}`}
-                  >
-                    <div className="flex flex-col items-center text-center">
-                      <Avatar className="w-24 h-24 mb-4">
-                        <AvatarImage src={profile.imageUrl || undefined} alt={profile.name} />
-                        <AvatarFallback className="text-xl">{getInitials(profile.name)}</AvatarFallback>
-                      </Avatar>
-                      <h3 className="font-semibold text-lg mb-1" data-testid={`text-team-name-${profile.id}`}>
-                        {profile.name}
-                      </h3>
-                      {profile.title && (
-                        <p className="text-sm text-muted-foreground mb-3">
-                          {profile.title}
-                        </p>
-                      )}
-                      {profile.bio && (
-                        <p className="text-sm text-muted-foreground line-clamp-3">
-                          {profile.bio}
-                        </p>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              <TeamCarousel profiles={featuredProfiles || []} />
             )}
           </div>
         </section>
       )}
 
+      {/* Footer */}
       <footer className="border-t border-border py-12 bg-muted/20">
-  <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10" dir="rtl">
 
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10" dir="rtl">
+            {/* اللوغو والوصف */}
+            <div className="flex flex-col items-start gap-3">
+              <div className="flex items-center gap-2">
+                <img src={logoUrl} alt={BRAND_NAME} className="w-10 h-10 object-contain rounded-md dark:hidden" />
+                <img src={logoDarkUrl} alt={BRAND_NAME} className="w-10 h-10 object-contain rounded-md hidden dark:block" />
+                <span className="font-bold text-lg">{BRAND_NAME}</span>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                منصة تعليمية أكاديمية تجمع أفضل الكورسات الجامعية من مختلف الكليات.
+              </p>
+            </div>
 
-      {/* اللوغو والوصف */}
-      <div className="flex flex-col items-start gap-3">
-        <div className="flex items-center gap-2">
-          <img src={logoUrl} alt={BRAND_NAME} className="w-10 h-10 object-contain rounded-md dark:hidden" />
-          <img src={logoDarkUrl} alt={BRAND_NAME} className="w-10 h-10 object-contain rounded-md hidden dark:block" />
-          <span className="font-bold text-lg">{BRAND_NAME}</span>
+            {/* الصفحات */}
+            <div>
+              <h4 className="font-bold mb-4 text-base">الصفحات</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/" className="hover:text-foreground transition-colors">الرئيسية</Link></li>
+                <li><Link href="/courses" className="hover:text-foreground transition-colors">الكورسات</Link></li>
+                <li><Link href="/login" className="hover:text-foreground transition-colors">تسجيل الدخول</Link></li>
+                <li><Link href="/signup" className="hover:text-foreground transition-colors">إنشاء حساب جديد</Link></li>
+              </ul>
+            </div>
+
+            {/* السوشيال ميديا */}
+            <div>
+              <h4 className="font-bold mb-4 text-base">السوشيال ميديا</h4>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                <li>
+                  <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-foreground transition-colors">
+                    <svg className="w-4 h-4 fill-current text-blue-600" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    فيسبوك
+                  </a>
+                </li>
+                <li>
+                  <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-foreground transition-colors">
+                    <svg className="w-4 h-4 fill-current text-pink-500" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                    انستجرام
+                  </a>
+                </li>
+                <li>
+                  <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-foreground transition-colors">
+                    <svg className="w-4 h-4 fill-current text-red-600" viewBox="0 0 24 24"><path d="M23.495 6.205a3.007 3.007 0 00-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 00.527 6.205a31.247 31.247 0 00-.522 5.805 31.247 31.247 0 00.522 5.783 3.007 3.007 0 002.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 002.088-2.088 31.247 31.247 0 00.5-5.783 31.247 31.247 0 00-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+                    يوتيوب
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* تواصل معنا */}
+            <div>
+              <h4 className="font-bold mb-4 text-base">تواصل معنا</h4>
+              <p className="text-sm text-muted-foreground mb-3">هل تحتاج مساعدة؟ فريقنا جاهز لمساعدتك.</p>
+              <Button variant="outline" size="sm" asChild>
+                <a href="mailto:support@noqtaa.cloud">المساعدة</a>
+              </Button>
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-2" dir="rtl">
+            <p className="text-sm text-muted-foreground">{BRAND_COPYRIGHT}</p>
+            <p className="text-xs text-muted-foreground">جميع الحقوق محفوظة © 2026</p>
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          منصة تعليمية أكاديمية تجمع أفضل الكورسات الجامعية من مختلف الكليات.
-        </p>
-      </div>
-
-      {/* الصفحات */}
-      <div>
-        <h4 className="font-bold mb-4 text-base">الصفحات</h4>
-        <ul className="space-y-2 text-sm text-muted-foreground">
-          <li><Link href="/" className="hover:text-foreground transition-colors">الرئيسية</Link></li>
-          <li><Link href="/courses" className="hover:text-foreground transition-colors">الكورسات</Link></li>
-          <li><Link href="/login" className="hover:text-foreground transition-colors">تسجيل الدخول</Link></li>
-          <li><Link href="/signup" className="hover:text-foreground transition-colors">إنشاء حساب جديد</Link></li>
-        </ul>
-      </div>
-
-      {/* السوشيال ميديا */}
-      <div>
-        <h4 className="font-bold mb-4 text-base">السوشيال ميديا</h4>
-        <ul className="space-y-3 text-sm text-muted-foreground">
-          <li>
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 hover:text-foreground transition-colors">
-              <svg className="w-4 h-4 fill-current text-blue-600" viewBox="0 0 24 24">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-              فيسبوك
-            </a>
-          </li>
-          <li>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 hover:text-foreground transition-colors">
-              <svg className="w-4 h-4 fill-current text-pink-500" viewBox="0 0 24 24">
-                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-              </svg>
-              انستجرام
-            </a>
-          </li>
-          <li>
-            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 hover:text-foreground transition-colors">
-              <svg className="w-4 h-4 fill-current text-red-600" viewBox="0 0 24 24">
-                <path d="M23.495 6.205a3.007 3.007 0 00-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 00.527 6.205a31.247 31.247 0 00-.522 5.805 31.247 31.247 0 00.522 5.783 3.007 3.007 0 002.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 002.088-2.088 31.247 31.247 0 00.5-5.783 31.247 31.247 0 00-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/>
-              </svg>
-              يوتيوب
-            </a>
-          </li>
-        </ul>
-      </div>
-
-      {/* تواصل معنا */}
-      <div>
-        <h4 className="font-bold mb-4 text-base">تواصل معنا</h4>
-        <p className="text-sm text-muted-foreground mb-3">هل تحتاج مساعدة؟ فريقنا جاهز لمساعدتك.</p>
-        <Button variant="outline" size="sm" asChild>
-          <a href="mailto:support@noqtaa.cloud">المساعدة</a>
-        </Button>
-      </div>
-
-    </div>
-
-    {/* الحقوق */}
-    <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-2" dir="rtl">
-      <p className="text-sm text-muted-foreground">{BRAND_COPYRIGHT}</p>
-      <p className="text-xs text-muted-foreground">جميع الحقوق محفوظة © 2026</p>
-    </div>
-
-  </div>
-</footer>
+      </footer>
     </div>
   );
 }
-       
