@@ -54,57 +54,75 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
             key={profile.id}
             onMouseEnter={() => setActiveIndex(index)}
             onMouseLeave={() => setActiveIndex(null)}
-            className="cursor-pointer flex-shrink-0 rounded-3xl overflow-hidden relative"
+            className="flex-shrink-0 rounded-3xl overflow-hidden relative"
             style={{
               width: isActive ? "320px" : "140px",
               height: "360px",
               backgroundColor: bgColor,
               transition: "width 0.5s ease",
+              cursor: "default",
             }}
             data-testid={`card-team-member-${profile.id}`}
           >
-            {profile.imageUrl ? (
+            {/* الصورة */}
+            {profile.imageUrl && (
               <img
                 src={profile.imageUrl}
                 alt={profile.name}
                 className="absolute bottom-0 left-0 right-0 w-full object-cover object-top"
-                style={{ height: isActive ? "65%" : "82%" }}
+                style={{ height: isActive ? "60%" : "80%" }}
               />
-            ) : (
-              <div className="absolute bottom-0 left-0 right-0 w-full h-4/5 flex items-center justify-center">
-                <span className="text-white/50 text-5xl font-bold">{profile.name[0]}</span>
-              </div>
             )}
 
+            {/* Gradient من الأسفل دايماً */}
             <div
               className="absolute inset-0"
               style={{
-                background: isActive
-                  ? `linear-gradient(to bottom, ${bgColor}ee 35%, transparent 65%)`
-                  : `linear-gradient(to top, ${bgColor}cc 15%, transparent 50%)`,
+                background: `linear-gradient(to top, ${bgColor} 20%, ${bgColor}99 50%, transparent 100%)`,
               }}
             />
 
+            {/* Gradient من الأعلى لما يكون مفتوح */}
             {isActive && (
-              <div className="absolute top-0 left-0 right-0 p-5 text-white" dir="rtl">
-                <h3 className="text-lg font-bold leading-tight mb-1">{profile.name}</h3>
-                {profile.title && <p className="text-sm opacity-85 mb-2 font-medium">{profile.title}</p>}
-                {profile.bio && <p className="text-xs opacity-75 leading-relaxed overflow-y-auto max-h-40">{profile.bio}</p>}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: `linear-gradient(to bottom, ${bgColor}dd 40%, transparent 70%)`,
+                }}
+              />
+            )}
+
+            {/* المعلومات لما يكون مفتوح */}
+            {isActive && (
+              <div className="absolute top-0 left-0 right-0 p-5 text-white z-10" dir="rtl">
+                <h3 className="text-base font-bold leading-tight mb-1 drop-shadow-lg">{profile.name}</h3>
+                {profile.title && (
+                  <p className="text-xs font-semibold mb-2 opacity-90 drop-shadow">{profile.title}</p>
+                )}
+                {profile.bio && (
+                  <p className="text-xs leading-relaxed opacity-90 drop-shadow overflow-y-auto max-h-32"
+                    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}>
+                    {profile.bio}
+                  </p>
+                )}
               </div>
             )}
 
-            {!isActive && (
-              <div className="absolute bottom-3 left-0 right-0 text-center px-2">
-                <p className="text-white text-xs font-semibold truncate">{profile.name}</p>
-              </div>
-            )}
+            {/* الاسم بالأسفل دايماً */}
+            <div className="absolute bottom-3 left-0 right-0 text-center px-2 z-10">
+              {!isActive && (
+                <p className="text-white text-xs font-bold truncate drop-shadow-lg"
+                  style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}>
+                  {profile.name}
+                </p>
+              )}
+            </div>
           </div>
         );
       })}
     </div>
   );
 }
-
 // =====================
 // Landing Page
 // =====================
