@@ -101,7 +101,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
             {/* المعلومات لما يكون مفتوح */}
             {isActive && (
               <div
-                className={`absolute top-0 bottom-0 flex flex-col justify-center p-5 text-white z-10 ${textDir === "rtl" ? "right-0" : "left-0"}`}
+                className={`absolute top-0 bottom-0 flex flex-col justify-end p-5 text-white z-10 ${textDir === "rtl" ? "right-0" : "left-0"}`}
                 dir={textDir}
                 style={{ width: "52%" }}
               >
@@ -121,11 +121,11 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
                 )}
                 {profile.bio && (
                   <p
-                    className="text-xs leading-relaxed opacity-90"
-                    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
-                  >
-                    {profile.bio}
-                  </p>
+  className="text-xs leading-relaxed opacity-90 line-clamp-5"
+  style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
+>
+  {profile.bio}
+</p>
                 )}
               </div>
             )}
