@@ -45,7 +45,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
 
   const getPosition = (index: number, total: number) => {
     const angle = (index * 360) / total - 90;
-    const radius = 160;
+    const radius = 200;
     const rad = (angle * Math.PI) / 180;
     return {
       x: Math.cos(rad) * radius,
