@@ -105,7 +105,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
             {/* المعلومات لما يكون مفتوح */}
             {isActive && (
               <div
-                className={`absolute inset-y-0 flex flex-col justify-between p-5 text-white z-10 ${textDir === "rtl" ? "right-0" : "left-0"}`}
+                className={`absolute inset-y-0 flex flex-col justify-between p-4 pb-6 text-white z-10 ${textDir === "rtl" ? "right-0" : "left-0"}`}
                 dir={textDir}
                 style={{ width: "48%" }}
               >
@@ -130,7 +130,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
                 {/* البايو بالأسفل */}
                 {profile.bio && (
                   <p
-                    className="text-xs leading-relaxed opacity-90 line-clamp-4"
+                    className="text-xs leading-relaxed opacity-90"
                     style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
                   >
                     {profile.bio}
