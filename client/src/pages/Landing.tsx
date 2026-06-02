@@ -46,7 +46,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
   const isRTL = (text: string) => /[\u0600-\u06FF]/.test(text);
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-4" style={{ scrollbarWidth: "none" }}>
+    <div className="flex gap-3 pb-4 w-full">
       {profiles.map((profile, index) => {
         const isActive = activeIndex === index;
         const bgColor = CARD_COLORS[index % CARD_COLORS.length];
@@ -64,7 +64,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
             }}
             className="flex-shrink-0 rounded-3xl overflow-hidden relative"
             style={{
-              width: isActive ? "420px" : "150px",
+              width: isActive ? "420px" : `${Math.min(150, Math.floor(800 / profiles.length))}px`,
               height: "380px",
               backgroundColor: bgColor,
               transition: "width 0.5s cubic-bezier(0.4,0,0.2,1)",
