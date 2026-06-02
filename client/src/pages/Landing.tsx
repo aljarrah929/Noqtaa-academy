@@ -170,7 +170,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
 
   {/* البايو بالأسفل */}
   {profile.bio && (
-    <p className="text-[9px] opacity-85 line-clamp-3"
+    <p className="text-[9px] opacity-85 line-clamp-6"
       style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
       {profile.bio}
     </p>
