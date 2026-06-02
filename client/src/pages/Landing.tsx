@@ -86,9 +86,8 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
               <div
                 className="absolute inset-0"
                 style={{
-                  background: textDir === "rtl"
-                    ? "linear-gradient(to left, rgba(0,0,0,0.82) 42%, transparent 72%)"
-                    : "linear-gradient(to right, rgba(0,0,0,0.82) 42%, transparent 72%)",
+                  background: "linear-gradient(to top, rgba(0,0,0,0.9) 50%, rgba(0,0,0,0.4) 100%)",
+
                 }}
               />
             )}
