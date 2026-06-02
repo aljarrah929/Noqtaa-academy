@@ -58,7 +58,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
   const centerY = containerSize / 2;
 
   return (
-    <div className="w-full flex justify-center py-8">
+    <div className="w-full flex justify-center py-2">
       <div className="relative" style={{ width: `${containerSize}px`, height: `${containerSize}px` }}>
 
         {/* خطوط الاتصال */}
