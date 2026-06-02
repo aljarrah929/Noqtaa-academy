@@ -111,14 +111,14 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
               className="absolute z-20 overflow-hidden shadow-xl"
               style={{
                 width: isActive ? "260px" : "100px",
-                height: isActive ? "160px" : "100px",
+                height: isActive ? "200px" : "100px",
                 borderRadius: isActive ? "16px" : "50%",
                 left: isActive
                   ? `${centerX + pos.x - 130}px`
                   : `${centerX + pos.x - 50}px`,
                 top: isActive
-                  ? `${centerY + pos.y - 80}px`
-                  : `${centerY + pos.y - 50}px`,
+                   ? `${centerY + pos.y - 100}px`
+                   : `${centerY + pos.y - 50}px`,
                 transition: "all 0.35s cubic-bezier(0.4,0,0.2,1)",
                 cursor: profile.profileUrl ? "pointer" : "default",
                 backgroundColor: RING_COLORS[index % RING_COLORS.length],
@@ -151,26 +151,31 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
               {/* المعلومات لما يكون مفتوح */}
               {isActive && (
                 <div
-                  className="absolute inset-0 flex flex-col justify-end p-3 text-white z-10"
-                  dir={isRTL ? "rtl" : "ltr"}
-                >
-                  <p className="text-xs font-bold leading-tight"
-                    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
-                    {profile.name}
-                  </p>
-                  {profile.title && (
-                    <p className="text-[10px] opacity-90 mt-0.5"
-                      style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
-                      {profile.title}
-                    </p>
-                  )}
-                  {profile.bio && (
-                    <p className="text-[9px] opacity-80 mt-1 line-clamp-2"
-                      style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
-                      {profile.bio}
-                    </p>
-                  )}
-                </div>
+  className="absolute inset-0 flex flex-col justify-between p-3 text-white z-10"
+  dir={isRTL ? "rtl" : "ltr"}
+>
+  {/* الاسم والمسمى فوق */}
+  <div>
+    <p className="text-xs font-bold leading-tight"
+      style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
+      {profile.name}
+    </p>
+    {profile.title && (
+      <p className="text-[10px] opacity-90 mt-0.5"
+        style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
+        {profile.title}
+      </p>
+    )}
+  </div>
+
+  {/* البايو بالأسفل */}
+  {profile.bio && (
+    <p className="text-[9px] opacity-85 line-clamp-3"
+      style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
+      {profile.bio}
+    </p>
+  )}
+</div>
               )}
 
               {/* الاسم المختصر لما يكون مغلق */}
