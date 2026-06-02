@@ -91,7 +91,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
           }}
           dir="rtl"
         >
-          <span>فريق<br />المنصة</span>
+          <span>Platform<br />Team</span>
         </div>
 
         {/* دوائر الأشخاص */}
