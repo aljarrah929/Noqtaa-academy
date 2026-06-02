@@ -45,7 +45,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
 
   const getPosition = (index: number, total: number) => {
     const angle = (index * 360) / total - 90;
-    const radius = 200;
+    const radius = 120;
     const rad = (angle * Math.PI) / 180;
     return {
       x: Math.cos(rad) * radius,
@@ -58,7 +58,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
   const centerY = containerSize / 2;
 
   return (
-    <div className="w-full flex justify-center py-2">
+    <div className="w-full flex justify-center py-8">
       <div className="relative" style={{ width: `${containerSize}px`, height: `${containerSize}px` }}>
 
         {/* خطوط الاتصال */}
@@ -143,15 +143,15 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
                 className="absolute inset-0"
                 style={{
                   background: isActive
-                    ? "linear-gradient(to top, rgba(0,0,0,0.88) 55%, rgba(0,0,0,0.3) 100%)"
-                    : "linear-gradient(to top, rgba(0,0,0,0.6) 25%, transparent 70%)",
+  ? "linear-gradient(to bottom, rgba(0,0,0,0.75) 35%, transparent 65%)"
+  : "linear-gradient(to top, rgba(0,0,0,0.6) 25%, transparent 70%)",
                 }}
               />
 
               {/* المعلومات لما يكون مفتوح */}
               {isActive && (
                 <div
-  className="absolute inset-0 flex flex-col justify-between p-3 text-white z-10"
+  className="absolute inset-0 flex flex-col justify-start  p-3 text-white z-10"
   dir={isRTL ? "rtl" : "ltr"}
 >
   {/* الاسم والمسمى فوق */}
