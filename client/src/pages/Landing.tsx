@@ -45,7 +45,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
 
   const getPosition = (index: number, total: number) => {
     const angle = (index * 360) / total - 90;
-    const radius = 120;
+    const radius = 160;
     const rad = (angle * Math.PI) / 180;
     return {
       x: Math.cos(rad) * radius,
@@ -151,7 +151,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
               {/* المعلومات لما يكون مفتوح */}
               {isActive && (
                 <div
-  className="absolute inset-0 flex flex-col justify-start  p-3 text-white z-10"
+  className="absolute inset-0 flex flex-col justify-between  p-3 text-white z-10"
   dir={isRTL ? "rtl" : "ltr"}
 >
   {/* الاسم والمسمى فوق */}
