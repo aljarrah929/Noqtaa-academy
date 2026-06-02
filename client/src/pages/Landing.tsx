@@ -43,10 +43,9 @@ const RING_COLORS = ["#2d6a4f", "#c1440e", "#1b4332", "#8b1a6b", "#1a3a8b", "#c1
 function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  // حساب مواضع الدوائر حول المركز
   const getPosition = (index: number, total: number) => {
-    const angle = (index * 360) / total - 90; // تبدأ من الأعلى
-    const radius = total <= 4 ? 200 : total <= 6 ? 220 : 240;
+    const angle = (index * 360) / total - 90;
+    const radius = 200;
     const rad = (angle * Math.PI) / 180;
     return {
       x: Math.cos(rad) * radius,
@@ -54,34 +53,26 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
     };
   };
 
-  const containerSize = 580;
+  const containerSize = 560;
   const centerX = containerSize / 2;
   const centerY = containerSize / 2;
 
   return (
     <div className="w-full flex justify-center py-8">
-      <div
-        className="relative"
-        style={{ width: `${containerSize}px`, height: `${containerSize}px` }}
-      >
+      <div className="relative" style={{ width: `${containerSize}px`, height: `${containerSize}px` }}>
+
         {/* خطوط الاتصال */}
-        <svg
-          className="absolute inset-0 w-full h-full"
-          style={{ zIndex: 0 }}
-        >
+        <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 0 }}>
           {profiles.map((_, index) => {
             const pos = getPosition(index, profiles.length);
             return (
               <line
                 key={index}
-                x1={centerX}
-                y1={centerY}
-                x2={centerX + pos.x}
-                y2={centerY + pos.y}
-                stroke="currentColor"
+                x1={centerX} y1={centerY}
+                x2={centerX + pos.x} y2={centerY + pos.y}
+                stroke="#aaa"
                 strokeWidth="1.5"
                 strokeDasharray="5,5"
-                className="text-primary/30"
                 opacity="0.5"
               />
             );
@@ -92,13 +83,13 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
         <div
           className="absolute flex items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-center shadow-xl z-10"
           style={{
-            width: "120px",
-            height: "120px",
-            left: `${centerX - 60}px`,
-            top: `${centerY - 60}px`,
-            fontSize: "14px",
-            lineHeight: "1.3",
+            width: "110px",
+            height: "110px",
+            left: `${centerX - 55}px`,
+            top: `${centerY - 55}px`,
+            fontSize: "15px",
           }}
+          dir="rtl"
         >
           <span>فريق<br />المنصة</span>
         </div>
@@ -107,7 +98,7 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
         {profiles.map((profile, index) => {
           const pos = getPosition(index, profiles.length);
           const isActive = activeIndex === index;
-          const circleSize = isActive ? 160 : 100;
+          const isRTL = /[\u0600-\u06FF]/.test(profile.name);
 
           return (
             <div
@@ -117,13 +108,18 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
               onClick={() => {
                 if (profile.profileUrl) window.open(profile.profileUrl, "_blank");
               }}
-              className="absolute rounded-full overflow-hidden shadow-lg z-20"
+              className="absolute z-20 overflow-hidden shadow-xl"
               style={{
-                width: `${circleSize}px`,
-                height: `${circleSize}px`,
-                left: `${centerX + pos.x - circleSize / 2}px`,
-                top: `${centerY + pos.y - circleSize / 2}px`,
-                transition: "all 0.3s ease",
+                width: isActive ? "260px" : "100px",
+                height: isActive ? "160px" : "100px",
+                borderRadius: isActive ? "16px" : "50%",
+                left: isActive
+                  ? `${centerX + pos.x - 130}px`
+                  : `${centerX + pos.x - 50}px`,
+                top: isActive
+                  ? `${centerY + pos.y - 80}px`
+                  : `${centerY + pos.y - 50}px`,
+                transition: "all 0.35s cubic-bezier(0.4,0,0.2,1)",
                 cursor: profile.profileUrl ? "pointer" : "default",
                 backgroundColor: RING_COLORS[index % RING_COLORS.length],
               }}
@@ -134,41 +130,53 @@ function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
                 <img
                   src={profile.imageUrl}
                   alt={profile.name}
-                  className="w-full h-full object-cover object-top"
+                  className="absolute inset-0 w-full h-full object-cover object-top"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-white text-2xl font-bold">{profile.name[0]}</span>
                 </div>
               )}
 
-              {/* overlay المعلومات عند الـ hover */}
+              {/* overlay دايم خفيف */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: isActive
+                    ? "linear-gradient(to top, rgba(0,0,0,0.88) 55%, rgba(0,0,0,0.3) 100%)"
+                    : "linear-gradient(to top, rgba(0,0,0,0.6) 25%, transparent 70%)",
+                }}
+              />
+
+              {/* المعلومات لما يكون مفتوح */}
               {isActive && (
                 <div
-                  className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-3"
-                  style={{
-                    background: "linear-gradient(to top, rgba(0,0,0,0.9) 60%, rgba(0,0,0,0.5) 100%)",
-                  }}
-                  dir="rtl"
+                  className="absolute inset-0 flex flex-col justify-end p-3 text-white z-10"
+                  dir={isRTL ? "rtl" : "ltr"}
                 >
-                  <p className="text-xs font-bold leading-tight mb-1" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
+                  <p className="text-xs font-bold leading-tight"
+                    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
                     {profile.name}
                   </p>
                   {profile.title && (
-                    <p className="text-[10px] opacity-90" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
+                    <p className="text-[10px] opacity-90 mt-0.5"
+                      style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
                       {profile.title}
+                    </p>
+                  )}
+                  {profile.bio && (
+                    <p className="text-[9px] opacity-80 mt-1 line-clamp-2"
+                      style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
+                      {profile.bio}
                     </p>
                   )}
                 </div>
               )}
 
-              {/* الاسم بالأسفل بدون hover */}
+              {/* الاسم المختصر لما يكون مغلق */}
               {!isActive && (
-                <div
-                  className="absolute bottom-0 left-0 right-0 text-center pb-1"
-                  style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7) 80%, transparent)" }}
-                >
-                  <p className="text-white text-[9px] font-semibold truncate px-1"
+                <div className="absolute bottom-1 left-0 right-0 text-center z-10 px-1">
+                  <p className="text-white text-[9px] font-bold truncate"
                     style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
                     {profile.name.split(" ")[0]}
                   </p>
