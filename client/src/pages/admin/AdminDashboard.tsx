@@ -13,6 +13,7 @@ import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 import type { CourseWithRelations, User } from "@shared/schema";
 
 interface AdminDashboardStats {
@@ -34,6 +35,7 @@ interface AdminDashboardStats {
 export default function AdminDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editMode, setEditMode] = useState<"AUTO" | "MANUAL">("AUTO");
   const [editValues, setEditValues] = useState({
@@ -58,29 +60,16 @@ export default function AdminDashboard() {
   });
 
   const updateStatsMutation = useMutation({
-    mutationFn: async (data: {
-      mode: "AUTO" | "MANUAL";
-      pendingApprovalsValue?: string;
-      totalTeachersValue?: string;
-      publishedCoursesValue?: string;
-      totalStudentsValue?: string;
-    }) => {
+    mutationFn: async (data: any) => {
       return apiRequest("PATCH", "/api/super-admin/admin-dashboard-stats", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/dashboard/stats"] });
       setEditModalOpen(false);
-      toast({
-        title: "Stats updated",
-        description: "Dashboard stats have been updated successfully.",
-      });
+      toast({ title: t("admin.statsUpdated"), description: t("admin.statsUpdatedDesc") });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update dashboard stats.",
-        variant: "destructive",
-      });
+      toast({ title: t("common.error"), description: t("admin.statsUpdateFailed"), variant: "destructive" });
     },
   });
 
@@ -117,17 +106,12 @@ export default function AdminDashboard() {
   const isLoading = coursesLoading || teachersLoading || statsLoading;
 
   return (
-    <DashboardLayout title="Admin Dashboard">
+    <DashboardLayout title={t("admin.dashboard")}>
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-2xl font-bold">Overview</h2>
+          <h2 className="text-2xl font-bold">{t("admin.overview")}</h2>
           {isSuperAdmin && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={openEditModal}
-              data-testid="button-edit-stats"
-            >
+            <Button variant="ghost" size="icon" onClick={openEditModal} data-testid="button-edit-stats">
               <Settings className="w-5 h-5" />
             </Button>
           )}
@@ -138,13 +122,9 @@ export default function AdminDashboard() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Pending Approvals</p>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-12 mt-1" />
-                  ) : (
-                    <p className="text-3xl font-bold text-yellow-600" data-testid="stat-pending">
-                      {stats.pendingApprovals}
-                    </p>
+                  <p className="text-sm text-muted-foreground">{t("admin.pendingApprovals")}</p>
+                  {isLoading ? <Skeleton className="h-8 w-12 mt-1" /> : (
+                    <p className="text-3xl font-bold text-yellow-600" data-testid="stat-pending">{stats.pendingApprovals}</p>
                   )}
                 </div>
                 <div className="p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-full">
@@ -158,13 +138,9 @@ export default function AdminDashboard() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Teachers</p>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-12 mt-1" />
-                  ) : (
-                    <p className="text-3xl font-bold" data-testid="stat-teachers">
-                      {stats.totalTeachers}
-                    </p>
+                  <p className="text-sm text-muted-foreground">{t("admin.totalTeachers")}</p>
+                  {isLoading ? <Skeleton className="h-8 w-12 mt-1" /> : (
+                    <p className="text-3xl font-bold" data-testid="stat-teachers">{stats.totalTeachers}</p>
                   )}
                 </div>
                 <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
@@ -178,13 +154,9 @@ export default function AdminDashboard() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Published Courses</p>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-12 mt-1" />
-                  ) : (
-                    <p className="text-3xl font-bold text-green-600" data-testid="stat-courses">
-                      {stats.totalCourses}
-                    </p>
+                  <p className="text-sm text-muted-foreground">{t("admin.publishedCourses")}</p>
+                  {isLoading ? <Skeleton className="h-8 w-12 mt-1" /> : (
+                    <p className="text-3xl font-bold text-green-600" data-testid="stat-courses">{stats.totalCourses}</p>
                   )}
                 </div>
                 <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-full">
@@ -198,13 +170,9 @@ export default function AdminDashboard() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Students</p>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-12 mt-1" />
-                  ) : (
-                    <p className="text-3xl font-bold" data-testid="stat-students">
-                      {stats.totalStudents}
-                    </p>
+                  <p className="text-sm text-muted-foreground">{t("admin.totalStudents")}</p>
+                  {isLoading ? <Skeleton className="h-8 w-12 mt-1" /> : (
+                    <p className="text-3xl font-bold" data-testid="stat-students">{stats.totalStudents}</p>
                   )}
                 </div>
                 <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-full">
@@ -224,10 +192,8 @@ export default function AdminDashboard() {
                     <Plus className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">Create Course</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Add new course
-                    </p>
+                    <CardTitle className="text-lg">{t("sidebar.createCourse")}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{t("teacher.createCourseDesc")}</p>
                   </div>
                 </div>
                 <ArrowRight className="w-5 h-5 text-muted-foreground" />
@@ -243,10 +209,8 @@ export default function AdminDashboard() {
                     <FileCheck className="w-5 h-5 text-yellow-600" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">Course Approvals</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {stats.pendingApprovals} pending
-                    </p>
+                    <CardTitle className="text-lg">{t("admin.courseApprovals")}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{stats.pendingApprovals} {t("admin.pending")}</p>
                   </div>
                 </div>
                 <ArrowRight className="w-5 h-5 text-muted-foreground" />
@@ -262,10 +226,8 @@ export default function AdminDashboard() {
                     <Users className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">Teachers</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {stats.totalTeachers} teachers
-                    </p>
+                    <CardTitle className="text-lg">{t("sidebar.teachers")}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{stats.totalTeachers} {t("admin.teachersCount")}</p>
                   </div>
                 </div>
                 <ArrowRight className="w-5 h-5 text-muted-foreground" />
@@ -281,15 +243,15 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-4">
                   <Clock className="w-8 h-8 text-yellow-600" />
                   <div>
-                    <h3 className="font-semibold">Courses Awaiting Approval</h3>
+                    <h3 className="font-semibold">{t("admin.coursesAwaitingApproval")}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {stats.pendingApprovals} course{Number(stats.pendingApprovals) !== 1 ? "s" : ""} need your review
+                      {stats.pendingApprovals} {t("admin.coursesNeedReview")}
                     </p>
                   </div>
                 </div>
                 <Button asChild>
                   <Link href="/admin/approvals">
-                    Review Now
+                    {t("admin.reviewNow")}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Link>
                 </Button>
@@ -302,84 +264,46 @@ export default function AdminDashboard() {
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Dashboard Stats</DialogTitle>
+            <DialogTitle>{t("admin.editStats")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="mode-toggle">Stats Mode</Label>
+                <Label>{t("admin.statsMode")}</Label>
                 <p className="text-sm text-muted-foreground">
-                  {editMode === "AUTO" ? "Values are calculated automatically" : "Values are set manually"}
+                  {editMode === "AUTO" ? t("admin.autoMode") : t("admin.manualMode")}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Auto</span>
-                <Switch
-                  id="mode-toggle"
-                  checked={editMode === "MANUAL"}
-                  onCheckedChange={(checked) => setEditMode(checked ? "MANUAL" : "AUTO")}
-                  data-testid="switch-mode-toggle"
-                />
-                <span className="text-sm text-muted-foreground">Manual</span>
+                <span className="text-sm text-muted-foreground">{t("admin.auto")}</span>
+                <Switch checked={editMode === "MANUAL"} onCheckedChange={(c) => setEditMode(c ? "MANUAL" : "AUTO")} data-testid="switch-mode-toggle" />
+                <span className="text-sm text-muted-foreground">{t("admin.manual")}</span>
               </div>
             </div>
-
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="pending-approvals">Pending Approvals</Label>
-                <Input
-                  id="pending-approvals"
-                  type="text"
-                  value={editValues.pendingApprovals}
-                  onChange={(e) => setEditValues({ ...editValues, pendingApprovals: e.target.value })}
-                  disabled={editMode === "AUTO"}
-                  data-testid="input-pending-approvals"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="total-teachers">Total Teachers</Label>
-                <Input
-                  id="total-teachers"
-                  type="text"
-                  value={editValues.totalTeachers}
-                  onChange={(e) => setEditValues({ ...editValues, totalTeachers: e.target.value })}
-                  disabled={editMode === "AUTO"}
-                  data-testid="input-total-teachers"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="published-courses">Published Courses</Label>
-                <Input
-                  id="published-courses"
-                  type="text"
-                  value={editValues.publishedCourses}
-                  onChange={(e) => setEditValues({ ...editValues, publishedCourses: e.target.value })}
-                  disabled={editMode === "AUTO"}
-                  data-testid="input-published-courses"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="total-students">Total Students</Label>
-                <Input
-                  id="total-students"
-                  type="text"
-                  value={editValues.totalStudents}
-                  onChange={(e) => setEditValues({ ...editValues, totalStudents: e.target.value })}
-                  disabled={editMode === "AUTO"}
-                  data-testid="input-total-students"
-                />
-              </div>
+              {[
+                { key: "pendingApprovals", label: t("admin.pendingApprovals"), testId: "input-pending-approvals" },
+                { key: "totalTeachers", label: t("admin.totalTeachers"), testId: "input-total-teachers" },
+                { key: "publishedCourses", label: t("admin.publishedCourses"), testId: "input-published-courses" },
+                { key: "totalStudents", label: t("admin.totalStudents"), testId: "input-total-students" },
+              ].map(({ key, label, testId }) => (
+                <div key={key} className="space-y-2">
+                  <Label>{label}</Label>
+                  <Input
+                    type="text"
+                    value={editValues[key as keyof typeof editValues]}
+                    onChange={(e) => setEditValues({ ...editValues, [key]: e.target.value })}
+                    disabled={editMode === "AUTO"}
+                    data-testid={testId}
+                  />
+                </div>
+              ))}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditModalOpen(false)} data-testid="button-cancel-edit">
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setEditModalOpen(false)} data-testid="button-cancel-edit">{t("common.cancel")}</Button>
             <Button onClick={handleSave} disabled={updateStatsMutation.isPending} data-testid="button-save-stats">
-              {updateStatsMutation.isPending ? "Saving..." : "Save"}
+              {updateStatsMutation.isPending ? t("common.loading") : t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
