@@ -43,154 +43,121 @@ const RING_COLORS = ["#2d6a4f", "#c1440e", "#1b4332", "#8b1a6b", "#1a3a8b", "#c1
 function TeamCarousel({ profiles }: { profiles: FeaturedProfile[] }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const getPosition = (index: number, total: number) => {
-    const angle = (index * 360) / total - 90;
-    const radius = 200;
-    const rad = (angle * Math.PI) / 180;
-    return {
-      x: Math.cos(rad) * radius,
-      y: Math.sin(rad) * radius,
-    };
-  };
-
-  const containerSize = 560;
-  const centerX = containerSize / 2;
-  const centerY = containerSize / 2;
+  const isRTL = (text: string) => /[\u0600-\u06FF]/.test(text);
 
   return (
-    <div className="w-full flex justify-center py-8">
-      <div className="relative" style={{ width: `${containerSize}px`, height: `${containerSize}px` }}>
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full">
+      {profiles.map((profile, index) => {
+        const isActive = activeIndex === index;
+        const textDir = isRTL(profile.name) ? "rtl" : "ltr";
 
-        {/* خطوط الاتصال */}
-        <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 0 }}>
-          {profiles.map((_, index) => {
-            const pos = getPosition(index, profiles.length);
-            return (
-              <line
-                key={index}
-                x1={centerX} y1={centerY}
-                x2={centerX + pos.x} y2={centerY + pos.y}
-                stroke="#aaa"
-                strokeWidth="1.5"
-                strokeDasharray="5,5"
-                opacity="0.5"
-              />
-            );
-          })}
-        </svg>
-
-        {/* الدائرة المركزية */}
-        <div
-          className="absolute flex items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-center shadow-xl z-10"
-          style={{
-            width: "110px",
-            height: "110px",
-            left: `${centerX - 55}px`,
-            top: `${centerY - 55}px`,
-            fontSize: "15px",
-          }}
-          dir="rtl"
-        >
-          <span>Platform<br />Team</span>
-        </div>
-
-        {/* دوائر الأشخاص */}
-        {profiles.map((profile, index) => {
-          const pos = getPosition(index, profiles.length);
-          const isActive = activeIndex === index;
-          const isRTL = /[\u0600-\u06FF]/.test(profile.name);
-
-          return (
-            <div
-              key={profile.id}
-              onMouseEnter={() => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(null)}
-              onClick={() => {
-                if (profile.profileUrl) window.open(profile.profileUrl, "_blank");
-              }}
-              className="absolute z-20 overflow-hidden shadow-xl"
-              style={{
-                width: isActive ? "260px" : "100px",
-                height: isActive ? "200px" : "100px",
-                borderRadius: isActive ? "16px" : "50%",
-                left: isActive
-                  ? `${centerX + pos.x - 130}px`
-                  : `${centerX + pos.x - 50}px`,
-                top: isActive
-                   ? `${centerY + pos.y - 100}px`
-                   : `${centerY + pos.y - 50}px`,
-                transition: "all 0.35s cubic-bezier(0.4,0,0.2,1)",
-                cursor: profile.profileUrl ? "pointer" : "default",
-                backgroundColor: RING_COLORS[index % RING_COLORS.length],
-              }}
-              data-testid={`card-team-member-${profile.id}`}
-            >
-              {/* الصورة */}
-              {profile.imageUrl ? (
-                <img
-                  src={profile.imageUrl}
-                  alt={profile.name}
-                  className="absolute inset-0 w-full h-full object-cover object-top"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-white text-2xl font-bold">{profile.name[0]}</span>
-                </div>
-              )}
-
-              {/* overlay دايم خفيف */}
-              <div
-                className="absolute inset-0"
+        return (
+          <div
+            key={profile.id}
+            onMouseEnter={() => setActiveIndex(index)}
+            onMouseLeave={() => setActiveIndex(null)}
+            className="relative rounded-2xl overflow-hidden shadow-md"
+            style={{
+              height: "280px",
+              backgroundColor: "#1a1a2e",
+              cursor: "default",
+            }}
+            data-testid={`card-team-member-${profile.id}`}
+          >
+            {/* صورة الخلفية */}
+            {profile.imageUrl ? (
+              <img
+                src={profile.imageUrl}
+                alt={profile.name}
+                className="absolute inset-0 w-full h-full object-cover object-top transition-all duration-500"
                 style={{
-                  background: isActive
-  ? "linear-gradient(to bottom, rgba(0,0,0,0.75) 35%, transparent 65%)"
-  : "linear-gradient(to top, rgba(0,0,0,0.6) 25%, transparent 70%)",
+                  filter: isActive ? "brightness(0.35)" : "brightness(0.85)",
                 }}
               />
+            ) : (
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{ backgroundColor: "#2d6a4f" }}
+              >
+                <span className="text-white text-5xl font-bold opacity-30">{profile.name[0]}</span>
+              </div>
+            )}
 
-              {/* المعلومات لما يكون مفتوح */}
-              {isActive && (
-                <div
-  className="absolute inset-0 flex flex-col justify-between  p-3 text-white z-10"
-  dir={isRTL ? "rtl" : "ltr"}
->
-  {/* الاسم والمسمى فوق */}
-  <div>
-    <p className="text-xs font-bold leading-tight"
-      style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
-      {profile.name}
-    </p>
-    {profile.title && (
-      <p className="text-[10px] opacity-90 mt-0.5"
-        style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
-        {profile.title}
-      </p>
-    )}
-  </div>
+            {/* الاسم والمسمى بالأسفل — دايماً ظاهر */}
+            {!isActive && (
+              <div
+                className="absolute bottom-0 left-0 right-0 p-3"
+                dir={textDir}
+                style={{
+                  background: "linear-gradient(to top, rgba(0,0,0,0.8) 80%, transparent)",
+                }}
+              >
+                <p className="text-sm font-bold text-primary"
+                  style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
+                  {profile.name}
+                </p>
+                {profile.title && (
+                  <p className="text-xs text-white/80">{profile.title}</p>
+                )}
+              </div>
+            )}
 
-  {/* البايو بالأسفل */}
-  {profile.bio && (
-    <p className="text-[9px]  opacity-120 line-clamp-6 "
-      style={{ textShadow: "0 1px 2px rgba(0, 0, 0, 0.9)" }}>
-      {profile.bio}
-    </p>
-  )}
-</div>
-              )}
-
-              {/* الاسم المختصر لما يكون مغلق */}
-              {!isActive && (
-                <div className="absolute bottom-1 left-0 right-0 text-center z-10 px-1">
-                  <p className="text-white text-[9px] font-bold truncate"
-                    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
-                    {profile.name.split(" ")[0]}
+            {/* Hover overlay — النص والبايو */}
+            {isActive && (
+              <div
+                className="absolute inset-0 flex flex-col justify-between p-4 text-white"
+                dir={textDir}
+              >
+                {/* البايو */}
+                <div>
+                  <p className="text-2xl font-bold text-primary mb-3 leading-none">"</p>
+                  <p className="text-xs leading-relaxed opacity-95 line-clamp-6"
+                    style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
+                    {profile.bio || ""}
                   </p>
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+
+                {/* الأسفل: صورة دائرة + الاسم + LinkedIn */}
+                <div className="flex items-center justify-between">
+                  <div dir={textDir}>
+                    <p className="text-sm font-bold text-primary">{profile.name}</p>
+                    <p className="text-xs opacity-80">{profile.title}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* LinkedIn */}
+                    {profile.profileUrl && (
+                      <a
+                        href={profile.profileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-8 h-8 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: "#0077b5" }}
+                      >
+                        <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
+                          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                        </svg>
+                      </a>
+                    )}
+
+                    {/* صورة دائرة صغيرة */}
+                    {profile.imageUrl && (
+                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/50">
+                        <img
+                          src={profile.imageUrl}
+                          alt={profile.name}
+                          className="w-full h-full object-cover object-top"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }// =====================
