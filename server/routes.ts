@@ -1723,17 +1723,27 @@ if (!allowedMimeTypes.includes(contentType)) {
 
   // Backblaze B2 - Backend proxy upload (fallback for CORS issues)
   const videoUpload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 1024 * 1024 * 1024 }, // 1GB
-    fileFilter: (req, file, cb) => {
-      const allowedTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"];
-      if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error("Only video files are allowed"));
-      }
-    },
-  });
+  storage: multer.memoryStorage(),
+  limits: { 
+    fileSize: 1024 * 1024 * 1024 // 1GB limit for videos and PDFs
+  },
+  fileFilter: (_req: any, file: any, cb: any) => {
+    const allowedDocumentTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    ];
+    
+    // Accept videos OR allowed document formats
+    if (file.mimetype.startsWith("video/") || allowedDocumentTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only video files and documents (PDF, Word, PPT) are allowed"));
+    }
+  },
+});
 
   app.post("/api/b2/video/upload", isAuthenticated, videoUpload.single("video"), async (req: any, res) => {
     try {
