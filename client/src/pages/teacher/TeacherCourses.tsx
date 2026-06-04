@@ -201,10 +201,6 @@ export default function TeacherCourses() {
                         <FileText className="w-4 h-4" />
                         <span>{course._count?.lessons || 0} lessons</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        <span>{course._count?.enrollments || 0} students</span>
-                      </div>
                     </div>
                   </CardContent>
 
