@@ -473,7 +473,7 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-2">
+          <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-center gap-2">
             <p className="text-xs text-muted-foreground">{t("footer.rights")}</p>
           </div>
         </div>

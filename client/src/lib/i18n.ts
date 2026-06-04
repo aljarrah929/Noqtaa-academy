@@ -175,7 +175,7 @@ admin: {
   contactUs: "Contact Us",        // en
   helpText: "Need help? Our team is ready to assist.", // en
   helpBtn: "Help",        // en
-  rights: "All rights reserved © 2026", // en
+  rights: "All rights reserved © to Noqtaa Academy 2026", // en
   home: "Home",
   courses: "Courses",
   login: "Log in",
@@ -472,7 +472,7 @@ admin: {
   contactUs: "تواصل معنا",        // ar
   helpText: "هل تحتاج مساعدة؟ فريقنا جاهز لمساعدتك.", // ar
   helpBtn: "المساعدة",    // ar
-  rights: "جميع الحقوق محفوظة © 2026", // ar
+  rights: "جميع الحقوق محفوظة © لنقطة أكاديمي 2026", // ar
   home: "الرئيسية",
   courses: "المساقات",
   login: "تسجيل الدخول",
