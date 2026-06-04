@@ -810,7 +810,7 @@ const lesson = await storage.createLesson(lessonData);
     }
   });
 
-  app.get("/api/courses/:id/enrollments", isAuthenticated, async (req: any, res) => {
+  app.post("/api/courses/:id/enrollments", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
@@ -821,18 +821,52 @@ const lesson = await storage.createLesson(lessonData);
         return res.status(404).json({ message: "Course not found" });
       }
       
-      const isOwner = course.teacherId === userId;
-      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
-      
-      if (!isOwner && !isAdmin) {
-        return res.status(403).json({ message: "Not authorized to view enrollments" });
+      if (user?.role === "TEACHER") {
+        return res.status(403).json({ message: "Teachers cannot enroll students. Please contact an Admin." });
       }
       
-      const enrollmentList = await storage.getEnrollmentsByCourse(courseId);
-      res.json(enrollmentList);
+      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Only admins can enroll students" });
+      }
+      
+      // 🔥 استلام الـ ID ونوع البكج من الواجهة
+      const { studentId, packageType } = req.body;
+      const requestedPackage = packageType || "all";
+      
+      // Validate studentId exists and is a student
+      const studentUser = await storage.getUser(studentId);
+      if (!studentUser) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      if (studentUser.role !== "STUDENT") {
+        return res.status(400).json({ message: "This user is not a student account" });
+      }
+      
+      // 🔥 فحص البكجات اللي مع الطالب بدل الفحص القديم
+      const userEnrollments = await db.select().from(enrollments)
+        .where(and(eq(enrollments.studentId, studentId), eq(enrollments.courseId, courseId)));
+      
+      const ownedPackages = userEnrollments.map(e => e.packageType || "all");
+
+      // إذا معاه المادة كاملة أو معاه نفس البكج اللي بنحاول نضيفه
+      if (ownedPackages.includes("all") || ownedPackages.includes(requestedPackage)) {
+        return res.status(400).json({ message: "الطالب مسجل في هذا القسم مسبقاً!" });
+      }
+      
+      // 🔥 إنشاء الاشتراك مع تمرير نوع البكج!
+      const enrollment = await storage.createEnrollment({
+        courseId,
+        studentId,
+        createdByUserId: userId,
+        packageType: requestedPackage // حفظ القسم بالداتابيز
+      } as any); // as any لتجاوز تدقيق التايبسكريبت
+      
+      res.status(201).json(enrollment);
     } catch (error) {
-      console.error("Error fetching enrollments:", error);
-      res.status(500).json({ message: "Failed to fetch enrollments" });
+      console.error("Error creating enrollment:", error);
+      res.status(500).json({ message: "Failed to create enrollment" });
     }
   });
 
