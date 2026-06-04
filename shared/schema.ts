@@ -98,6 +98,7 @@ export const courses = pgTable("courses", {
   price: integer("price").notNull().default(0),
   status: courseStatusEnum("status").notNull().default("DRAFT"),
   isLocked: boolean("is_locked").notNull().default(false),
+  format: varchar("format", { length: 50 }).notNull().default("course"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   likesCount: integer("likes_count").default(0),
