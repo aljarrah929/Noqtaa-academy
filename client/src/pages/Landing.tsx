@@ -440,7 +440,7 @@ export default function Landing() {
 
             {/* السوشيال ميديا */}
             <div>
-              <h4 className="font-bold mb-4 text-base">السوشيال ميديا</h4>
+              <h4 className="font-bold mb-4 text-base">{t("footer.socialMedia")}</h4>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li>
                   <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-foreground transition-colors">
@@ -465,17 +465,17 @@ export default function Landing() {
 
             {/* تواصل معنا */}
             <div>
-              <h4 className="font-bold mb-4 text-base">تواصل معنا</h4>
-              <p className="text-sm text-muted-foreground mb-3">هل تحتاج مساعدة؟ فريقنا جاهز لمساعدتك.</p>
+              <h4 className="font-bold mb-4 text-base">{t("footer.contactUs")}</h4>
+              <p className="text-sm text-muted-foreground mb-3">{t("footer.helpText")}</p>
               <Button variant="outline" size="sm" asChild>
-                <a href="mailto:support@noqtaa.cloud">المساعدة</a>
+                <a href="mailto:support@noqtaa.cloud">{t("footer.helpBtn")}</a>
               </Button>
             </div>
           </div>
 
           <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-2" dir="rtl">
             <p className="text-sm text-muted-foreground">{BRAND_COPYRIGHT}</p>
-            <p className="text-xs text-muted-foreground">جميع الحقوق محفوظة © 2026</p>
+            <p className="text-xs text-muted-foreground">{t("footer.rights")}</p>
           </div>
         </div>
       </footer>
