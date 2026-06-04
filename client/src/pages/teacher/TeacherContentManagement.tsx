@@ -36,7 +36,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Plus, Trash2, ArrowLeft, Video, FileText, Link as LinkIcon, File, Sparkles } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Video, FileText, Link as LinkIcon, File, Sparkles, FileUp } from "lucide-react";
 import { Link } from "wouter";
 import type { CourseWithRelations, Lesson } from "@shared/schema";
 import { B2VideoUploader } from "@/components/B2VideoUploader";
@@ -128,17 +128,18 @@ export default function TeacherContentManagement() {
     }
   };
 
-  const openLessonDialog = (lesson?: Lesson) => {
+  // 🔥 تعديل ذكي: خلينا الدالة تستقبل النوع الافتراضي عشان نفتح الـ PDF مباشرة
+  const openLessonDialog = (lesson?: Lesson, defaultType: "text" | "video" | "link" | "file" = "text") => {
     if (lesson) {
       setEditingLesson(lesson);
       lessonForm.reset({
         title: lesson.title,
-        contentType: lesson.contentType,
+        contentType: lesson.contentType as any,
         content: lesson.content || "",
       });
     } else {
       setEditingLesson(null);
-      lessonForm.reset({ title: "", contentType: "text", content: "" });
+      lessonForm.reset({ title: "", contentType: defaultType, content: "" });
     }
     setLessonDialogOpen(true);
   };
@@ -214,9 +215,9 @@ export default function TeacherContentManagement() {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <CardTitle>Lessons</CardTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {canUploadVideo && (
                   <Button variant="outline" size="sm" asChild data-testid="button-upload-video">
                     <Link href={`/teacher/courses/${courseId}/upload-video`}>
@@ -225,16 +226,23 @@ export default function TeacherContentManagement() {
                     </Link>
                   </Button>
                 )}
+                
+                {/* 🔥 الزر الجديد لرفع الملازم */}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => openLessonDialog(undefined, "file")}
+                >
+                  <FileUp className="w-4 h-4 mr-1 text-primary" />
+                  Upload PDF
+                </Button>
+
                 <Button variant="outline" size="sm" asChild data-testid="button-quiz-builder">
                   <Link href={`/admin/courses/${courseId}/quiz-builder`}>
                     <Sparkles className="w-4 h-4 mr-1" />
                     Quiz Builder
                   </Link>
-                </Button>
-                <Button size="sm" onClick={() => openLessonDialog()} data-testid="button-add-lesson">
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add Lesson
-                </Button>
+                </Button>                
               </div>
             </CardHeader>
             <CardContent>
@@ -299,7 +307,7 @@ export default function TeacherContentManagement() {
       <Dialog open={lessonDialogOpen} onOpenChange={setLessonDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingLesson ? "Edit Lesson" : "Add Lesson"}</DialogTitle>
+            <DialogTitle>{editingLesson ? "Edit Content" : lessonForm.watch("contentType") === "file" ? "Upload PDF / File" : "Add Lesson"}</DialogTitle>
           </DialogHeader>
           <Form {...lessonForm}>
             <form onSubmit={lessonForm.handleSubmit(onLessonSubmit)} className="space-y-4">
@@ -308,9 +316,9 @@ export default function TeacherContentManagement() {
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel>{lessonForm.watch("contentType") === "file" ? "File Title (اسم الملزمة)" : "Title"}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Lesson title" {...field} data-testid="input-lesson-title" />
+                      <Input placeholder="Enter title here..." {...field} data-testid="input-lesson-title" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -333,7 +341,7 @@ export default function TeacherContentManagement() {
                         <SelectItem value="text">Text</SelectItem>
                         <SelectItem value="video">Video</SelectItem>
                         <SelectItem value="link">Link</SelectItem>
-                        <SelectItem value="file">File</SelectItem>
+                        <SelectItem value="file">File (PDF/Docs)</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -347,7 +355,8 @@ export default function TeacherContentManagement() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {lessonForm.watch("contentType") === "video" ? "Video" : "Content"}
+                      {lessonForm.watch("contentType") === "video" ? "Video URL" : 
+                       lessonForm.watch("contentType") === "file" ? "File Link (رابط الملف)" : "Content"}
                     </FormLabel>
                     <FormControl>
                       {lessonForm.watch("contentType") === "video" ? (
@@ -359,9 +368,9 @@ export default function TeacherContentManagement() {
                       ) : (
                         <Textarea 
                           placeholder={
-                            lessonForm.watch("contentType") === "link" ? "External URL" :
-                            lessonForm.watch("contentType") === "file" ? "File URL" :
-                            "Lesson content"
+                            lessonForm.watch("contentType") === "link" ? "https://example.com" :
+                            lessonForm.watch("contentType") === "file" ? "ضع رابط الملف هنا (مثال: رابط Google Drive للملزمة)" :
+                            "Lesson content text..."
                           }
                           className="min-h-32"
                           {...field} 
@@ -383,7 +392,7 @@ export default function TeacherContentManagement() {
                   disabled={createLessonMutation.isPending || updateLessonMutation.isPending}
                   data-testid="button-save-lesson"
                 >
-                  {editingLesson ? "Update Lesson" : "Add Lesson"}
+                  {editingLesson ? "Update" : "Add Content"}
                 </Button>
               </DialogFooter>
             </form>
