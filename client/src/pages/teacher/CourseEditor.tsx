@@ -619,6 +619,7 @@ export default function CourseEditor() {
                                     const res = await fetch("/api/b2/image/upload", {
                                       method: "POST",
                                       body: formData,
+                                      credentials: "include"
                                     });
 
                                     if (!res.ok) throw new Error("Failed to upload image");
