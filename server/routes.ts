@@ -1804,7 +1804,10 @@ res.status(201).json(enrollment);
 
       // توليد اسم فريد ونظيف للصورة داخل مجلد thumbnails
       const timestamp = Date.now();
-      const cleanFileName = req.file.originalname.replace(/\s+/g, "_");
+      const cleanFileName = req.file.originalname
+  .replace(/\s+/g, "_")
+  .replace(/[()[\]{}'"`]/g, "")
+  .replace(/_+/g, "_");
       const objectKey = `thumbnails/${timestamp}-${cleanFileName}`;
       
       // استخدام دالة الـ CDN المعتمدة بالمشروع لتركيب الرابط
