@@ -1635,10 +1635,20 @@ res.status(201).json(enrollment);
       }
       
       // Validate video content type
-      const allowedVideoTypes = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"];
-      if (!allowedVideoTypes.includes(contentType)) {
-        return res.status(400).json({ message: "Only video files (mp4, webm, mov, avi) are allowed" });
-      }
+      const allowedMimeTypes = [
+  "video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-matroska", "video/avi",
+  "application/pdf", 
+  "application/msword", 
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-powerpoint", 
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+];
+
+if (!allowedMimeTypes.includes(contentType)) {
+  return res.status(400).json({ 
+    message: "Only video files and documents (PDF, Word, PPT) are allowed" 
+  });
+}
       
       // Validate file size (1GB max for videos)
       const maxVideoSize = 1024 * 1024 * 1024;
