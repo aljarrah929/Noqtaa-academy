@@ -201,6 +201,10 @@ export default function TeacherCourses() {
                         <FileText className="w-4 h-4" />
                         <span>{course._count?.lessons || 0} lessons</span>
                       </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        <span>{course._count?.enrollments || 0} students</span>
+                      </div>
                     </div>
                   </CardContent>
 
@@ -231,12 +235,6 @@ export default function TeacherCourses() {
                     )}
                     {course.status === "PUBLISHED" && (
                       <>
-                        <Button variant="outline" size="sm" asChild data-testid={`button-enrollments-${course.id}`}>
-                          <Link href={`/teacher/courses/${course.id}/enrollments`}>
-                            <UserPlus className="w-4 h-4 mr-1" />
-                            Enrollments
-                          </Link>
-                        </Button>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button 
