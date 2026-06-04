@@ -873,12 +873,15 @@ const lesson = await storage.createLesson(lessonData);
         return res.status(400).json({ message: "Student is already enrolled" });
       }
       
-      const enrollment = await storage.createEnrollment({
-        courseId,
-        studentId,
-        createdByUserId: userId,
-      });
-      res.status(201).json(enrollment);
+      const packageType = req.body.packageType || "all";
+
+const enrollment = await storage.createEnrollment({
+  courseId,
+  studentId,
+  createdByUserId: userId,
+  packageType,
+} as any);
+res.status(201).json(enrollment);
     } catch (error) {
       console.error("Error creating enrollment:", error);
       res.status(500).json({ message: "Failed to create enrollment" });

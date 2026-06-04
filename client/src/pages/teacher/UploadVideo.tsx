@@ -109,12 +109,20 @@ export default function UploadVideo() {
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select Section" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        <SelectItem value="all">Full material (All)</SelectItem>
-                        <SelectItem value="first"> First material (First)</SelectItem>
-                        <SelectItem value="second">Second material  (Second)</SelectItem>
-                        <SelectItem value="mid">Midterm material  (Mid)</SelectItem>
-                        <SelectItem value="final">Final material  (Final)</SelectItem>
-                      </SelectContent>
+  <SelectItem value="all">Full material (All)</SelectItem>
+  {(course as any)?.priceFirst > 0 && (
+    <SelectItem value="first">First material (First)</SelectItem>
+  )}
+  {(course as any)?.priceSecond > 0 && (
+    <SelectItem value="second">Second material (Second)</SelectItem>
+  )}
+  {(course as any)?.priceMid > 0 && (
+    <SelectItem value="mid">Midterm material (Mid)</SelectItem>
+  )}
+  {(course as any)?.priceFinal > 0 && (
+    <SelectItem value="final">Final material (Final)</SelectItem>
+  )}
+</SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
