@@ -125,6 +125,10 @@ export default function AdminJoinRequests() {
     onSuccess: () => {
       toast({ title: "✅ تم التسجيل", description: "تم تسجيل الطالب في الكورس بنجاح." });
       queryClient.invalidateQueries({ queryKey: ["/api/join-requests"] });
+      // تحديث الكورسات عشان يتحدث عدد الطلاب فوراً
+queryClient.invalidateQueries({ queryKey: ["/api/courses"] }); 
+// تحديث الاشتراكات بشكل عام
+queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
       setAddByIdOpen(false);
       setSearchId("");
       setFoundStudent(null);
