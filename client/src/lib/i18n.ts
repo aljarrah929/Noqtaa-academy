@@ -142,7 +142,8 @@ manageCourses: "Manage Courses",
   home: "Home",
   courses: "Courses",
   login: "Log in",
-  signUp: "Sign up"
+  signUp: "Sign up",
+  para: "An academic educational platform that brings together the best university courses from various colleges"
 },
 
       course: {
@@ -399,6 +400,7 @@ manageCourses: "إدارة المساقات",
   courses: "المساقات",
   login: "تسجيل الدخول",
   signUp: "إنشاء حساب",
+   para: "منصة تعليمية أكاديمية تجمع أفضل الكورسات الجامعية من مختلف الكليات."
 },
       course: {
         lessons: "دروس",
