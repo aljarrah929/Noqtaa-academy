@@ -341,7 +341,30 @@ export default function Landing() {
           )}
         </div>
       </section>
-
+        {/* Team Section */}
+      {(profilesLoading || (featuredProfiles && featuredProfiles.length > 0)) && (
+        <section className="py-20 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex flex-col md:flex-row items-start justify-between gap-6 mb-12" dir="rtl">
+              <div>
+                <h2 className="text-3xl md:text-4xl font-bold mb-3" data-testid="text-team-title">
+                  {t("landing.platformTeam")}
+                </h2>
+                <p className="text-muted-foreground max-w-md">{t("landing.platformTeamDesc")}</p>
+              </div>
+            </div>
+            {profilesLoading ? (
+              <div className="flex gap-4 pb-4">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <Skeleton key={i} className="min-w-[140px] h-[360px] rounded-3xl flex-shrink-0" />
+                ))}
+              </div>
+            ) : (
+              <TeamCarousel profiles={featuredProfiles || []} />
+            )}
+          </div>
+        </section>
+      )}
       {/* Featured Courses Section */}
       <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4">
@@ -386,31 +409,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
-      {/* Team Section */}
-      {(profilesLoading || (featuredProfiles && featuredProfiles.length > 0)) && (
-        <section className="py-20 overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex flex-col md:flex-row items-start justify-between gap-6 mb-12" dir="rtl">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-3" data-testid="text-team-title">
-                  {t("landing.platformTeam")}
-                </h2>
-                <p className="text-muted-foreground max-w-md">{t("landing.platformTeamDesc")}</p>
-              </div>
-            </div>
-            {profilesLoading ? (
-              <div className="flex gap-4 pb-4">
-                {[1, 2, 3, 4, 5].map(i => (
-                  <Skeleton key={i} className="min-w-[140px] h-[360px] rounded-3xl flex-shrink-0" />
-                ))}
-              </div>
-            ) : (
-              <TeamCarousel profiles={featuredProfiles || []} />
-            )}
-          </div>
-        </section>
-      )}
 
       {/* Footer */}
       <footer className="border-t border-border py-12 bg-muted/20">
