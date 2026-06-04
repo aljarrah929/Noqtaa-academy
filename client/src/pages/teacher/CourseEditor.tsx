@@ -616,26 +616,29 @@ export default function CourseEditor() {
                                   formData.append("file", file);
 
                                   try {
-                                    const res = await fetch("/api/b2/image/upload", {
-                                      method: "POST",
-                                      body: formData,
-                                      credentials: "include"
-                                    });
+  const res = await fetch("/api/b2/image/upload", {
+    method: "POST",
+    body: formData,
+    credentials: "include"
+  });
 
-                                    if (!res.ok) throw new Error("Failed to upload image");
-                                    const data = await res.json();
-                                    
-                                    field.onChange(data.cdnUrl || data.url || "");
-                                    toast({ title: "تم الرفع", description: "تم رفع غلاف المساق بنجاح." });
-                                  } catch (err: any) {
-                                    toast({ 
-                                      title: "فشل الرفع", 
-                                      description: "تأكد من وجود راوت /api/b2/image/upload في السيرفر.", 
-                                      variant: "destructive" 
-                                    });
-                                  } finally {
-                                    setUploadingImage(false);
-                                  }
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || `HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  
+  field.onChange(data.cdnUrl || data.url || "");
+  toast({ title: "تم الرفع", description: "تم رفع غلاف المساق بنجاح." });
+} catch (err: any) {
+  toast({ 
+    title: "فشل الرفع", 
+    description: err.message || "خطأ غير معروف",
+    variant: "destructive" 
+  });
+} finally {
+  setUploadingImage(false);
+}
                                 }}
                               />
                               {uploadingImage && (
