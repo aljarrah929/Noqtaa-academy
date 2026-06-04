@@ -2,17 +2,16 @@ import { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
-import { Upload, X, CheckCircle, AlertCircle, Video, RefreshCw } from "lucide-react";
+import { Upload, X, CheckCircle, FileText, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
-interface B2FileUploader {
+interface B2FileUploaderProps {
   courseId: number;
   value?: string;
   onChange: (cdnUrl: string | undefined) => void;
   onUploadStart?: () => void;
   onUploadComplete?: (cdnUrl: string) => void;
   onUploadError?: (error: string) => void;
-  onDurationExtracted?: (minutes: number) => void; // السطر السحري الجديد
 }
 
 type UploadState = "idle" | "requesting" | "uploading" | "success" | "error";
@@ -24,15 +23,13 @@ export function B2FileUploader({
   onUploadStart,
   onUploadComplete,
   onUploadError,
-  onDurationExtracted,
-}: B2FileUploader) {
+}: B2FileUploaderProps) {
   const [uploadState, setUploadState] = useState<UploadState>(value ? "success" : "idle");
   const [progress, setProgress] = useState(0);
   const [fileName, setFileName] = useState<string>("");
   const [fileSize, setFileSize] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadMethod, setUploadMethod] = useState<"direct" | "proxy">("direct");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
 
@@ -44,31 +41,9 @@ export function B2FileUploader({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  const log = (message: string, data?: any) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[B2Upload ${timestamp}] ${message}`, data || "");
-  };
-// ✨ الخدعة السحرية: دالة استخراج الوقت الأوتوماتيكية بالثواني
-  const extractDuration = (file: File) => {
-    const video = document.createElement("video");
-    video.preload = "metadata";
-    video.onloadedmetadata = () => {
-      window.URL.revokeObjectURL(video.src);
-      // هون صرنا نوخذ الوقت بالثواني بالضبط من الفيديو
-      const totalSeconds = Math.round(video.duration);
-      if (onDurationExtracted) {
-        onDurationExtracted(totalSeconds); // نرسل إجمالي الثواني للواجهة
-      }
-      log("Total duration extracted (seconds)", { totalSeconds });
-    };
-    video.onerror = () => log("Failed to extract duration from video");
-    video.src = URL.createObjectURL(file);
-  };
-  
   const uploadViaProxy = async (file: File): Promise<string> => {
-    setUploadMethod("proxy");
     const formData = new FormData();
-    formData.append("video", file);
+    formData.append("video", file); // نتركها video عشان الباك إند يقبلها بدون تعديلات إضافية
     formData.append("courseId", String(courseId));
 
     return new Promise((resolve, reject) => {
@@ -102,7 +77,6 @@ export function B2FileUploader({
   };
 
   const uploadDirect = async (file: File, uploadUrl: string, cdnUrl: string): Promise<string> => {
-    setUploadMethod("direct");
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhrRef.current = xhr;
@@ -130,12 +104,7 @@ export function B2FileUploader({
   };
 
   const uploadFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith("video/")) {
-      setErrorMessage("Please select a video file");
-      setUploadState("error");
-      return;
-    }
-
+    // 🔥 شلنا شرط الفحص تبع الفيديو من هون عشان يقبل الـ PDF
     if (file.size > 1024 * 1024 * 1024) {
       setErrorMessage("File too large. Maximum size is 1GB.");
       setUploadState("error");
@@ -186,7 +155,6 @@ export function B2FileUploader({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      extractDuration(file); // سحب الوقت فوراً
       uploadFile(file);
     }
   };
@@ -196,10 +164,9 @@ export function B2FileUploader({
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      extractDuration(file); // سحب الوقت فوراً
       uploadFile(file);
     }
-  }, [uploadFile, onDurationExtracted]);
+  }, [uploadFile]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -227,17 +194,17 @@ export function B2FileUploader({
 
   if (uploadState === "success" && value) {
     return (
-      <Card className="p-4">
+      <Card className="p-4 border-primary/20 bg-primary/5">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/30">
             <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm">Video uploaded successfully</p>
+            <p className="font-medium text-sm">تم رفع الملف بنجاح</p>
             {fileName && <p className="text-xs text-muted-foreground truncate">{fileName} ({fileSize})</p>}
           </div>
           <Button type="button" variant="outline" size="sm" onClick={resetUploader}>
-            <RefreshCw className="w-4 h-4 mr-1" /> Replace
+            <RefreshCw className="w-4 h-4 mr-1" /> تغيير الملف
           </Button>
         </div>
       </Card>
@@ -246,14 +213,14 @@ export function B2FileUploader({
 
   if (uploadState === "uploading" || uploadState === "requesting") {
     return (
-      <Card className="p-4">
+      <Card className="p-4 border-primary/20">
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-full bg-primary/10">
-              <Video className="w-5 h-5 text-primary animate-pulse" />
+              <FileText className="w-5 h-5 text-primary animate-pulse" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">Uploading...</p>
+              <p className="font-medium text-sm">جاري الرفع...</p>
               <p className="text-xs text-muted-foreground truncate">{fileName}</p>
             </div>
             <Button type="button" variant="ghost" size="icon" onClick={cancelUpload}>
@@ -270,31 +237,32 @@ export function B2FileUploader({
   }
 
   return (
-    <div
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
-        isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-      }`}
-      onClick={() => fileInputRef.current?.click()}
-    >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf,.doc,.docx,.ppt,.pptx"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
-      <div className="flex flex-col items-center gap-2">
-        <div className="p-3 rounded-full bg-muted">
-          <Upload className="w-6 h-6 text-muted-foreground" />
+    <div className="space-y-2">
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer flex flex-col items-center justify-center min-h-[160px] ${
+          isDragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/30"
+        }`}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.doc,.docx,.ppt,.pptx"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <div className="p-4 rounded-full bg-primary/5 mb-3">
+          <Upload className="w-8 h-8 text-primary/70" />
         </div>
-        <div>
-          <p className="font-medium text-sm">Drop your video here or click to browse</p>
-          <p className="text-xs text-muted-foreground mt-1">MP4, MOV, WebM (max 1GB)</p>
-        </div>
+        <p className="font-medium text-base mb-1">اسحب الملف هنا أو انقر للاختيار</p>
+        <p className="text-sm text-muted-foreground">صيغ مدعومة: PDF, Word, PowerPoint (الحد الأقصى 1GB)</p>
       </div>
+      {errorMessage && (
+        <p className="text-sm text-destructive font-medium mt-2">{errorMessage}</p>
+      )}
     </div>
   );
 }
