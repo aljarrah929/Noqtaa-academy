@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { GraduationCap, Moon, Sun, LogOut, LayoutDashboard, Menu, X, User, BookOpen } from "lucide-react";
+import { GraduationCap, Moon, Sun, LogOut, LayoutDashboard, Menu, X, User, BookOpen, Users, FileText } from "lucide-react";
 import { getRoleDisplayName } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -224,6 +224,21 @@ export function Header() {
                       {t("nav.profile")}
                     </Link>
                   </DropdownMenuItem>
+                  {/* 🔥 الخانات الجديدة اللي ضفناها */}
+<DropdownMenuItem asChild>
+  <Link href="/teachers">
+    <Users className="w-4 h-4 mr-2" />
+    دليل الأساتذة
+  </Link>
+</DropdownMenuItem>
+
+<DropdownMenuItem asChild>
+  <Link href="/library">
+    <FileText className="w-4 h-4 mr-2" />
+    المكتبة (ملفات PDF)
+  </Link>
+</DropdownMenuItem>
+{/* 🔥 نهاية الخانات الجديدة */}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={handleLogout}
