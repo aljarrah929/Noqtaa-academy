@@ -129,6 +129,15 @@ const resources = {
         platformTeam: "Platform Team",
         platformTeamDesc: "Meet the people behind our university e-learning platform",
       },
+      footer: {
+  pages: "Pages",          // en
+  socialMedia: "Social Media",    // en
+  contactUs: "Contact Us",        // en
+  helpText: "Need help? Our team is ready to assist.", // en
+  helpBtn: "Help",        // en
+  rights: "All rights reserved © 2026", // en
+},
+
       course: {
         lessons: "lessons",
         lesson: "lesson",
@@ -348,6 +357,14 @@ const resources = {
         platformTeam: "فريق المنصة",
         platformTeamDesc: "تعرف على الأشخاص وراء منصتنا التعليمية الجامعية",
       },
+      footer: {
+  pages: "الصفحات",        // ar
+  socialMedia: "السوشيال ميديا",  // ar
+  contactUs: "تواصل معنا",        // ar
+  helpText: "هل تحتاج مساعدة؟ فريقنا جاهز لمساعدتك.", // ar
+  helpBtn: "المساعدة",    // ar
+  rights: "جميع الحقوق محفوظة © 2026", // ar
+},
       course: {
         lessons: "دروس",
         lesson: "درس",

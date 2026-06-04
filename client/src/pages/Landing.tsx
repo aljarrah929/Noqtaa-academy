@@ -429,7 +429,7 @@ export default function Landing() {
 
             {/* الصفحات */}
             <div>
-              <h4 className="font-bold mb-4 text-base">الصفحات</h4>
+              <h4 className="font-bold mb-4 text-base">{t("footer.pages")}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="/" className="hover:text-foreground transition-colors">الرئيسية</Link></li>
                 <li><Link href="/courses" className="hover:text-foreground transition-colors">الكورسات</Link></li>
