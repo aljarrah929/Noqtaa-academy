@@ -413,7 +413,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="border-t border-border py-12 bg-muted/20">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10" dir="rtl">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
 
             {/* اللوغو والوصف */}
             <div className="flex flex-col items-start gap-3">
@@ -473,7 +473,7 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-2" dir="rtl">
+          <div className="border-t border-border pt-6 flex flex-col md:flex-row items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">{t("footer.rights")}</p>
           </div>
         </div>
