@@ -431,10 +431,10 @@ export default function Landing() {
             <div>
               <h4 className="font-bold mb-4 text-base">{t("footer.pages")}</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/" className="hover:text-foreground transition-colors">{t("footer.socialMedia")}</Link></li>
-                <li><Link href="/courses" className="hover:text-foreground transition-colors">{t("footer.socialMedia")}</Link></li>
-                <li><Link href="/login" className="hover:text-foreground transition-colors">{t("footer.socialMedia")} </Link></li>
-                <li><Link href="/signup" className="hover:text-foreground transition-colors"> {t("footer.socialMedia")} </Link></li>
+                <li><Link href="/" className="hover:text-foreground transition-colors">{t("footer.home")}</Link></li>
+                <li><Link href="/courses" className="hover:text-foreground transition-colors">{t("footer.courses")}</Link></li>
+                <li><Link href="/login" className="hover:text-foreground transition-colors">{t("footer.login")} </Link></li>
+                <li><Link href="/signup" className="hover:text-foreground transition-colors"> {t("footer.signUp")} </Link></li>
               </ul>
             </div>
 

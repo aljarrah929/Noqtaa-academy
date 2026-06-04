@@ -139,6 +139,10 @@ manageCourses: "Manage Courses",
   helpText: "Need help? Our team is ready to assist.", // en
   helpBtn: "Help",        // en
   rights: "All rights reserved © 2026", // en
+  home: "Home",
+  courses: "Courses",
+  login: "Log in",
+  signUp: "Sign up"
 },
 
       course: {
@@ -391,6 +395,10 @@ manageCourses: "إدارة المساقات",
   helpText: "هل تحتاج مساعدة؟ فريقنا جاهز لمساعدتك.", // ar
   helpBtn: "المساعدة",    // ar
   rights: "جميع الحقوق محفوظة © 2026", // ar
+  home: "الرئيسية",
+  courses: "المساقات",
+  login: "تسجيل الدخول",
+  signUp: "إنشاء حساب",
 },
       course: {
         lessons: "دروس",
