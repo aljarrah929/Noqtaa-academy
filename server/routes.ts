@@ -1772,7 +1772,7 @@ res.status(201).json(enrollment);
 // 1. إعداد ميموري مولتر خاص بالصور مع فلتر للأمان
   const imageUpload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // حد أقصى 5 ميجا بايت للصورة
+    limits: { fileSize: 25 * 1024 * 1024 }, // حد أقصى 5 ميجا بايت للصورة
     fileFilter: (_req: any, file: any, cb: any) => {
       if (file.mimetype.startsWith("image/")) {
         cb(null, true);
@@ -1783,7 +1783,23 @@ res.status(201).json(enrollment);
   });
 
   // 2. راوت رفع صور غلاف الكورس إلى Backblaze B2
-  app.post("/api/b2/image/upload", isAuthenticated, imageUpload.single("file"), async (req: any, res) => {
+  app.post(
+    "/api/b2/image/upload",
+    isAuthenticated,
+    (req: any, res: any, next: any) => {
+      imageUpload.single("file")(req, res, (err: any) => {
+        if (err) {
+          console.error("[B2 Image Upload] Multer error:", err?.code, err?.message);
+          const msg =
+            err?.code === "LIMIT_FILE_SIZE"
+              ? "حجم الصورة كبير جداً (الحد الأقصى 25 ميجا)"
+              : err?.message || "خطأ في رفع الملف";
+          return res.status(400).json({ message: msg });
+        }
+        next();
+      });
+    },
+    async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
