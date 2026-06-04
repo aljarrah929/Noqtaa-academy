@@ -13,6 +13,7 @@ import { useCart } from "@/hooks/useCart";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   BookOpen, 
@@ -33,6 +34,7 @@ export default function CourseDetail() {
   const [match, params] = useRoute("/courses/:id");
   const courseId = params?.id;
   const [location] = useLocation();
+  const { t, i18n } = useTranslation();
   const { user, isAuthenticated } = useAuth();
   const { addToCart, removeFromCart, isInCart } = useCart();
   const [selectedPackage, setSelectedPackage] = useState("all");
@@ -130,7 +132,7 @@ const hasAllPackages = userPackages.includes("all") ||
       <div className="max-w-6xl mx-auto px-4 py-8">
         <Link href="/courses">
           <Button variant="ghost" className="mb-6">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Courses
+            <ArrowLeft className="w-4 h-4 mr-2" /> {t("course.backToCourses")}
           </Button>
         </Link>
 
@@ -145,9 +147,9 @@ const hasAllPackages = userPackages.includes("all") ||
                     </Badge>
                   )}
                   {isEnrolled ? (
-                    <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" /> Enrolled</Badge>
+                    <Badge variant="default" className="bg-green-600"><CheckCircle className="w-3 h-3 mr-1" /> {t("course.enrolled")}</Badge>
                   ) : isAuthenticated ? (
-                    <Badge variant="secondary"><Lock className="w-3 h-3 mr-1" /> Not Enrolled</Badge>
+                    <Badge variant="secondary"><Lock className="w-3 h-3 mr-1" /> {t("course.notEnrolled")}</Badge>
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-4">
@@ -170,7 +172,7 @@ const hasAllPackages = userPackages.includes("all") ||
             </Card>
 
             <div>
-              <h2 className="text-xl font-semibold mb-4">Course Content</h2>
+              <h2 className="text-xl font-semibold mb-4">{t("course.courseContent")}</h2>
               {course.lessons && course.lessons.length > 0 ? (
                 <LessonList
                     lessons={course.lessons}
@@ -193,7 +195,7 @@ const hasAllPackages = userPackages.includes("all") ||
 
           <div className="space-y-6">
             <Card>
-              <CardHeader><CardTitle className="text-lg">Instructor</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg">{t("course.instructor")}</CardTitle></CardHeader>
               <CardContent>
                 {course.teacher && (
                   <div className="flex items-start gap-4">
@@ -203,9 +205,9 @@ const hasAllPackages = userPackages.includes("all") ||
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold">{course.teacher.firstName} {course.teacher.lastName}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">Teacher</p>
+                      <p className="text-sm text-muted-foreground mb-3">{t("course.teacher")}</p>
                       <Button variant="outline" size="sm" asChild className="w-full">
-                        <a href={`mailto:${course.teacher.email}?subject=Question about ${course.title}`}><Mail className="w-4 h-4 mr-2" /> Contact Teacher</a>
+                        <a href={`mailto:${course.teacher.email}?subject=Question about ${course.title}`}><Mail className="w-4 h-4 mr-2" /> {t("course.contactTeacher")}</a>
                       </Button>
                     </div>
                   </div>
@@ -217,8 +219,8 @@ const hasAllPackages = userPackages.includes("all") ||
               <Card className="border-primary/50">
                 <CardContent className="py-6 text-center">
                   <Lock className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
-                  <h3 className="font-semibold mb-2">Want to enroll?</h3>
-                  <Button asChild className="w-full"><Link href={loginUrl}>Log in to Continue</Link></Button>
+                  <h3 className="font-semibold mb-2">{t("course.wantToEnrollQ")}</h3>
+                  <Button asChild className="w-full"><Link href={loginUrl}>{t("course.logInToContinue")}</Link></Button>
                 </CardContent>
               </Card>
             )}
@@ -231,19 +233,19 @@ const hasAllPackages = userPackages.includes("all") ||
                   {joinRequestStatus?.exists && joinRequestStatus.status === "PENDING" ? (
                     <>
                       <Clock className="w-10 h-10 mx-auto text-amber-500 mb-3" />
-                      <h3 className="font-semibold mb-2">Request Pending</h3>
-                      <JoinRequestModal courseId={parseInt(courseId!)} courseTitle={course.title} trigger={<Button variant="outline" className="w-full"><Clock className="w-4 h-4 mr-2" /> View Status</Button>} />
+                      <h3 className="font-semibold mb-2">{t("course.requestPending")}</h3>
+                      <JoinRequestModal courseId={parseInt(courseId!)} courseTitle={course.title} trigger={<Button variant="outline" className="w-full"><Clock className="w-4 h-4 mr-2" /> {t("course.viewStatus")}</Button>} />
                     </>
                   ) : joinRequestStatus?.exists && joinRequestStatus.status === "REJECTED" ? (
                     <>
                       <UserPlus className="w-10 h-10 mx-auto text-primary mb-3" />
-                      <h3 className="font-semibold mb-2">Request Rejected</h3>
-                      <JoinRequestModal courseId={parseInt(courseId!)} courseTitle={course.title} trigger={<Button className="w-full"><UserPlus className="w-4 h-4 mr-2" /> Submit New Request</Button>} />
+                      <h3 className="font-semibold mb-2">{t("course.requestRejected")}</h3>
+                      <JoinRequestModal courseId={parseInt(courseId!)} courseTitle={course.title} trigger={<Button className="w-full"><UserPlus className="w-4 h-4 mr-2" /> {t("course.submitNewRequest")}</Button>} />
                     </>
                   ) : (
                     <>
                       <UserPlus className="w-10 h-10 mx-auto text-primary mb-3" />
-                      <h3 className="font-semibold mb-4">Want to Enroll?</h3>
+                      <h3 className="font-semibold mb-4">{t("course.wantToEnroll")}</h3>
                       
                       {/* --- اختيار البكج --- */}
                       {packageOptions.length > 1 && (
@@ -266,7 +268,7 @@ const hasAllPackages = userPackages.includes("all") ||
 
                       {currentSelection && currentSelection.price > 0 && (
                         <div className="p-3 bg-muted rounded-lg mb-4 border">
-                          <p className="text-sm text-muted-foreground mb-1">Total Price:</p>
+                          <p className="text-sm text-muted-foreground mb-1">{t("course.totalPrice")}</p>
                           <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                             {formatPrice(currentSelection.price)}
                           </p>
@@ -290,9 +292,9 @@ const hasAllPackages = userPackages.includes("all") ||
                           }
                         >
                           {isInCart(course.id) ? (
-                            <><Check className="w-4 h-4 mr-2 text-green-600" /> In Cart</>
+                            <><Check className="w-4 h-4 mr-2 text-green-600" /> {t("course.inCart")}</>
                           ) : (
-                            <><ShoppingCart className="w-4 h-4 mr-2" /> Add to Cart</>
+                            <><ShoppingCart className="w-4 h-4 mr-2" /> {t("course.addToCart")}</>
                           )}
                         </Button>
 
@@ -302,7 +304,7 @@ const hasAllPackages = userPackages.includes("all") ||
                           packageType={currentSelection.value}
                           trigger={
                             <Button className="flex-1">
-                              <UserPlus className="w-4 h-4 mr-2" /> Buy Now
+                              <UserPlus className="w-4 h-4 mr-2" /> {t("course.buyNow")}
                             </Button>
                           }
                         />
@@ -317,8 +319,8 @@ const hasAllPackages = userPackages.includes("all") ||
   <Card className="bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800">
     <CardContent className="py-6 text-center">
       <CheckCircle className="w-10 h-10 mx-auto text-green-600 mb-3" />
-      <h3 className="font-semibold mb-2 text-green-800 dark:text-green-400">You're Enrolled!</h3>
-      <p className="text-sm text-green-700 dark:text-green-500">You have access to your purchased content.</p>
+      <h3 className="font-semibold mb-2 text-green-800 dark:text-green-400">{t("course.youreEnrolled")}</h3>
+      <p className="text-sm text-green-700 dark:text-green-500">{t("course.enrolledDesc")}</p>
     </CardContent>
   </Card>
 )}

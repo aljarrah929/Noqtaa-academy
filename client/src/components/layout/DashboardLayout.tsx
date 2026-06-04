@@ -94,7 +94,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     { href: "/teacher", label: t("nav.dashboard"), icon: LayoutDashboard },
     { href: "/teacher/courses", label: t("sidebar.myCourses"), icon: BookOpen },
     { href: "/teacher/join-requests", label: t("sidebar.joinRequests"), icon: UserPlus },
-    { href: "/teacher/courses/new", label: "Create Course", icon: GraduationCap },
+    { href: "/teacher/courses/new", label: t("sidebar.createCourse"), icon: GraduationCap },
   ];
 
   const adminMenuItems = [
@@ -102,7 +102,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     { href: "/admin/approvals", label: t("sidebar.approvals"), icon: FileCheck },
     { href: "/admin/requests", label: t("sidebar.joinRequests"), icon: UserPlus },
     { href: "/admin/teachers", label: t("sidebar.teachers"), icon: Users },
-    { href: "/admin/courses", label: "Manage Courses", icon: BookOpen },
+    { href: "/admin/courses", label: t("sidebar.manageCourses"), icon: BookOpen },
   ];
 
   const superAdminMenuItems = [
