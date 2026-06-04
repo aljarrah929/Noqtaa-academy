@@ -78,6 +78,7 @@ export default function AdminJoinRequests() {
   const [foundStudent, setFoundStudent] = useState<any>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const [selectedPackage, setSelectedPackage] = useState<string>("all");
 
   const { data: requests, isLoading } = useQuery<JoinRequestWithRelations[]>({
     queryKey: ["/api/join-requests"],
@@ -118,8 +119,8 @@ export default function AdminJoinRequests() {
 
   // Mutation لإضافة طالب مباشرة
   const enrollByIdMutation = useMutation({
-    mutationFn: async ({ studentId, courseId }: { studentId: string; courseId: number }) => {
-      await apiRequest("POST", `/api/courses/${courseId}/enrollments`, { studentId });
+    mutationFn: async ({ studentId, courseId, packageType  }: { studentId: string; courseId: number; packageType: string; }) => {
+      await apiRequest("POST", `/api/courses/${courseId}/enrollments`, { studentId, packageType  });
     },
     onSuccess: () => {
       toast({ title: "✅ تم التسجيل", description: "تم تسجيل الطالب في الكورس بنجاح." });
@@ -127,6 +128,7 @@ export default function AdminJoinRequests() {
       setAddByIdOpen(false);
       setSearchId("");
       setFoundStudent(null);
+      
       setSelectedCourseId("");
     },
     onError: (error: Error) => {
@@ -159,12 +161,13 @@ export default function AdminJoinRequests() {
   };
 
   const handleEnrollById = () => {
-    if (!foundStudent || !selectedCourseId) return;
-    enrollByIdMutation.mutate({
-      studentId: foundStudent.id,
-      courseId: parseInt(selectedCourseId),
-    });
-  };
+  if (!foundStudent || !selectedCourseId) return;
+  enrollByIdMutation.mutate({
+    studentId: foundStudent.id,
+    courseId: parseInt(selectedCourseId),
+    packageType: selectedPackage,
+  });
+};
 
   const viewReceipt = async (requestId: number, mimeType?: string) => {
     setReceiptLoading(true);
@@ -419,7 +422,7 @@ export default function AdminJoinRequests() {
       {/* ===== Dialog إضافة طالب بالـ ID ===== */}
       <Dialog open={addByIdOpen} onOpenChange={(open) => {
         setAddByIdOpen(open);
-        if (!open) { setSearchId(""); setFoundStudent(null); setSelectedCourseId(""); setSearchError(""); }
+        if (!open) { setSearchId(""); setFoundStudent(null); setSelectedCourseId(""); setSelectedPackage("all"); setSearchError(""); }
       }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -460,23 +463,59 @@ export default function AdminJoinRequests() {
             )}
 
             {/* اختيار الكورس */}
-            {foundStudent && (
-              <div className="space-y-2">
-                <Label>اختر الكورس</Label>
-                <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الكورس..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {publishedCourses.map((course: any) => (
-                      <SelectItem key={course.id} value={String(course.id)}>
-                        {course.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* اختيار الكورس والقسم */}
+{foundStudent && (
+  <div className="space-y-3">
+    <div className="space-y-2">
+      <Label>اختر الكورس</Label>
+      <Select value={selectedCourseId} onValueChange={(val) => {
+        setSelectedCourseId(val);
+        setSelectedPackage("all");
+      }}>
+        <SelectTrigger>
+          <SelectValue placeholder="اختر الكورس..." />
+        </SelectTrigger>
+        <SelectContent>
+          {publishedCourses.map((course: any) => (
+            <SelectItem key={course.id} value={String(course.id)}>
+              {course.title}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+
+    {/* اختيار القسم */}
+    {selectedCourseId && (() => {
+      const course = publishedCourses.find((c: any) => String(c.id) === selectedCourseId);
+      const packages = [
+        { value: "all", label: "المادة كاملة", price: course?.price },
+        { value: "first", label: "الفيرست", price: course?.priceFirst },
+        { value: "second", label: "السكند", price: course?.priceSecond },
+        { value: "mid", label: "الميد", price: course?.priceMid },
+        { value: "final", label: "الفاينل", price: course?.priceFinal },
+      ].filter(p => p.price && p.price > 0);
+
+      return (
+        <div className="space-y-2">
+          <Label>اختر القسم</Label>
+          <Select value={selectedPackage} onValueChange={setSelectedPackage}>
+            <SelectTrigger>
+              <SelectValue placeholder="اختر القسم..." />
+            </SelectTrigger>
+            <SelectContent>
+              {packages.map(pkg => (
+                <SelectItem key={pkg.value} value={pkg.value}>
+                  {pkg.label} — {pkg.price} JOD
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    })()}
+  </div>
+)}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddByIdOpen(false)}>إلغاء</Button>
