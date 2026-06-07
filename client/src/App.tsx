@@ -48,6 +48,8 @@ import Library from "@/pages/Library";
 import LibraryFileDetail from "@/pages/LibraryFileDetail";
 import TeacherLibrary from "@/pages/teacher/TeacherLibrary";
 import LibraryReader from "@/pages/LibraryReader";
+import Teachers from "@/pages/Teachers";
+import TeacherProfile from "@/pages/TeacherProfile";
 import AdminLibraryPurchases from "@/pages/admin/AdminLibraryPurchases";
 
 const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/select-path", "/onboarding"];
@@ -115,6 +117,8 @@ function Router() {
       <Route path="/library/:id/read" component={LibraryReader} />
       <Route path="/library/:id" component={LibraryFileDetail} />
       <Route path="/library" component={Library} />
+      <Route path="/teachers/:id" component={TeacherProfile} />
+      <Route path="/teachers" component={Teachers} />
       <Route path="*" component={NotFound} />
       
     </Switch>

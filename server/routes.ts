@@ -3783,6 +3783,84 @@ Generate between 5 and 20 questions depending on the content length. Focus on ke
       res.status(500).json({ message: "Failed to get receipt" });
     }
   });
+ app.get("/api/teachers", async (_req, res) => {
+    try {
+      const rows = await db.select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        profileImageUrl: users.profileImageUrl,
+        bio: users.bio,
+      })
+        .from(users)
+        .where(eq(users.role, "TEACHER"));
+ 
+      // لكل أستاذ نضيف عدد الكورسات المنشورة
+      const result = [];
+      for (const tch of rows) {
+        const [cnt] = await db.select({ value: count() })
+          .from(courses)
+          .where(and(eq(courses.teacherId, tch.id), eq(courses.status, "PUBLISHED")));
+        result.push({
+          ...tch,
+          name: [tch.firstName, tch.lastName].filter(Boolean).join(" ") || "أستاذ",
+          courseCount: cnt?.value || 0,
+        });
+      }
+ 
+      res.json(result);
+    } catch (e) {
+      console.error("[Teachers] list error:", e);
+      res.status(500).json({ message: "Failed to fetch teachers" });
+    }
+  });
+ 
+  // (عام) تفاصيل أستاذ واحد + المواد التي يدرّسها
+  app.get("/api/teachers/:id", async (req, res) => {
+    try {
+      const teacherId = req.params.id;
+ 
+      const [tch] = await db.select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        profileImageUrl: users.profileImageUrl,
+        bio: users.bio,
+        role: users.role,
+      })
+        .from(users)
+        .where(eq(users.id, teacherId));
+ 
+      if (!tch || tch.role !== "TEACHER") {
+        return res.status(404).json({ message: "Teacher not found" });
+      }
+ 
+      // المواد المنشورة لهذا الأستاذ
+      const teacherCourses = await db.select({
+        id: courses.id,
+        title: courses.title,
+        description: courses.description,
+        price: courses.price,
+        coverImageUrl: courses.coverImageUrl,
+      })
+        .from(courses)
+        .where(and(eq(courses.teacherId, teacherId), eq(courses.status, "PUBLISHED")));
+ 
+      res.json({
+        id: tch.id,
+        name: [tch.firstName, tch.lastName].filter(Boolean).join(" ") || "أستاذ",
+        email: tch.email,
+        profileImageUrl: tch.profileImageUrl,
+        bio: tch.bio,
+        courses: teacherCourses,
+      });
+    } catch (e) {
+      console.error("[Teachers] detail error:", e);
+      res.status(500).json({ message: "Failed to fetch teacher" });
+    }
+  });
  
   const httpServer = createServer(app);
   return httpServer;

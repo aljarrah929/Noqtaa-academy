@@ -70,6 +70,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name", { length: 100 }),
   lastName: varchar("last_name", { length: 100 }),
   profileImageUrl: text("profile_image_url"),
+  bio: text("bio"),
   role: userRoleEnum("role").notNull().default("STUDENT"),
   universityId: integer("university_id").references(() => universities.id),
   collegeId: integer("college_id").references(() => colleges.id),
