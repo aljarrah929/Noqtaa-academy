@@ -285,7 +285,10 @@ wantToEnrollQ: "Want to enroll?",
       },
       Teachers_profile: {
         dis: "Get to know the platform's teachers and the materials they teach.",
-        search: "Search for a teacher..."
+        search: "Search for a teacher...",
+        course: "Courses",
+        fileviwe:"View file",
+        empty: "There are no teachers currently available.",
       },
       common: {
         loading: "Loading...",
@@ -588,7 +591,10 @@ wantToEnrollQ: "تريد الاشتراك؟",
       },
       Teachers_profile: {
         dis:"تعرّف على أساتذة المنصة والمواد التي يدرّسونها",
-        search: "ابحث عن أستاذ..."
+        search: "ابحث عن أستاذ...",
+        course: "مساقات",
+        fileviwe:"عرض الملف",
+        empty: "لا يوجد معلمين حاليا."
       },
       common: {
         loading: "جارٍ التحميل...",
