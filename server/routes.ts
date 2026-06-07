@@ -3397,8 +3397,10 @@ Generate between 5 and 20 questions depending on the content length. Focus on ke
  
   // هل عند الطالب صلاحية وصول؟ (مشترك بالكورس = مجاني، أو شراء معتمد)
   async function userHasLibraryAccess(userId: string, file: typeof libraryFiles.$inferSelect): Promise<boolean> {
+    console.log("[LIB ACCESS] checking", { userId, fileCourseId: file.courseId, fileId: file.id });
     const enr = await db.select().from(enrollments)
       .where(and(eq(enrollments.studentId, userId), eq(enrollments.courseId, file.courseId)));
+    console.log("[LIB ACCESS] enrollments found:", enr.length);
     if (enr.length > 0) return true;
     const pur = await db.select().from(libraryPurchases)
       .where(and(
