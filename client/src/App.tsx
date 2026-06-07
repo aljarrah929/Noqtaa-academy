@@ -112,7 +112,7 @@ function Router() {
       <Route path="/admin/courses" component={ManageCourses} />
       <Route path="/teacher/library" component={TeacherLibrary} />
       <Route path="/admin/library-purchases" component={AdminLibraryPurchases} />
-      <Route path="/library/:id" component={LibraryFileDetail} />
+      <Route path="/library/:id/read" component={LibraryReader} />
       <Route path="/library/:id" component={LibraryFileDetail} />
       <Route path="/library" component={Library} />
       <Route path="*" component={NotFound} />
