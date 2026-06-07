@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 import { Users, BookOpen, Mail, ArrowLeft, FileText } from "lucide-react";
 
 interface TeacherCourse {
@@ -28,7 +29,7 @@ interface TeacherDetail {
 export default function TeacherProfile() {
   const [, params] = useRoute("/teachers/:id");
   const id = params?.id;
-
+  const { t } = useTranslation();
   const { data: teacher, isLoading } = useQuery<TeacherDetail>({
     queryKey: [`/api/teachers/${id}`],
     enabled: !!id,
@@ -52,9 +53,9 @@ export default function TeacherProfile() {
         <Header />
         <div className="max-w-4xl mx-auto px-4 py-8 text-center">
           <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-xl font-semibold mb-2">الأستاذ غير موجود</h2>
+          <h2 className="text-xl font-semibold mb-2">{t("Teachers_profile.empty3")} </h2>
           <Button asChild>
-            <Link href="/teachers"><ArrowLeft className="w-4 h-4 ml-2" /> رجوع للدليل</Link>
+            <Link href="/teachers"><ArrowLeft className="w-4 h-4 ml-2" /> {t("common.back")}</Link>
           </Button>
         </div>
       </div>
@@ -68,7 +69,7 @@ export default function TeacherProfile() {
       <Header />
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
         <Link href="/teachers">
-          <Button variant="ghost"><ArrowLeft className="w-4 h-4 ml-2" /> رجوع للدليل</Button>
+          <Button variant="ghost"><ArrowLeft className="w-4 h-4 ml-2" /> {t("common.back")} </Button>
         </Link>
 
         {/* بطاقة المعلومات */}
@@ -87,15 +88,15 @@ export default function TeacherProfile() {
                 </p>
               </div>
               <Badge variant="secondary" className="gap-1">
-                <BookOpen className="w-3 h-3" /> {teacher.courses.length} مادة
+                <BookOpen className="w-3 h-3" /> {teacher.courses.length} {t("Teachers_profile.course")}
               </Badge>
             </div>
 
             {/* النبذة */}
             <div className="mt-6">
-              <h2 className="font-semibold mb-2">لمحة عن الأستاذ</h2>
+              <h2 className="font-semibold mb-2">{t("Teachers_profile.About")}</h2>
               <p className="text-muted-foreground whitespace-pre-wrap">
-                {teacher.bio || "لم يقم الأستاذ بإضافة نبذة بعد."}
+                {teacher.bio || t("Teachers_profile.empty1")}
               </p>
             </div>
           </CardContent>
@@ -104,13 +105,13 @@ export default function TeacherProfile() {
         {/* المواد */}
         <div>
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-primary" /> المواد التي يدرّسها
+            <BookOpen className="w-5 h-5 text-primary" />   {t("Teachers_profile.mat")}
           </h2>
 
           {teacher.courses.length === 0 ? (
             <Card className="py-10 border-dashed">
               <CardContent className="text-center text-muted-foreground">
-                لا توجد مواد منشورة حالياً.
+                {t("Teachers_profile.empty2")}
               </CardContent>
             </Card>
           ) : (
