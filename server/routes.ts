@@ -3670,7 +3670,45 @@ Generate between 5 and 20 questions depending on the content length. Focus on ke
       res.status(500).json({ message: "Failed to get download link" });
     }
   });
+ app.get("/api/library/:id/stream", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [file] = await db.select().from(libraryFiles).where(eq(libraryFiles.id, id));
+      if (!file) return res.status(404).json({ message: "File not found" });
  
+      const user = await storage.getUser(req.user.id);
+      const isStaff = user && ["TEACHER", "ADMIN", "SUPER_ADMIN"].includes(user.role) &&
+        (user.role !== "TEACHER" || file.teacherId === user.id);
+ 
+      // نفس بوابة الأمان: لازم صلاحية وصول
+      if (!isStaff && !(await userHasLibraryAccess(req.user.id, file))) {
+        return res.status(403).json({ message: "يجب شراء هذا الملف أولاً" });
+      }
+ 
+      const b2Client = getB2Client();
+      if (!b2Client || !B2_BUCKET_NAME) return res.status(503).json({ message: "Storage not configured" });
+ 
+      const obj = await b2Client.send(new GetObjectCommand({
+        Bucket: B2_BUCKET_NAME,
+        Key: file.fileKey,
+      }));
+ 
+      if (!obj.Body) return res.status(404).json({ message: "File not found" });
+ 
+      // ترويسات تمنع الكاش والتحميل المباشر
+      res.setHeader("Content-Type", file.fileMime || "application/pdf");
+      res.setHeader("Content-Disposition", "inline");
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+      res.setHeader("Pragma", "no-cache");
+      if (obj.ContentLength) res.setHeader("Content-Length", obj.ContentLength);
+ 
+      const stream = obj.Body as NodeJS.ReadableStream;
+      stream.pipe(res);
+    } catch (e: any) {
+      console.error("[Library] stream error:", e?.message || e);
+      res.status(500).json({ message: "Failed to stream file" });
+    }
+  });
   // (أدمن) قائمة طلبات الشراء
   app.get("/api/library/purchases/all", isAuthenticated, async (req: any, res) => {
     try {

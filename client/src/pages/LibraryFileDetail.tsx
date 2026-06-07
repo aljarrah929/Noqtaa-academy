@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRoute, Link } from "wouter";
+import { useRoute, Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,12 +36,12 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 export default function LibraryFileDetail() {
   const [, params] = useRoute("/library/:id");
   const id = params?.id;
+  const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
 
   const [paymentMethod, setPaymentMethod] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
-  const [opening, setOpening] = useState(false);
 
   const { data: file, isLoading } = useQuery<FileDetail>({
     queryKey: [`/api/library/${id}`],
@@ -77,21 +77,9 @@ export default function LibraryFileDetail() {
     },
   });
 
-  const openFile = async () => {
-    setOpening(true);
-    try {
-      const res = await fetch(`/api/library/${id}/download`, { credentials: "include" });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "تعذّر فتح الملف");
-      }
-      const data = await res.json();
-      window.open(data.url, "_blank", "noopener,noreferrer");
-    } catch (e: any) {
-      toast({ title: "خطأ", description: e.message, variant: "destructive" });
-    } finally {
-      setOpening(false);
-    }
+  // يفتح صفحة العارض الآمن بدل رابط الملف المباشر
+  const openFile = () => {
+    setLocation(`/library/${id}/read`);
   };
 
   if (isLoading) {
@@ -169,9 +157,9 @@ export default function LibraryFileDetail() {
                     <CheckCircle2 className="w-5 h-5" />
                     <span className="font-medium">هذا الملف متاح لك</span>
                   </div>
-                  <Button size="lg" className="w-full" onClick={openFile} disabled={opening}>
-                    {opening ? <Loader2 className="w-5 h-5 ml-2 animate-spin" /> : <BookOpen className="w-5 h-5 ml-2" />}
-                    {opening ? "جاري الفتح..." : "قراءة الملف"}
+                  <Button size="lg" className="w-full" onClick={openFile}>
+                    <BookOpen className="w-5 h-5 ml-2" />
+                    قراءة الملف
                   </Button>
                 </div>
 
