@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,7 @@ export default function Profile() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [uploading, setUploading] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [bio, setBio] = useState("");
   const { t } = useTranslation();
 
   const { data: user, isLoading } = useQuery<UserWithCollege>({
@@ -46,6 +48,12 @@ export default function Profile() {
     }
   }, [user?.phoneNumber]);
 
+  useEffect(() => {
+    if (user?.bio) {
+      setBio(user.bio);
+    }
+  }, [user?.bio]);
+
   const phoneMutation = useMutation({
     mutationFn: async (data: { phoneNumber: string }) => {
       const res = await apiRequest("PATCH", "/api/profile/phone", data);
@@ -59,7 +67,24 @@ export default function Profile() {
       toast({ title: t("common.error"), description: error.message, variant: "destructive" });
     },
   });
+const bioMutation = useMutation({
+    mutationFn: async (data: { bio: string }) => {
+      const res = await apiRequest("PATCH", "/api/profile/bio", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({ title: "تم الحفظ", description: "تم تحديث النبذة بنجاح." });
+    },
+    onError: (error: Error) => {
+      toast({ title: t("common.error"), description: error.message, variant: "destructive" });
+    },
+  });
 
+  const handleBioUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    bioMutation.mutate({ bio });
+  };
   const handlePhoneUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     phoneMutation.mutate({ phoneNumber });
@@ -362,6 +387,36 @@ export default function Profile() {
           </CardContent>
         </Card>
       </div>
+      {/* Bio Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>النبذة التعريفية</CardTitle>
+            <CardDescription>نبذة مختصرة تظهر للطلاب في دليل الأساتذة</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleBioUpdate} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="bio">النبذة</Label>
+                <Textarea
+                  id="bio"
+                  placeholder="اكتب نبذة مختصرة عن خبرتك والمواد التي تدرّسها..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={4}
+                  maxLength={1000}
+                />
+                <p className="text-xs text-muted-foreground">{bio.length} / 1000</p>
+              </div>
+              <Button type="submit" disabled={bioMutation.isPending}>
+                {bioMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" /> {t("profile.saving")}</>
+                ) : (
+                  "حفظ النبذة"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
     </DashboardLayout>
   );
 }
