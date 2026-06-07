@@ -70,6 +70,8 @@ export function Header() {
   const navLinks = [
     { href: "/", label: t("nav.home") },
     { href: "/courses", label: t("nav.courses") },
+    { href: "/teachers", label: "دليل الأساتذة" },
+    { href: "/library", label: "المكتبة" },
   ];
 
   const getDashboardLink = () => {
@@ -224,21 +226,6 @@ export function Header() {
                       {t("nav.profile")}
                     </Link>
                   </DropdownMenuItem>
-                  {/* 🔥 الخانات الجديدة اللي ضفناها */}
-<DropdownMenuItem asChild>
-  <Link href="/teachers">
-    <Users className="w-4 h-4 mr-2" />
-    دليل الأساتذة
-  </Link>
-</DropdownMenuItem>
-
-<DropdownMenuItem asChild>
-  <Link href="/library">
-    <FileText className="w-4 h-4 mr-2" />
-    المكتبة (ملفات PDF)
-  </Link>
-</DropdownMenuItem>
-{/* 🔥 نهاية الخانات الجديدة */}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={handleLogout}
