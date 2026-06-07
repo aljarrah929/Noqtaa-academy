@@ -301,7 +301,36 @@ const bioMutation = useMutation({
             </div>
           </CardContent>
         </Card>
-
+         {/* Bio Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>النبذة التعريفية</CardTitle>
+            <CardDescription>نبذة مختصرة تظهر للطلاب في دليل الأساتذة</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleBioUpdate} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="bio">النبذة</Label>
+                <Textarea
+                  id="bio"
+                  placeholder="اكتب نبذة مختصرة عن خبرتك والمواد التي تدرّسها..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={4}
+                  maxLength={1000}
+                />
+                <p className="text-xs text-muted-foreground">{bio.length} / 1000</p>
+              </div>
+              <Button type="submit" disabled={bioMutation.isPending}>
+                {bioMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" /> {t("profile.saving")}</>
+                ) : (
+                  "حفظ النبذة"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
         {/* Phone Number Section */}
         <Card>
           <CardHeader>
@@ -387,36 +416,7 @@ const bioMutation = useMutation({
           </CardContent>
         </Card>
       </div>
-      {/* Bio Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>النبذة التعريفية</CardTitle>
-            <CardDescription>نبذة مختصرة تظهر للطلاب في دليل الأساتذة</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleBioUpdate} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="bio">النبذة</Label>
-                <Textarea
-                  id="bio"
-                  placeholder="اكتب نبذة مختصرة عن خبرتك والمواد التي تدرّسها..."
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  rows={4}
-                  maxLength={1000}
-                />
-                <p className="text-xs text-muted-foreground">{bio.length} / 1000</p>
-              </div>
-              <Button type="submit" disabled={bioMutation.isPending}>
-                {bioMutation.isPending ? (
-                  <><Loader2 className="w-4 h-4 ltr:mr-2 rtl:ml-2 animate-spin" /> {t("profile.saving")}</>
-                ) : (
-                  "حفظ النبذة"
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+      
     </DashboardLayout>
   );
 }
