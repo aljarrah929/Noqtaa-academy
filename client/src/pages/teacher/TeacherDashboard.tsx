@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Users, ArrowRight, CheckCircle, Video } from "lucide-react";
+import { BookOpen, Users, ArrowRight, CheckCircle, Video, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import type { CourseWithRelations } from "@shared/schema";
@@ -138,6 +138,20 @@ export default function TeacherDashboard() {
           </Card>
         </div>
       </div>
+      <Card className="hover-elevate">
+            <Link href="/teacher/library">
+              <CardContent className="pt-6 flex items-center gap-4">
+                <div className="p-3 bg-primary/10 rounded-full">
+                  <FileText className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">ملفات المكتبة</h3>
+                  <p className="text-sm text-muted-foreground">رفع وإدارة ملازم PDF</p>
+                </div>
+                <ArrowRight className="w-5 h-5 ml-auto text-muted-foreground" />
+              </CardContent>
+            </Link>
+          </Card>
     </DashboardLayout>
   );
 }
