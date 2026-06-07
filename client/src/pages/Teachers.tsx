@@ -65,29 +65,29 @@ export default function Teachers() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 bg-muted/20 rounded-2xl border border-dashed">
             <Users className="w-16 h-16 mx-auto text-muted-foreground opacity-50 mb-4" />
-            <h3 className="text-xl font-medium">لا يوجد أساتذة حالياً</h3>
+            <h3 className="text-xl font-medium">{t("Teachers_profile.empty")}</h3>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((t) => (
-              <Card key={t.id} className="group hover:shadow-lg transition-all border-primary/10">
+            {filtered.map((t1) => (
+              <Card key={t1.id} className="group hover:shadow-lg transition-all border-primary/10">
                 <CardContent className="p-6 flex flex-col items-center text-center">
                   <Avatar className="w-24 h-24 mb-4 border-4 border-primary/10">
-                    <AvatarImage src={t.profileImageUrl || undefined} alt={t.name} className="object-cover" />
-                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">{initials(t)}</AvatarFallback>
+                    <AvatarImage src={t1.profileImageUrl || undefined} alt={t1.name} className="object-cover" />
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">{initials(t1)}</AvatarFallback>
                   </Avatar>
-                  <h3 className="font-bold text-lg group-hover:text-primary transition-colors">{t.name}</h3>
+                  <h3 className="font-bold text-lg group-hover:text-primary transition-colors">{t1.name}</h3>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                    <Mail className="w-3 h-3" /> {t.email}
+                    <Mail className="w-3 h-3" /> {t1.email}
                   </p>
-                  {t.bio && (
-                    <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{t.bio}</p>
+                  {t1.bio && (
+                    <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{t1.bio}</p>
                   )}
                   <Badge variant="secondary" className="mt-3 gap-1">
-                    <BookOpen className="w-3 h-3" /> {t.courseCount} مادة
+                    <BookOpen className="w-3 h-3" /> {t1.courseCount} {t("Teachers_profile.course")}
                   </Badge>
-                  <Link href={`/teachers/${t.id}`} className="w-full mt-4">
-                    <Button variant="outline" className="w-full rounded-full">عرض الملف</Button>
+                  <Link href={`/teachers/${t1.id}`} className="w-full mt-4">
+                    <Button variant="outline" className="w-full rounded-full">{t("Teachers_profile.fileviwe")} </Button>
                   </Link>
                 </CardContent>
               </Card>
