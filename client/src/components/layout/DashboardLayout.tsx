@@ -42,6 +42,7 @@ import {
   User,
   UserPlus,
   Landmark,
+  FileText
 } from "lucide-react";
 import { getRoleDisplayName, canAccessAdminDashboard, canAccessTeacherDashboard, canAccessAccountantDashboard, canManageColleges, canManageRoles } from "@/lib/authUtils";
 import { BRAND_NAME } from "@/lib/branding";
@@ -101,6 +102,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     { href: "/admin", label: t("nav.dashboard"), icon: LayoutDashboard },
     { href: "/admin/approvals", label: t("sidebar.approvals"), icon: FileCheck },
     { href: "/admin/requests", label: t("sidebar.joinRequests"), icon: UserPlus },
+    { href: "/admin/library-purchases", label: "Library file requests", icon: FileText },
     { href: "/admin/teachers", label: t("sidebar.teachers"), icon: Users },
     { href: "/admin/courses", label: t("sidebar.manageCourses"), icon: BookOpen },
   ];

@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { FileCheck, Users, BookOpen, ArrowRight, Clock, Settings, Plus } from "lucide-react";
+import { FileCheck, Users, BookOpen, ArrowRight, Clock, Settings, Plus, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -235,6 +235,22 @@ export default function AdminDashboard() {
             </Link>
           </Card>
         </div>
+        <Card className="hover-elevate">
+            <Link href="/admin/library-purchases">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-full">
+                    <FileText className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">طلبات شراء المكتبة</CardTitle>
+                    <p className="text-sm text-muted-foreground">مراجعة إيصالات ملفات PDF</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-5 h-5 text-muted-foreground" />
+              </CardHeader>
+            </Link>
+          </Card>
 
         {Number(stats.pendingApprovals) > 0 && (
           <Card className="border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/10">
