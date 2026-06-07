@@ -43,8 +43,11 @@ import AccountantDashboard from "@/pages/accountant/AccountantDashboard";
 import CollegeOnboarding from "@/pages/CollegeOnboarding";
 import SelectPath from "@/pages/SelectPath";
 import Profile from "@/pages/Profile";
-import Library from "@/pages/Library";
 import SupportWidget from "@/components/SupportWidget";
+import Library from "@/pages/Library";
+import LibraryFileDetail from "@/pages/LibraryFileDetail";
+import TeacherLibrary from "@/pages/teacher/TeacherLibrary";
+import AdminLibraryPurchases from "@/pages/admin/AdminLibraryPurchases";
 
 const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/select-path", "/onboarding"];
 
@@ -106,7 +109,10 @@ function Router() {
       <Route path="/profile" component={Profile} />
       <Route path="/cart" component={Cart} />
       <Route path="/admin/courses" component={ManageCourses} />
-      <Route path="/library" component={Library} />
+      <Route path="/teacher/library" component={TeacherLibrary} />
+<Route path="/admin/library-purchases" component={AdminLibraryPurchases} />
+<Route path="/library/:id" component={LibraryFileDetail} />
+<Route path="/library" component={Library} />
       <Route path="*" component={NotFound} />
       
     </Switch>

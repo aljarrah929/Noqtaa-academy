@@ -263,6 +263,54 @@ export const adminDashboardStatsConfig = pgTable("admin_dashboard_stats_config",
   updatedAt: timestamp("updated_at").defaultNow(),
   updatedByUserId: varchar("updated_by_user_id").references(() => users.id),
 });
+// ==========================================================================
+// الخطوة 1 — أضف هذا البلوك في shared/schema.ts قبل سطر "// Relations"
+// ==========================================================================
+
+// المكتبة الرقمية: ملفات PDF مستقلة مربوطة بكورس
+export const libraryFiles = pgTable("library_files", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  teacherId: varchar("teacher_id").notNull().references(() => users.id),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  price: integer("price").notNull().default(0),
+  fileKey: varchar("file_key", { length: 500 }).notNull(),       // objectKey خاص على B2 (ليس رابط CDN)
+  fileMime: varchar("file_mime", { length: 100 }).notNull().default("application/pdf"),
+  fileSize: integer("file_size").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const libraryPurchases = pgTable("library_purchases", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  fileId: integer("file_id").notNull().references(() => libraryFiles.id, { onDelete: "cascade" }),
+  studentId: varchar("student_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: joinRequestStatusEnum("status").notNull().default("PENDING"),
+  receiptKey: varchar("receipt_key", { length: 500 }).notNull(),
+  receiptMime: varchar("receipt_mime", { length: 100 }).notNull(),
+  receiptSize: integer("receipt_size").notNull(),
+  message: text("message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+}, (table) => [
+  index("idx_library_purchase_file_student").on(table.fileId, table.studentId),
+]);
+
+export const libraryFilesRelations = relations(libraryFiles, ({ one, many }) => ({
+  course: one(courses, { fields: [libraryFiles.courseId], references: [courses.id] }),
+  teacher: one(users, { fields: [libraryFiles.teacherId], references: [users.id] }),
+  purchases: many(libraryPurchases),
+}));
+
+export const libraryPurchasesRelations = relations(libraryPurchases, ({ one }) => ({
+  file: one(libraryFiles, { fields: [libraryPurchases.fileId], references: [libraryFiles.id] }),
+  student: one(users, { fields: [libraryPurchases.studentId], references: [users.id] }),
+}));
+
+// ==========================================================================
+// وأضف هذه الأسطر في آخر الملف (قسم الـ types)
+// ==========================================================================
 
 // Relations
 export const universitiesRelations = relations(universities, ({ many }) => ({
@@ -553,3 +601,6 @@ export type UserWithCollege = User & {
   college?: College;
   major?: Major;
 };
+export const insertLibraryFileSchema = createInsertSchema(libraryFiles).omit({ createdAt: true });
+export type LibraryFile = typeof libraryFiles.$inferSelect;
+export type LibraryPurchase = typeof libraryPurchases.$inferSelect;

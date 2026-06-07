@@ -14,7 +14,7 @@ import OpenAI from "openai";
 import { sendEmail } from "./email";
 import { db } from "./db";
 import { eq, and, count, sql, desc } from "drizzle-orm";
-import { users, courses, colleges, enrollments, joinRequests } from "@shared/schema";
+import { users, courses, colleges, enrollments, joinRequests, libraryFiles, libraryPurchases } from "@shared/schema";
 import { enrollmentRequests } from "@shared/schema";
 
 // Cloudflare R2 configuration
@@ -3362,7 +3362,384 @@ Generate between 5 and 20 questions depending on the content length. Focus on ke
       res.status(500).json({ message: "Failed to delete question" });
     }
   });
-
+   const libraryFileUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 50 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const ok = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ];
+      ok.includes(file.mimetype) ? cb(null, true) : cb(new Error("Only PDF/Word files allowed"));
+    },
+  });
+ 
+  // إيصال الشراء — 10 ميجا
+  const libraryReceiptUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const ok = ["image/png", "image/jpeg", "application/pdf"];
+      ok.includes(file.mimetype) ? cb(null, true) : cb(new Error("Only PNG/JPG/PDF allowed"));
+    },
+  });
+ 
+  // wrapper يحوّل أخطاء multer إلى 400 واضحة بدل 500
+  const withMulter = (mw: any) => (req: any, res: any, next: any) =>
+    mw(req, res, (err: any) => {
+      if (err) {
+        const msg = err?.code === "LIMIT_FILE_SIZE" ? "حجم الملف كبير جداً" : err?.message || "خطأ في الرفع";
+        return res.status(400).json({ message: msg });
+      }
+      next();
+    });
+ 
+  // هل عند الطالب صلاحية وصول؟ (مشترك بالكورس = مجاني، أو شراء معتمد)
+  async function userHasLibraryAccess(userId: string, file: typeof libraryFiles.$inferSelect): Promise<boolean> {
+    const enr = await db.select().from(enrollments)
+      .where(and(eq(enrollments.studentId, userId), eq(enrollments.courseId, file.courseId)));
+    if (enr.length > 0) return true;
+    const pur = await db.select().from(libraryPurchases)
+      .where(and(
+        eq(libraryPurchases.fileId, file.id),
+        eq(libraryPurchases.studentId, userId),
+        eq(libraryPurchases.status, "APPROVED"),
+      ));
+    return pur.length > 0;
+  }
+ 
+  // (أستاذ/أدمن) رفع ملف للمكتبة مربوط بكورس
+  app.post("/api/library/files", isAuthenticated, withMulter(libraryFileUpload.single("file")), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !["TEACHER", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+        return res.status(403).json({ message: "Only teachers/admins can upload library files" });
+      }
+      if (!req.file) return res.status(400).json({ message: "No file provided" });
+ 
+      const { title, description, price, courseId } = req.body;
+      if (!title || !courseId) return res.status(400).json({ message: "title and courseId are required" });
+ 
+      const course = await storage.getCourseById(parseInt(courseId));
+      if (!course) return res.status(404).json({ message: "Course not found" });
+      if (user.role === "TEACHER" && course.teacherId !== user.id) {
+        return res.status(403).json({ message: "You can only attach files to your own courses" });
+      }
+ 
+      const priceNum = Math.min(Math.max(parseInt(price) || 0, 0), 1_000_000);
+ 
+      const b2Client = getB2Client();
+      if (!b2Client || !B2_BUCKET_NAME) return res.status(503).json({ message: "Storage not configured" });
+ 
+      const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const objectKey = `library/${courseId}/${Date.now()}-${safeName}`;
+ 
+      await b2Client.send(new PutObjectCommand({
+        Bucket: B2_BUCKET_NAME, Key: objectKey, Body: req.file.buffer, ContentType: req.file.mimetype,
+      }));
+ 
+      const ok = await verifyObjectExistsInB2(b2Client, objectKey);
+      if (!ok) return res.status(500).json({ message: "Upload verification failed" });
+ 
+      const [record] = await db.insert(libraryFiles).values({
+        courseId: parseInt(courseId),
+        teacherId: user.id,
+        title,
+        description: description || null,
+        price: priceNum,
+        fileKey: objectKey,
+        fileMime: req.file.mimetype,
+        fileSize: req.file.size,
+      }).returning();
+ 
+      res.status(201).json(record);
+    } catch (e: any) {
+      console.error("[Library] upload error:", e?.message || e);
+      res.status(500).json({ message: "Failed to upload library file" });
+    }
+  });
+ 
+  // (أستاذ) ملفاته + اسم الكورس — لخانة الداشبورد
+  app.get("/api/teacher/library", isAuthenticated, async (req: any, res) => {
+    try {
+      const rows = await db.select({
+        id: libraryFiles.id,
+        title: libraryFiles.title,
+        description: libraryFiles.description,
+        price: libraryFiles.price,
+        fileSize: libraryFiles.fileSize,
+        isActive: libraryFiles.isActive,
+        createdAt: libraryFiles.createdAt,
+        courseId: libraryFiles.courseId,
+        courseTitle: courses.title,
+      })
+        .from(libraryFiles)
+        .leftJoin(courses, eq(libraryFiles.courseId, courses.id))
+        .where(eq(libraryFiles.teacherId, req.user.id))
+        .orderBy(desc(libraryFiles.createdAt));
+      res.json(rows);
+    } catch (e) {
+      console.error("[Library] teacher list error:", e);
+      res.status(500).json({ message: "Failed to fetch files" });
+    }
+  });
+ 
+  // حذف ملف (صاحبه أو أدمن)
+  app.delete("/api/library/files/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      const id = parseInt(req.params.id);
+      const [file] = await db.select().from(libraryFiles).where(eq(libraryFiles.id, id));
+      if (!file) return res.status(404).json({ message: "File not found" });
+      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+      if (!isAdmin && file.teacherId !== req.user.id) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      await db.delete(libraryFiles).where(eq(libraryFiles.id, id));
+      res.status(204).send();
+    } catch (e) {
+      console.error("[Library] delete error:", e);
+      res.status(500).json({ message: "Failed to delete file" });
+    }
+  });
+ 
+  // (عام) قائمة المكتبة — ميتاداتا فقط (بدون fileKey) + حالة الوصول للمستخدم
+  app.get("/api/library", async (req: any, res) => {
+    try {
+      const search = (req.query.search as string || "").trim().toLowerCase();
+      const full = await db.select({
+        f: libraryFiles,
+        courseTitle: courses.title,
+        teacherFirst: users.firstName,
+        teacherLast: users.lastName,
+      })
+        .from(libraryFiles)
+        .leftJoin(courses, eq(libraryFiles.courseId, courses.id))
+        .leftJoin(users, eq(libraryFiles.teacherId, users.id))
+        .where(eq(libraryFiles.isActive, true))
+        .orderBy(desc(libraryFiles.createdAt));
+ 
+      const userId = req.user?.id;
+      let list = [];
+      for (const row of full) {
+        if (search && !row.f.title.toLowerCase().includes(search)) continue;
+        list.push({
+          id: row.f.id,
+          title: row.f.title,
+          description: row.f.description,
+          price: row.f.price,
+          fileSize: row.f.fileSize,
+          fileMime: row.f.fileMime,
+          createdAt: row.f.createdAt,
+          courseId: row.f.courseId,
+          courseTitle: row.courseTitle,
+          teacherName: [row.teacherFirst, row.teacherLast].filter(Boolean).join(" ") || "Unknown",
+          hasAccess: userId ? await userHasLibraryAccess(userId, row.f) : false,
+        });
+      }
+      res.json(list);
+    } catch (e) {
+      console.error("[Library] list error:", e);
+      res.status(500).json({ message: "Failed to fetch library" });
+    }
+  });
+ 
+  // (عام) تفاصيل ملف واحد — ميتاداتا + حالة الوصول (بدون رابط الملف)
+  app.get("/api/library/:id", async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [row] = await db.select({
+        f: libraryFiles,
+        courseTitle: courses.title,
+        teacherFirst: users.firstName,
+        teacherLast: users.lastName,
+      })
+        .from(libraryFiles)
+        .leftJoin(courses, eq(libraryFiles.courseId, courses.id))
+        .leftJoin(users, eq(libraryFiles.teacherId, users.id))
+        .where(eq(libraryFiles.id, id));
+      if (!row) return res.status(404).json({ message: "File not found" });
+ 
+      const userId = req.user?.id;
+      let pendingPurchase = false;
+      if (userId) {
+        const pend = await db.select().from(libraryPurchases)
+          .where(and(eq(libraryPurchases.fileId, id), eq(libraryPurchases.studentId, userId), eq(libraryPurchases.status, "PENDING")));
+        pendingPurchase = pend.length > 0;
+      }
+ 
+      res.json({
+        id: row.f.id,
+        title: row.f.title,
+        description: row.f.description,
+        price: row.f.price,
+        fileSize: row.f.fileSize,
+        fileMime: row.f.fileMime,
+        createdAt: row.f.createdAt,
+        courseId: row.f.courseId,
+        courseTitle: row.courseTitle,
+        teacherName: [row.teacherFirst, row.teacherLast].filter(Boolean).join(" ") || "Unknown",
+        hasAccess: userId ? await userHasLibraryAccess(userId, row.f) : false,
+        pendingPurchase,
+      });
+    } catch (e) {
+      console.error("[Library] detail error:", e);
+      res.status(500).json({ message: "Failed to fetch file" });
+    }
+  });
+ 
+  // (طالب) تقديم طلب شراء + إيصال
+  app.post("/api/library/:id/purchase", isAuthenticated, withMulter(libraryReceiptUpload.single("receipt")), async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || user.role !== "STUDENT") {
+        return res.status(403).json({ message: "Only students can purchase files" });
+      }
+      const id = parseInt(req.params.id);
+      const [file] = await db.select().from(libraryFiles).where(eq(libraryFiles.id, id));
+      if (!file) return res.status(404).json({ message: "File not found" });
+      if (!req.file) return res.status(400).json({ message: "Receipt is required" });
+ 
+      if (await userHasLibraryAccess(user.id, file)) {
+        return res.status(400).json({ message: "لديك صلاحية الوصول لهذا الملف مسبقاً" });
+      }
+      const existing = await db.select().from(libraryPurchases)
+        .where(and(eq(libraryPurchases.fileId, id), eq(libraryPurchases.studentId, user.id), eq(libraryPurchases.status, "PENDING")));
+      if (existing.length > 0) {
+        return res.status(400).json({ message: "لديك طلب قيد المراجعة لهذا الملف" });
+      }
+ 
+      const b2Client = getB2Client();
+      if (!b2Client || !B2_BUCKET_NAME) return res.status(503).json({ message: "Storage not configured" });
+ 
+      const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const receiptKey = `library-receipts/${id}/${user.id}/${Date.now()}-${safeName}`;
+      await b2Client.send(new PutObjectCommand({
+        Bucket: B2_BUCKET_NAME, Key: receiptKey, Body: req.file.buffer, ContentType: req.file.mimetype,
+      }));
+ 
+      const [purchase] = await db.insert(libraryPurchases).values({
+        fileId: id,
+        studentId: user.id,
+        status: "PENDING",
+        receiptKey,
+        receiptMime: req.file.mimetype,
+        receiptSize: req.file.size,
+        message: req.body.message || null,
+      }).returning();
+ 
+      res.status(201).json({ id: purchase.id, status: purchase.status });
+    } catch (e: any) {
+      console.error("[Library] purchase error:", e?.message || e);
+      res.status(500).json({ message: "Failed to submit purchase" });
+    }
+  });
+ 
+  // (طالب) تحميل/قراءة الملف — التحقق ثم رابط مؤقت 5 دقائق. كل الأمان هنا.
+  app.get("/api/library/:id/download", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const [file] = await db.select().from(libraryFiles).where(eq(libraryFiles.id, id));
+      if (!file) return res.status(404).json({ message: "File not found" });
+ 
+      const user = await storage.getUser(req.user.id);
+      const isStaff = user && ["TEACHER", "ADMIN", "SUPER_ADMIN"].includes(user.role) &&
+        (user.role !== "TEACHER" || file.teacherId === user.id);
+ 
+      if (!isStaff && !(await userHasLibraryAccess(req.user.id, file))) {
+        return res.status(403).json({ message: "يجب شراء هذا الملف أولاً" });
+      }
+ 
+      const b2Client = getB2Client();
+      if (!b2Client || !B2_BUCKET_NAME) return res.status(503).json({ message: "Storage not configured" });
+ 
+      const url = await getSignedUrl(b2Client, new GetObjectCommand({
+        Bucket: B2_BUCKET_NAME, Key: file.fileKey,
+      }), { expiresIn: 300 });
+ 
+      res.json({ url, mime: file.fileMime });
+    } catch (e: any) {
+      console.error("[Library] download error:", e?.message || e);
+      res.status(500).json({ message: "Failed to get download link" });
+    }
+  });
+ 
+  // (أدمن) قائمة طلبات الشراء
+  app.get("/api/library/purchases/all", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+        return res.status(403).json({ message: "Admins only" });
+      }
+      const rows = await db.select({
+        id: libraryPurchases.id,
+        status: libraryPurchases.status,
+        message: libraryPurchases.message,
+        createdAt: libraryPurchases.createdAt,
+        fileTitle: libraryFiles.title,
+        filePrice: libraryFiles.price,
+        studentFirst: users.firstName,
+        studentLast: users.lastName,
+        studentEmail: users.email,
+      })
+        .from(libraryPurchases)
+        .leftJoin(libraryFiles, eq(libraryPurchases.fileId, libraryFiles.id))
+        .leftJoin(users, eq(libraryPurchases.studentId, users.id))
+        .orderBy(desc(libraryPurchases.createdAt));
+      res.json(rows);
+    } catch (e) {
+      console.error("[Library] purchases list error:", e);
+      res.status(500).json({ message: "Failed to fetch purchases" });
+    }
+  });
+ 
+  // (أدمن) موافقة/رفض
+  app.post("/api/library/purchases/:id/:action", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+        return res.status(403).json({ message: "Admins only" });
+      }
+      const id = parseInt(req.params.id);
+      const action = req.params.action;
+      if (!["approve", "reject"].includes(action)) return res.status(400).json({ message: "Invalid action" });
+ 
+      const [p] = await db.select().from(libraryPurchases).where(eq(libraryPurchases.id, id));
+      if (!p) return res.status(404).json({ message: "Request not found" });
+      if (p.status !== "PENDING") return res.status(400).json({ message: "Already processed" });
+ 
+      await db.update(libraryPurchases)
+        .set({ status: action === "approve" ? "APPROVED" : "REJECTED", reviewedAt: new Date() })
+        .where(eq(libraryPurchases.id, id));
+      res.json({ message: action === "approve" ? "Approved" : "Rejected" });
+    } catch (e) {
+      console.error("[Library] review error:", e);
+      res.status(500).json({ message: "Failed to process request" });
+    }
+  });
+ 
+  // (أدمن) عرض إيصال — رابط مؤقت
+  app.get("/api/library/purchases/:id/receipt", isAuthenticated, async (req: any, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user || !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+        return res.status(403).json({ message: "Admins only" });
+      }
+      const [p] = await db.select().from(libraryPurchases).where(eq(libraryPurchases.id, parseInt(req.params.id)));
+      if (!p) return res.status(404).json({ message: "Not found" });
+      const b2Client = getB2Client();
+      if (!b2Client || !B2_BUCKET_NAME) return res.status(503).json({ message: "Storage not configured" });
+      const url = await getSignedUrl(b2Client, new GetObjectCommand({
+        Bucket: B2_BUCKET_NAME, Key: p.receiptKey,
+      }), { expiresIn: 3600 });
+      res.json({ url, mime: p.receiptMime });
+    } catch (e) {
+      console.error("[Library] receipt error:", e);
+      res.status(500).json({ message: "Failed to get receipt" });
+    }
+  });
+ 
   const httpServer = createServer(app);
   return httpServer;
 }

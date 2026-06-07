@@ -785,6 +785,7 @@ export default function CourseEditor() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="all">Full material (All)</SelectItem>
                         <SelectItem value="first">First material (First)</SelectItem>
                         <SelectItem value="second">Second material  (Second)</SelectItem>
                         <SelectItem value="mid">Midterm material  (Mid)</SelectItem>
