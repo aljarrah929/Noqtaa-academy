@@ -48,8 +48,7 @@ export default function LibraryReader() {
   const [page, setPage] = useState(1);
   const [scale, setScale] = useState(1.3);
 
-  const watermark = `${user?.firstName || ""} ${user?.lastName || ""} • ${user?.email || ""} • ${user?.publicId || ""}`.trim();
-
+  const watermark = user?.publicId || user?.email || "محمي";
   // ===== الحماية: منع right-click و keyboard shortcuts للحفظ/الطباعة =====
   useEffect(() => {
     const blockContext = (e: MouseEvent) => { e.preventDefault(); return false; };
