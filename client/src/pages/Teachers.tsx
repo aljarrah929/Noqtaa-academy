@@ -45,12 +45,12 @@ export default function Teachers() {
           <div>
             <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
               <Users className="w-8 h-8" />{t("nav.teacher")} </h1>
-            <p className="text-muted-foreground mt-2">تعرّف على أساتذة المنصة والمواد التي يدرّسونها</p>
+            <p className="text-muted-foreground mt-2">{t("Teachers_profile.dis")}</p>
           </div>
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="ابحث عن أستاذ..."
+              placeholder={t("Teachers_profile.search")} 
               className="pl-9 bg-background"
               value={search}
               onChange={(e) => setSearch(e.target.value)}

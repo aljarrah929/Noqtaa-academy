@@ -110,6 +110,7 @@ manageCourses: "Manage Courses",
         welcomeToBrand: "Welcome to {{brand}}, {{name}}!",
         passwordPlaceholder: "Min 8 chars, upper, lower, number, special",
         confirmPasswordPlaceholder: "Re-enter your password",
+        
       },
       teacher: {
   dashboard: "Teacher Dashboard",
@@ -282,6 +283,10 @@ wantToEnrollQ: "Want to enroll?",
         avatarUpdatedDesc: "Your profile picture has been updated.",
         avatarUploadFailed: "Failed to upload avatar.",
       },
+      Teachers_profile: {
+        dis: "Get to know the platform's teachers and the materials they teach.",
+        search: "Search for a teacher..."
+      },
       common: {
         loading: "Loading...",
         error: "Error",
@@ -409,6 +414,7 @@ manageCourses: "إدارة المساقات",
         welcomeToBrand: "مرحباً بك في {{brand}}، {{name}}!",
         passwordPlaceholder: "8 أحرف على الأقل، حروف كبيرة وصغيرة، أرقام، ورموز",
         confirmPasswordPlaceholder: "أعد إدخال كلمة المرور",
+        
       },
       teacher: {
   dashboard: "لوحة تحكم المدرس",
@@ -579,6 +585,10 @@ wantToEnrollQ: "تريد الاشتراك؟",
         avatarUpdated: "تم تحديث الصورة",
         avatarUpdatedDesc: "تم تحديث صورة ملفك الشخصي.",
         avatarUploadFailed: "فشل رفع الصورة.",
+      },
+      Teachers_profile: {
+        dis:"تعرّف على أساتذة المنصة والمواد التي يدرّسونها",
+        search: "ابحث عن أستاذ..."
       },
       common: {
         loading: "جارٍ التحميل...",
