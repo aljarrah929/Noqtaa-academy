@@ -3507,7 +3507,7 @@ Generate between 5 and 20 questions depending on the content length. Focus on ke
   });
  
   // (عام) قائمة المكتبة — ميتاداتا فقط (بدون fileKey) + حالة الوصول للمستخدم
-  app.get("/api/library", async (req: any, res) => {
+  app.get("/api/library", isAuthenticated, async (req: any, res) => {
     try {
       const search = (req.query.search as string || "").trim().toLowerCase();
       const full = await db.select({
@@ -3548,7 +3548,7 @@ Generate between 5 and 20 questions depending on the content length. Focus on ke
   });
  
   // (عام) تفاصيل ملف واحد — ميتاداتا + حالة الوصول (بدون رابط الملف)
-  app.get("/api/library/:id", async (req: any, res) => {
+    app.get("/api/library/:id", isAuthenticated, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const [row] = await db.select({
