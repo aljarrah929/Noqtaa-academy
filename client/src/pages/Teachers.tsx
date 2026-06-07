@@ -43,7 +43,7 @@ export default function Teachers() {
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-primary/5 p-6 rounded-2xl border border-primary/10">
           <div>
             <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
-              <Users className="w-8 h-8" /> t("nav.teacher")
+              <Users className="w-8 h-8" />label: t("nav.teacher")
             </h1>
             <p className="text-muted-foreground mt-2">تعرّف على أساتذة المنصة والمواد التي يدرّسونها</p>
           </div>
