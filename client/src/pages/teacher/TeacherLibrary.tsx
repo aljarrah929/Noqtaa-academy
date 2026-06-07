@@ -1,5 +1,4 @@
 import { useState, useRef } from "react";
-import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { FileText, Upload, Trash2, Loader2, Plus } from "lucide-react";
+import { FileText, Upload, Trash2, Loader2, Plus, ImageIcon } from "lucide-react";
 import type { CourseWithRelations } from "@shared/schema";
 
 interface TeacherLibFile {
@@ -31,12 +30,17 @@ interface TeacherLibFile {
 export default function TeacherLibrary() {
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
+  const imageRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("0");
   const [courseId, setCourseId] = useState("");
   const [file, setFile] = useState<File | null>(null);
+
+  // الصورة
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string>("");
 
   const { data: courses } = useQuery<CourseWithRelations[]>({
     queryKey: ["/api/teacher/courses"],
@@ -46,17 +50,44 @@ export default function TeacherLibrary() {
     queryKey: ["/api/teacher/library"],
   });
 
+  const handleCoverSelect = (f: File | null) => {
+    setCoverFile(f);
+    if (f) setCoverPreview(URL.createObjectURL(f));
+    else setCoverPreview("");
+  };
+
   const uploadMutation = useMutation({
     mutationFn: async () => {
-      if (!file) throw new Error("يرجى اختيار ملف");
+      if (!file) throw new Error("يرجى اختيار ملف PDF");
       if (!title.trim()) throw new Error("يرجى إدخال عنوان");
       if (!courseId) throw new Error("يرجى اختيار الكورس المرتبط");
+
+      // 1) لو في صورة غلاف، نرفعها أول عبر endpoint الصور الموجود
+      let coverImageUrl = "";
+      if (coverFile) {
+        const imgForm = new FormData();
+        imgForm.append("file", coverFile);
+        const imgRes = await fetch("/api/b2/image/upload", {
+          method: "POST",
+          body: imgForm,
+          credentials: "include",
+        });
+        if (!imgRes.ok) {
+          const err = await imgRes.json().catch(() => ({}));
+          throw new Error(err.message || "فشل رفع صورة الغلاف");
+        }
+        const imgData = await imgRes.json();
+        coverImageUrl = imgData.cdnUrl;
+      }
+
+      // 2) رفع ملف الـ PDF مع باقي البيانات
       const fd = new FormData();
       fd.append("file", file);
       fd.append("title", title);
       fd.append("description", description);
       fd.append("price", price);
       fd.append("courseId", courseId);
+      fd.append("coverImageUrl", coverImageUrl);
       const res = await fetch("/api/library/files", { method: "POST", body: fd, credentials: "include" });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -68,7 +99,9 @@ export default function TeacherLibrary() {
       queryClient.invalidateQueries({ queryKey: ["/api/teacher/library"] });
       toast({ title: "تم الرفع", description: "تم إضافة الملف للمكتبة بنجاح." });
       setTitle(""); setDescription(""); setPrice("0"); setCourseId(""); setFile(null);
+      handleCoverSelect(null);
       if (fileRef.current) fileRef.current.value = "";
+      if (imageRef.current) imageRef.current.value = "";
     },
     onError: (e: Error) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
@@ -124,11 +157,35 @@ export default function TeacherLibrary() {
                 <Input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} />
               </div>
             </div>
+
+            {/* صورة الغلاف */}
+            <div className="space-y-2">
+              <Label>صورة الغلاف (اختياري)</Label>
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-24 h-32 rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer overflow-hidden bg-muted/30 flex-shrink-0"
+                  onClick={() => imageRef.current?.click()}
+                >
+                  {coverPreview ? (
+                    <img src={coverPreview} alt="preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  اضغط على المربع لاختيار صورة غلاف للملف. إن لم تختر صورة، ستظهر أيقونة PDF افتراضية.
+                </div>
+              </div>
+              <input ref={imageRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => handleCoverSelect(e.target.files?.[0] || null)} />
+            </div>
+
             <div className="space-y-2">
               <Label>الملف (PDF/Word) *</Label>
               <Input ref={fileRef} type="file" accept=".pdf,.doc,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               {file && <p className="text-xs text-muted-foreground">{file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</p>}
             </div>
+
             <Button onClick={() => uploadMutation.mutate()} disabled={uploadMutation.isPending} className="w-full">
               {uploadMutation.isPending
                 ? <><Loader2 className="w-4 h-4 ml-2 animate-spin" /> جاري الرفع...</>

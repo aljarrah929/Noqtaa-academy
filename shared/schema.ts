@@ -278,6 +278,7 @@ export const libraryFiles = pgTable("library_files", {
   fileKey: varchar("file_key", { length: 500 }).notNull(),       // objectKey خاص على B2 (ليس رابط CDN)
   fileMime: varchar("file_mime", { length: 100 }).notNull().default("application/pdf"),
   fileSize: integer("file_size").notNull().default(0),
+  coverImageUrl: varchar("cover_image_url", { length: 500 }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });

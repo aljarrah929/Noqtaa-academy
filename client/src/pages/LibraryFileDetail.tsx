@@ -9,9 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { FileText, ArrowLeft, Lock, CheckCircle2, Clock, Upload, BookOpen, Loader2 } from "lucide-react";
+import {
+  FileText, ArrowLeft, Lock, CheckCircle2, Clock, Upload, BookOpen, Loader2,
+  Smartphone, Wallet, CreditCard, FileCheck,
+} from "lucide-react";
 
 interface FileDetail {
   id: number;
@@ -20,17 +24,22 @@ interface FileDetail {
   price: number;
   fileSize: number;
   fileMime: string;
+  coverImageUrl: string | null;
   courseTitle: string | null;
   teacherName: string;
   hasAccess: boolean;
   pendingPurchase: boolean;
 }
 
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+
 export default function LibraryFileDetail() {
   const [, params] = useRoute("/library/:id");
   const id = params?.id;
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
+
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
   const [opening, setOpening] = useState(false);
 
@@ -41,9 +50,11 @@ export default function LibraryFileDetail() {
 
   const purchaseMutation = useMutation({
     mutationFn: async () => {
-      if (!receipt) throw new Error("يرجى إرفاق إيصال الدفع");
+      if (!paymentMethod) throw new Error("يرجى اختيار طريقة الدفع");
+      if (paymentMethod !== "visa" && !receipt) throw new Error("يرجى إرفاق إيصال الدفع");
       const fd = new FormData();
-      fd.append("receipt", receipt);
+      if (receipt) fd.append("receipt", receipt);
+      fd.append("paymentMethod", paymentMethod);
       const res = await fetch(`/api/library/${id}/purchase`, {
         method: "POST",
         body: fd,
@@ -59,6 +70,7 @@ export default function LibraryFileDetail() {
       queryClient.invalidateQueries({ queryKey: [`/api/library/${id}`] });
       toast({ title: "تم إرسال الطلب", description: "سيتم مراجعة طلبك من قبل الإدارة قريباً." });
       setReceipt(null);
+      setPaymentMethod("");
     },
     onError: (e: Error) => {
       toast({ title: "خطأ", description: e.message, variant: "destructive" });
@@ -121,7 +133,14 @@ export default function LibraryFileDetail() {
           </Button>
         </Link>
 
-        <Card>
+        <Card className="overflow-hidden">
+          {/* صورة الغلاف لو موجودة */}
+          {file.coverImageUrl && (
+            <div className="w-full aspect-[16/7] bg-muted overflow-hidden">
+              <img src={file.coverImageUrl} alt={file.title} className="w-full h-full object-cover" />
+            </div>
+          )}
+
           <CardHeader>
             <div className="flex items-start gap-4">
               <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -178,7 +197,7 @@ export default function LibraryFileDetail() {
                   <p className="text-sm text-amber-700 dark:text-amber-400">سيتم تفعيل الملف بعد موافقة الإدارة على إيصالك.</p>
                 </div>
 
-              /* الحالة 5: شراء */
+              /* الحالة 5: شراء — بطرق الدفع زي السلة */
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between bg-primary/5 rounded-lg p-4">
@@ -187,25 +206,66 @@ export default function LibraryFileDetail() {
                       {file.price > 0 ? `${file.price} JOD` : "مجاناً"}
                     </span>
                   </div>
+
+                  {/* طريقة الدفع */}
                   <div className="space-y-2">
-                    <Label>إيصال الدفع * (صورة أو PDF)</Label>
-                    <Input
-                      type="file"
-                      accept="image/png,image/jpeg,application/pdf"
-                      onChange={(e) => setReceipt(e.target.files?.[0] || null)}
-                    />
-                    {receipt && <p className="text-xs text-muted-foreground">{receipt.name}</p>}
+                    <Label>طريقة الدفع *</Label>
+                    <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                      <SelectTrigger><SelectValue placeholder="اختر طريقة الدفع" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cliq">
+                          <div className="flex items-center gap-2"><Smartphone className="w-4 h-4 text-purple-600" /><span>CliQ Transfer</span></div>
+                        </SelectItem>
+                        <SelectItem value="zain_cash">
+                          <div className="flex items-center gap-2"><Wallet className="w-4 h-4 text-red-600" /><span>Zain Cash</span></div>
+                        </SelectItem>
+                        <SelectItem value="visa">
+                          <div className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-blue-600" /><span>Visa (Coming Soon)</span></div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {/* تعليمات التحويل */}
+                  {(paymentMethod === "cliq" || paymentMethod === "zain_cash") && (
+                    <div className="p-3 bg-muted rounded-md text-sm border">
+                      <p className="font-semibold mb-1">حوّل {file.price} JOD إلى:</p>
+                      {paymentMethod === "cliq" ? (
+                        <p>CliQ Alias: <strong className="bg-background px-1 rounded">NOQTAA</strong></p>
+                      ) : (
+                        <p>Zain Cash: <strong className="bg-background px-1 rounded">0790000000</strong></p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* رفع الإيصال */}
+                  {(paymentMethod === "cliq" || paymentMethod === "zain_cash") && (
+                    <div className="space-y-2">
+                      <Label>إيصال الدفع * (صورة أو PDF)</Label>
+                      <Input
+                        type="file"
+                        accept={ALLOWED_TYPES.join(",")}
+                        onChange={(e) => setReceipt(e.target.files?.[0] || null)}
+                      />
+                      {receipt && (
+                        <p className="text-xs text-green-600 flex items-center gap-1">
+                          <FileCheck className="w-3 h-3" /> {receipt.name}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   <Button
                     size="lg"
                     className="w-full"
                     onClick={() => purchaseMutation.mutate()}
-                    disabled={!receipt || purchaseMutation.isPending}
+                    disabled={!paymentMethod || (paymentMethod !== "visa" && !receipt) || purchaseMutation.isPending}
                   >
                     {purchaseMutation.isPending
                       ? <><Loader2 className="w-5 h-5 ml-2 animate-spin" /> جاري الإرسال...</>
                       : <><Upload className="w-5 h-5 ml-2" /> إرسال طلب الشراء</>}
                   </Button>
+
                   <p className="text-xs text-muted-foreground text-center">
                     إذا كنت مشتركاً في الكورس المرتبط، سيكون الملف متاحاً لك مجاناً تلقائياً.
                   </p>

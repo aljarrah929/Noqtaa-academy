@@ -3397,10 +3397,8 @@ Generate between 5 and 20 questions depending on the content length. Focus on ke
  
   // هل عند الطالب صلاحية وصول؟ (مشترك بالكورس = مجاني، أو شراء معتمد)
   async function userHasLibraryAccess(userId: string, file: typeof libraryFiles.$inferSelect): Promise<boolean> {
-    console.log("[LIB ACCESS] checking", { userId, fileCourseId: file.courseId, fileId: file.id });
     const enr = await db.select().from(enrollments)
       .where(and(eq(enrollments.studentId, userId), eq(enrollments.courseId, file.courseId)));
-    console.log("[LIB ACCESS] enrollments found:", enr.length);
     if (enr.length > 0) return true;
     const pur = await db.select().from(libraryPurchases)
       .where(and(
@@ -3420,7 +3418,8 @@ Generate between 5 and 20 questions depending on the content length. Focus on ke
       }
       if (!req.file) return res.status(400).json({ message: "No file provided" });
  
-      const { title, description, price, courseId } = req.body;
+      const { title, description, price, courseId, coverImageUrl } = req.body;
+
       if (!title || !courseId) return res.status(400).json({ message: "title and courseId are required" });
  
       const course = await storage.getCourseById(parseInt(courseId));
@@ -3453,6 +3452,7 @@ Generate between 5 and 20 questions depending on the content length. Focus on ke
         fileKey: objectKey,
         fileMime: req.file.mimetype,
         fileSize: req.file.size,
+        coverImageUrl: coverImageUrl || null,  
       }).returning();
  
       res.status(201).json(record);
@@ -3533,6 +3533,7 @@ Generate between 5 and 20 questions depending on the content length. Focus on ke
           price: row.f.price,
           fileSize: row.f.fileSize,
           fileMime: row.f.fileMime,
+          coverImageUrl: row.f.coverImageUrl,
           createdAt: row.f.createdAt,
           courseId: row.f.courseId,
           courseTitle: row.courseTitle,
@@ -3578,6 +3579,7 @@ Generate between 5 and 20 questions depending on the content length. Focus on ke
         price: row.f.price,
         fileSize: row.f.fileSize,
         fileMime: row.f.fileMime,
+        coverImageUrl: row.f.coverImageUrl,
         createdAt: row.f.createdAt,
         courseId: row.f.courseId,
         courseTitle: row.courseTitle,
@@ -3628,7 +3630,9 @@ Generate between 5 and 20 questions depending on the content length. Focus on ke
         receiptKey,
         receiptMime: req.file.mimetype,
         receiptSize: req.file.size,
-        message: req.body.message || null,
+        message: req.body.paymentMethod
+          ? `[${req.body.paymentMethod}] ${req.body.message || ""}`.trim()
+          : (req.body.message || null),
       }).returning();
  
       res.status(201).json({ id: purchase.id, status: purchase.status });

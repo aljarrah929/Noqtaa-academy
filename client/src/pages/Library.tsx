@@ -15,6 +15,7 @@ interface LibraryItem {
   description: string | null;
   price: number;
   fileSize: number;
+  coverImageUrl: string | null;
   courseTitle: string | null;
   teacherName: string;
   hasAccess: boolean;
@@ -71,7 +72,15 @@ export default function Library() {
             {filtered.map((book) => (
               <Card key={book.id} className="group hover:shadow-lg transition-all duration-300 border-primary/10 overflow-hidden flex flex-col">
                 <div className="aspect-[3/4] relative bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center overflow-hidden">
-                  <FileText className="w-20 h-20 text-primary/30" />
+                  {book.coverImageUrl ? (
+                    <img
+                      src={book.coverImageUrl}
+                      alt={book.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <FileText className="w-20 h-20 text-primary/30" />
+                  )}
                   <div className="absolute top-3 right-3">
                     <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm">PDF</Badge>
                   </div>
