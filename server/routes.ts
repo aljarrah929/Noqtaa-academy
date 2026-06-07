@@ -2325,7 +2325,25 @@ if (!allowedMimeTypes.includes(contentType)) {
       res.status(500).json({ message: "Failed to update phone number" });
     }
   });
+  app.patch("/api/profile/bio", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { bio } = req.body;
 
+      if (typeof bio !== "string") {
+        return res.status(400).json({ message: "Bio is required" });
+      }
+      if (bio.length > 1000) {
+        return res.status(400).json({ message: "النبذة طويلة جداً (الحد 1000 حرف)" });
+      }
+
+      await db.update(users).set({ bio: bio.trim() }).where(eq(users.id, userId));
+      res.json({ success: true, bio: bio.trim() });
+    } catch (error) {
+      console.error("Error updating bio:", error);
+      res.status(500).json({ message: "Failed to update bio" });
+    }
+  });
   // ============ JOIN REQUESTS ============
   
   // Multer config for join request receipt uploads (memory storage, 10MB max)
