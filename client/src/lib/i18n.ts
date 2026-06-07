@@ -14,6 +14,8 @@ const resources = {
         login: "Log in",
         lightMode: "Light Mode",
         darkMode: "Dark Mode",
+        library: "library",
+        teacher: "Teachers",
       },
       sidebar: {
         student: "Student",
@@ -310,6 +312,8 @@ wantToEnrollQ: "Want to enroll?",
         login: "تسجيل الدخول",
         lightMode: "الوضع الفاتح",
         darkMode: "الوضع الداكن",
+        library: "المكتبة",
+        teacher: "المدرسين",
       },
       sidebar: {
         student: "الطالب",
