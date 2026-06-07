@@ -121,7 +121,20 @@ export default function TeacherDashboard() {
               </CardContent>
             </Link>
           </Card>
-
+            <Card className="hover-elevate">
+            <Link href="/teacher/library">
+              <CardContent className="pt-6 flex items-center gap-4">
+                <div className="p-3 bg-primary/10 rounded-full">
+                  <FileText className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">ملفات المكتبة</h3>
+                  <p className="text-sm text-muted-foreground">رفع وإدارة ملازم PDF</p>
+                </div>
+                <ArrowRight className="w-5 h-5 ml-auto text-muted-foreground" />
+              </CardContent>
+            </Link>
+          </Card>
           <Card className="hover-elevate">
             <Link href="/courses">
               <CardContent className="pt-6 flex items-center gap-4">
@@ -138,20 +151,6 @@ export default function TeacherDashboard() {
           </Card>
         </div>
       </div>
-      <Card className="hover-elevate">
-            <Link href="/teacher/library">
-              <CardContent className="pt-6 flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-full">
-                  <FileText className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">ملفات المكتبة</h3>
-                  <p className="text-sm text-muted-foreground">رفع وإدارة ملازم PDF</p>
-                </div>
-                <ArrowRight className="w-5 h-5 ml-auto text-muted-foreground" />
-              </CardContent>
-            </Link>
-          </Card>
     </DashboardLayout>
   );
 }
