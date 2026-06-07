@@ -70,8 +70,8 @@ export function Header() {
   const navLinks = [
     { href: "/", label: t("nav.home") },
     { href: "/courses", label: t("nav.courses") },
-    { href: "/teachers", label: "nav.teacher" },
-    { href: "/library", label: "nav.library" },
+    { href: "/teachers", label: t("nav.teacher") },
+    { href: "/library", label: t("nav.library") },
   ];
 
   const getDashboardLink = () => {
