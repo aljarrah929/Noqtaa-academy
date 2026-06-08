@@ -40,7 +40,8 @@ export default function LibraryFileDetail() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
-   const { t } = useTranslation();
+  const { t } = useTranslation();
+
   const [paymentMethod, setPaymentMethod] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
 
@@ -51,8 +52,8 @@ export default function LibraryFileDetail() {
 
   const purchaseMutation = useMutation({
     mutationFn: async () => {
-      if (!paymentMethod) throw new Error("يرجى اختيار طريقة الدفع");
-      if (paymentMethod !== "visa" && !receipt) throw new Error("يرجى إرفاق إيصال الدفع");
+      if (!paymentMethod) throw new Error(t("Teachers_profile.selectPaymentErr"));
+      if (paymentMethod !== "visa" && !receipt) throw new Error(t("Teachers_profile.receiptErr"));
       const fd = new FormData();
       if (receipt) fd.append("receipt", receipt);
       fd.append("paymentMethod", paymentMethod);
@@ -63,18 +64,18 @@ export default function LibraryFileDetail() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "فشل إرسال الطلب");
+        throw new Error(err.message || t("Teachers_profile.submitFailed"));
       }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/library/${id}`] });
-      toast({ title: "تم إرسال الطلب", description: "سيتم مراجعة طلبك من قبل الإدارة قريباً." });
+      toast({ title: t("Teachers_profile.requestSent"), description: t("Teachers_profile.requestSentDesc") });
       setReceipt(null);
       setPaymentMethod("");
     },
     onError: (e: Error) => {
-      toast({ title: "خطأ", description: e.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: e.message, variant: "destructive" });
     },
   });
 
@@ -101,9 +102,9 @@ export default function LibraryFileDetail() {
         <Header />
         <div className="max-w-3xl mx-auto px-4 py-8 text-center">
           <FileText className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-xl font-semibold mb-2">الملف غير موجود</h2>
+          <h2 className="text-xl font-semibold mb-2">{t("Teachers_profile.fileNotFound")}</h2>
           <Button asChild>
-            <Link href="/library"><ArrowLeft className="w-4 h-4 ml-2" /> رجوع للمكتبة</Link>
+            <Link href="/library"><ArrowLeft className="w-4 h-4 ml-2" /> {t("Teachers_profile.backToLibrary")}</Link>
           </Button>
         </div>
       </div>
@@ -118,7 +119,7 @@ export default function LibraryFileDetail() {
       <div className="max-w-3xl mx-auto px-4 py-8">
         <Link href="/library">
           <Button variant="ghost" className="mb-6">
-            <ArrowLeft className="w-4 h-4 ml-2" /> رجوع للمكتبة
+            <ArrowLeft className="w-4 h-4 ml-2" /> {t("Teachers_profile.backToLibrary")}
           </Button>
         </Link>
 
@@ -147,7 +148,7 @@ export default function LibraryFileDetail() {
 
           <CardContent className="space-y-6">
             <p className="text-muted-foreground whitespace-pre-wrap">
-              {file.description || "لا يوجد وصف لهذا الملف."}
+              {file.description || t("Teachers_profile.noDescription")}
             </p>
 
             <div className="border-t pt-6">
@@ -156,11 +157,11 @@ export default function LibraryFileDetail() {
                 <div className="text-center space-y-4">
                   <div className="flex items-center justify-center gap-2 text-green-600">
                     <CheckCircle2 className="w-5 h-5" />
-                    <span className="font-medium">هذا الملف متاح لك</span>
+                    <span className="font-medium">{t("Teachers_profile.availableToYou")}</span>
                   </div>
                   <Button size="lg" className="w-full" onClick={openFile}>
                     <BookOpen className="w-5 h-5 ml-2" />
-                    قراءة الملف
+                    {t("Teachers_profile.readFile")}
                   </Button>
                 </div>
 
@@ -168,39 +169,39 @@ export default function LibraryFileDetail() {
               ) : !isAuthenticated ? (
                 <div className="text-center space-y-3">
                   <Lock className="w-12 h-12 mx-auto text-muted-foreground" />
-                  <p className="text-muted-foreground">سجّل الدخول للوصول لهذا الملف</p>
-                  <Button asChild><Link href="/login">تسجيل الدخول</Link></Button>
+                  <p className="text-muted-foreground">{t("Teachers_profile.loginToAccess")}</p>
+                  <Button asChild><Link href="/login">{t("Teachers_profile.login")}</Link></Button>
                 </div>
 
               /* الحالة 3: ليس طالباً */
               ) : user?.role !== "STUDENT" ? (
                 <div className="text-center text-muted-foreground">
-                  هذا الملف متاح للطلاب لشرائه. حسابك ليس حساب طالب.
+                  {t("Teachers_profile.notStudent")}
                 </div>
 
               /* الحالة 4: طلب قيد المراجعة */
               ) : file.pendingPurchase ? (
                 <div className="text-center space-y-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg p-6 border border-amber-200 dark:border-amber-800">
                   <Clock className="w-10 h-10 mx-auto text-amber-600" />
-                  <p className="font-medium text-amber-800 dark:text-amber-300">طلبك قيد المراجعة</p>
-                  <p className="text-sm text-amber-700 dark:text-amber-400">سيتم تفعيل الملف بعد موافقة الإدارة على إيصالك.</p>
+                  <p className="font-medium text-amber-800 dark:text-amber-300">{t("Teachers_profile.pendingTitle")}</p>
+                  <p className="text-sm text-amber-700 dark:text-amber-400">{t("Teachers_profile.pendingDesc")}</p>
                 </div>
 
               /* الحالة 5: شراء — بطرق الدفع زي السلة */
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between bg-primary/5 rounded-lg p-4">
-                    <span className="font-medium">سعر الملف</span>
+                    <span className="font-medium">{t("Teachers_profile.filePrice")}</span>
                     <span className="font-bold text-primary text-xl">
-                      {file.price > 0 ? `${file.price} JOD` : "مجاناً"}
+                      {file.price > 0 ? `${file.price} JOD` : t("Teachers_profile.free")}
                     </span>
                   </div>
 
                   {/* طريقة الدفع */}
                   <div className="space-y-2">
-                    <Label>طريقة الدفع *</Label>
+                    <Label>{t("Teachers_profile.paymentMethod")}</Label>
                     <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                      <SelectTrigger><SelectValue placeholder="اختر طريقة الدفع" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t("Teachers_profile.selectPayment")} /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="cliq">
                           <div className="flex items-center gap-2"><Smartphone className="w-4 h-4 text-purple-600" /><span>CliQ Transfer</span></div>
@@ -218,7 +219,7 @@ export default function LibraryFileDetail() {
                   {/* تعليمات التحويل */}
                   {(paymentMethod === "cliq" || paymentMethod === "zain_cash") && (
                     <div className="p-3 bg-muted rounded-md text-sm border">
-                      <p className="font-semibold mb-1">حوّل {file.price} JOD إلى:</p>
+                      <p className="font-semibold mb-1">{t("Teachers_profile.transferTo", { price: file.price })}</p>
                       {paymentMethod === "cliq" ? (
                         <p>CliQ Alias: <strong className="bg-background px-1 rounded">NOQTAA</strong></p>
                       ) : (
@@ -230,7 +231,7 @@ export default function LibraryFileDetail() {
                   {/* رفع الإيصال */}
                   {(paymentMethod === "cliq" || paymentMethod === "zain_cash") && (
                     <div className="space-y-2">
-                      <Label>إيصال الدفع * (صورة أو PDF)</Label>
+                      <Label>{t("Teachers_profile.receiptLabel")}</Label>
                       <Input
                         type="file"
                         accept={ALLOWED_TYPES.join(",")}
@@ -251,12 +252,12 @@ export default function LibraryFileDetail() {
                     disabled={!paymentMethod || (paymentMethod !== "visa" && !receipt) || purchaseMutation.isPending}
                   >
                     {purchaseMutation.isPending
-                      ? <><Loader2 className="w-5 h-5 ml-2 animate-spin" /> جاري الإرسال...</>
-                      : <><Upload className="w-5 h-5 ml-2" /> إرسال طلب الشراء</>}
+                      ? <><Loader2 className="w-5 h-5 ml-2 animate-spin" /> {t("Teachers_profile.sending")}</>
+                      : <><Upload className="w-5 h-5 ml-2" /> {t("Teachers_profile.submitPurchase")}</>}
                   </Button>
 
                   <p className="text-xs text-muted-foreground text-center">
-                    إذا كنت مشتركاً في الكورس المرتبط، سيكون الملف متاحاً لك مجاناً تلقائياً.
+                    {t("Teachers_profile.enrolledFree")}
                   </p>
                 </div>
               )}
