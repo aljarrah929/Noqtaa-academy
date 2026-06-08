@@ -99,7 +99,7 @@ export default function Library() {
                     {book.title}
                   </h3>
                   {book.courseTitle && (
-                    <p className="text-xs text-muted-foreground mb-2">{t("Teachers_profile.Linked")}{book.courseTitle}</p>
+                    <p className="text-xs text-muted-foreground mb-2"> {t("Teachers_profile.Linked")} {book.courseTitle}</p>
                   )}
                   <p className="text-sm text-muted-foreground mb-4 line-clamp-2 flex-1">
                     {book.description || t("Teachers_profile.book")}
