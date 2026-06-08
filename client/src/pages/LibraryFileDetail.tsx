@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 import { queryClient } from "@/lib/queryClient";
 import {
   FileText, ArrowLeft, Lock, CheckCircle2, Clock, Upload, BookOpen, Loader2,
@@ -39,7 +40,7 @@ export default function LibraryFileDetail() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
-
+   const { t } = useTranslation();
   const [paymentMethod, setPaymentMethod] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
 
@@ -137,7 +138,7 @@ export default function LibraryFileDetail() {
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-1">{file.title}</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {file.teacherName}{file.courseTitle ? ` • مرتبط بكورس: ${file.courseTitle}` : ""} • {sizeMB} MB
+                  {file.teacherName}{file.courseTitle ? ` {t("Teachers_profile.Linked")} ${file.courseTitle}` : ""} • {sizeMB} MB
                 </p>
               </div>
               <Badge variant="secondary">PDF</Badge>
