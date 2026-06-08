@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Search, BookOpen, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Header } from "@/components/layout/Header";
 
@@ -23,7 +24,7 @@ interface LibraryItem {
 
 export default function Library() {
   const [searchQuery, setSearchQuery] = useState("");
-
+  const { t } = useTranslation();
   const { data: items, isLoading } = useQuery<LibraryItem[]>({
     queryKey: ["/api/library"],
   });
@@ -40,14 +41,14 @@ export default function Library() {
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-primary/5 p-6 rounded-2xl border border-primary/10">
           <div>
             <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
-              <BookOpen className="w-8 h-8" /> المكتبة الرقمية
+              <BookOpen className="w-8 h-8" /> {t("Teachers_profile.Library")}
             </h1>
-            <p className="text-muted-foreground mt-2">تصفح واشترك في الملازم والملفات الأكاديمية</p>
+            <p className="text-muted-foreground mt-2">{t("Teachers_profile.dis2")}</p>
           </div>
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="ابحث عن ملف، ملزمة..."
+              placeholder={t("Teachers_profile.search2")}
               className="pl-9 bg-background"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -64,8 +65,8 @@ export default function Library() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 bg-muted/20 rounded-2xl border border-dashed">
             <FileText className="w-16 h-16 mx-auto text-muted-foreground opacity-50 mb-4" />
-            <h3 className="text-xl font-medium">لا توجد ملفات حالياً</h3>
-            <p className="text-muted-foreground mt-2">سيتم إضافة الملازم قريباً من قبل الأساتذة.</p>
+            <h3 className="text-xl font-medium">{t("Teachers_profile.empty4")}</h3>
+            <p className="text-muted-foreground mt-2">{t("Teachers_profile.dis3")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -87,7 +88,7 @@ export default function Library() {
                   {book.hasAccess && (
                     <div className="absolute top-3 left-3">
                       <Badge className="bg-green-600 text-white gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> متاح
+                        <CheckCircle2 className="w-3 h-3" /> {t("Teachers_profile.avil")}
                       </Badge>
                     </div>
                   )}
@@ -98,19 +99,19 @@ export default function Library() {
                     {book.title}
                   </h3>
                   {book.courseTitle && (
-                    <p className="text-xs text-muted-foreground mb-2">مرتبط بكورس: {book.courseTitle}</p>
+                    <p className="text-xs text-muted-foreground mb-2">{t("Teachers_profile.Linked")}{book.courseTitle}</p>
                   )}
                   <p className="text-sm text-muted-foreground mb-4 line-clamp-2 flex-1">
-                    {book.description || "ملف أكاديمي"}
+                    {book.description || t("Teachers_profile.book")}
                   </p>
 
-                  <div className="flex items-center justify-between mt-auto pt-4 border-t">
+                <div className="flex items-center justify-between mt-auto pt-4 border-t">
                     <span className="font-bold text-primary text-lg">
-                      {book.hasAccess ? "متاح لك" : book.price > 0 ? `${book.price} JOD` : "مجاناً"}
+                      {book.hasAccess ? t("Teachers_profile.avilyou") : book.price > 0 ? `${book.price} JOD` : t("Teachers_profile.free")}
                     </span>
                     <Link href={`/library/${book.id}`}>
                       <Button size="sm" className="rounded-full">
-                        {book.hasAccess ? "قراءة" : "التفاصيل"}
+                        {book.hasAccess ? t("Teachers_profile.read") :t("Teachers_profile.details")}
                       </Button>
                     </Link>
                   </div>
