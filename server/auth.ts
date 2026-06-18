@@ -122,7 +122,6 @@ export async function setupAuth(app: Express) {
         console.log(`[Login] User NOT found for email: ${data.email}`);
         return res.status(401).json({ message: "Invalid email or password" });
       }
-      console.log(`[Login] User FOUND: id=${user.id}, hasPasswordHash=${!!user.passwordHash}`);
       
       if (!user.passwordHash) {
         console.log(`[Login] User has no passwordHash (OAuth-only user)`);
@@ -130,7 +129,6 @@ export async function setupAuth(app: Express) {
       }
 
       const validPassword = await bcrypt.compare(data.password, user.passwordHash);
-      console.log(`[Login] Password comparison result: ${validPassword}`);
       if (!validPassword) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
@@ -140,18 +138,19 @@ export async function setupAuth(app: Express) {
         return res.status(403).json({ message: "Account is disabled" });
       }
 
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
-      await storage.setLoginOtp(user.id, otp, otpExpiry);
-      console.log(`[Login] OTP generated for userId: ${user.id}`);
+      // الدخول المباشر: إنشاء الجلسة بدون OTP
+      req.session.userId = user.id;
+      req.session.save(async (err) => {
+        if (err) {
+          console.error(`[Login] Session save ERROR:`, err);
+          return res.status(500).json({ message: "Failed to save session" });
+        }
+        console.log(`[Login] Session saved successfully for userId: ${user.id}`);
 
-      const emailContent = getOtpEmailContent(otp);
-      sendEmailInBackground({
-        to: user.email,
-        ...emailContent,
+        const userWithCollege = await storage.getUserWithCollege(user.id);
+        res.json(userWithCollege);
       });
 
-      res.json({ requireOtp: true, userId: user.id });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
@@ -160,7 +159,6 @@ export async function setupAuth(app: Express) {
       res.status(500).json({ message: "Failed to log in" });
     }
   });
-
   app.post("/api/auth/resend-otp", async (req, res) => {
     try {
       const { userId } = req.body;
@@ -480,7 +478,9 @@ export async function seedSuperAdmin() {
     passwordHash,
     firstName: "Super",
     lastName: "Admin",
+    universityId: 1,
     collegeId: 1,
+    majorId: 1,
     role: "SUPER_ADMIN",
   });
   console.log("Created SUPER_ADMIN user:", email);
