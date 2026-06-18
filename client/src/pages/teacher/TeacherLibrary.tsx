@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { FileText, Upload, Trash2, Loader2, Plus, ImageIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { CourseWithRelations } from "@shared/schema";
 
 interface TeacherLibFile {
@@ -29,6 +30,7 @@ interface TeacherLibFile {
 
 export default function TeacherLibrary() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLInputElement>(null);
 
@@ -58,9 +60,9 @@ export default function TeacherLibrary() {
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
-      if (!file) throw new Error("يرجى اختيار ملف PDF");
-      if (!title.trim()) throw new Error("يرجى إدخال عنوان");
-      if (!courseId) throw new Error("يرجى اختيار الكورس المرتبط");
+      if (!file) throw new Error(t("library.selectPdfErr"));
+      if (!title.trim()) throw new Error(t("library.enterTitleErr"));
+      if (!courseId) throw new Error(t("library.selectCourseErr"));
 
       // 1) لو في صورة غلاف، نرفعها أول عبر endpoint الصور الموجود
       let coverImageUrl = "";
@@ -74,7 +76,7 @@ export default function TeacherLibrary() {
         });
         if (!imgRes.ok) {
           const err = await imgRes.json().catch(() => ({}));
-          throw new Error(err.message || "فشل رفع صورة الغلاف");
+          throw new Error(err.message || t("library.coverUploadFailed"));
         }
         const imgData = await imgRes.json();
         coverImageUrl = imgData.cdnUrl;
@@ -91,60 +93,60 @@ export default function TeacherLibrary() {
       const res = await fetch("/api/library/files", { method: "POST", body: fd, credentials: "include" });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || "فشل رفع الملف");
+        throw new Error(err.message || t("library.fileUploadFailed"));
       }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teacher/library"] });
-      toast({ title: "تم الرفع", description: "تم إضافة الملف للمكتبة بنجاح." });
+      toast({ title: t("library.uploaded"), description: t("library.uploadedDesc") });
       setTitle(""); setDescription(""); setPrice("0"); setCourseId(""); setFile(null);
       handleCoverSelect(null);
       if (fileRef.current) fileRef.current.value = "";
       if (imageRef.current) imageRef.current.value = "";
     },
-    onError: (e: Error) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(`/api/library/files/${id}`, { method: "DELETE", credentials: "include" });
-      if (!res.ok) throw new Error("فشل الحذف");
+      if (!res.ok) throw new Error(t("library.deleteFailed"));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teacher/library"] });
-      toast({ title: "تم الحذف" });
+      toast({ title: t("library.deleted") });
     },
-    onError: (e: Error) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   return (
-    <DashboardLayout title="ملفات المكتبة">
+    <DashboardLayout title={t("library.filesTitle")}>
       <div className="max-w-4xl mx-auto space-y-8">
         {/* نموذج الرفع */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5" /> رفع ملف جديد للمكتبة
+              <Plus className="w-5 h-5" /> {t("library.uploadNewFile")}
             </CardTitle>
             <CardDescription>
-              ارفع ملف PDF واربطه بكورس. سيكون مجانياً للمشتركين بالكورس، ومدفوعاً لغيرهم.
+              {t("library.uploadDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>عنوان الملف *</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="مثال: ملزمة الوحدة الأولى" />
+              <Label>{t("library.fileTitle")}</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("library.fileTitlePlaceholder")} />
             </div>
             <div className="space-y-2">
-              <Label>الوصف</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="وصف مختصر للملف" />
+              <Label>{t("library.description")}</Label>
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("library.descriptionPlaceholder")} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>الكورس المرتبط *</Label>
+                <Label>{t("library.linkedCourse")}</Label>
                 <Select value={courseId} onValueChange={setCourseId}>
-                  <SelectTrigger><SelectValue placeholder="اختر الكورس" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("library.selectCourse")} /></SelectTrigger>
                   <SelectContent>
                     {(courses || []).map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>
@@ -153,14 +155,14 @@ export default function TeacherLibrary() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>السعر (JOD)</Label>
+                <Label>{t("library.priceJod")}</Label>
                 <Input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} />
               </div>
             </div>
 
             {/* صورة الغلاف */}
             <div className="space-y-2">
-              <Label>صورة الغلاف (اختياري)</Label>
+              <Label>{t("library.coverImage")}</Label>
               <div className="flex items-center gap-4">
                 <div
                   className="w-24 h-32 rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer overflow-hidden bg-muted/30 flex-shrink-0"
@@ -173,7 +175,7 @@ export default function TeacherLibrary() {
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  اضغط على المربع لاختيار صورة غلاف للملف. إن لم تختر صورة، ستظهر أيقونة PDF افتراضية.
+                  {t("library.coverHint")}
                 </div>
               </div>
               <input ref={imageRef} type="file" accept="image/*" className="hidden"
@@ -181,15 +183,15 @@ export default function TeacherLibrary() {
             </div>
 
             <div className="space-y-2">
-              <Label>الملف (PDF/Word) *</Label>
+              <Label>{t("library.fileLabel")}</Label>
               <Input ref={fileRef} type="file" accept=".pdf,.doc,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               {file && <p className="text-xs text-muted-foreground">{file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</p>}
             </div>
 
             <Button onClick={() => uploadMutation.mutate()} disabled={uploadMutation.isPending} className="w-full">
               {uploadMutation.isPending
-                ? <><Loader2 className="w-4 h-4 ml-2 animate-spin" /> جاري الرفع...</>
-                : <><Upload className="w-4 h-4 ml-2" /> رفع الملف</>}
+                ? <><Loader2 className="w-4 h-4 ml-2 animate-spin" /> {t("library.uploading")}</>
+                : <><Upload className="w-4 h-4 ml-2" /> {t("library.uploadFile")}</>}
             </Button>
           </CardContent>
         </Card>
@@ -197,7 +199,7 @@ export default function TeacherLibrary() {
         {/* قائمة الملفات */}
         <div>
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-primary" /> ملفاتي بالمكتبة
+            <FileText className="w-5 h-5 text-primary" /> {t("library.myFiles")}
           </h2>
           {isLoading ? (
             <div className="space-y-3">
@@ -206,7 +208,7 @@ export default function TeacherLibrary() {
           ) : !files || files.length === 0 ? (
             <Card className="py-10 border-dashed">
               <CardContent className="text-center text-muted-foreground">
-                لم ترفع أي ملفات بعد.
+                {t("library.noFilesYet")}
               </CardContent>
             </Card>
           ) : (
@@ -220,10 +222,10 @@ export default function TeacherLibrary() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{f.title}</p>
                       <p className="text-sm text-muted-foreground truncate">
-                        {f.courseTitle ? `كورس: ${f.courseTitle}` : "—"} • {(f.fileSize / 1024 / 1024).toFixed(2)} MB
+                        {f.courseTitle ? t("library.coursePrefix", { title: f.courseTitle }) : "—"} • {(f.fileSize / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
-                    <Badge variant="secondary">{f.price > 0 ? `${f.price} JOD` : "مجاناً"}</Badge>
+                    <Badge variant="secondary">{f.price > 0 ? `${f.price} JOD` : t("library.free")}</Badge>
                     <Button
                       variant="ghost"
                       size="icon"
