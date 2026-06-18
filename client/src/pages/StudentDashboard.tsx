@@ -5,9 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookOpen, ArrowRight, FileText } from "lucide-react";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import type { CourseWithRelations } from "@shared/schema";
 
 export default function StudentDashboard() {
+  const { t } = useTranslation();
+
   // هاد الراوت بيجيب كل اشتراكات الطالب (كورسات وملفات pdf)
   const { data: enrolledItems, isLoading } = useQuery<CourseWithRelations[]>({
     queryKey: ["/api/enrollments/my-courses"],
@@ -18,7 +21,7 @@ export default function StudentDashboard() {
   const pdfFiles = enrolledItems?.filter(item => item.format === "pdf") || [];
 
   return (
-    <DashboardLayout title="لوحة التحكم | دوراتي وملفاتي">
+    <DashboardLayout title={t("studentDashboard.title")}>
       <div className="max-w-6xl mx-auto space-y-12">
         
         {/* ================= قسم الكورسات (الفيديو) ================= */}
@@ -26,11 +29,11 @@ export default function StudentDashboard() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold flex items-center gap-2">
               <BookOpen className="w-6 h-6 text-primary" />
-              الكورسات المسجل بها ({videoCourses.length})
+              {t("studentDashboard.enrolledCourses", { count: videoCourses.length })}
             </h2>
             <Button variant="outline" asChild>
               <Link href="/courses">
-                تصفح الكورسات
+                {t("studentDashboard.browseCourses")}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
             </Button>
@@ -47,7 +50,7 @@ export default function StudentDashboard() {
                   key={course.id}
                   course={course}
                   actionHref={`/courses/${course.id}`}
-                  actionLabel="متابعة التعلم"
+                  actionLabel={t("studentDashboard.continueLearning")}
                 />
               ))}
             </div>
@@ -55,8 +58,8 @@ export default function StudentDashboard() {
             <Card className="py-12 border-dashed bg-muted/30">
               <CardContent className="text-center">
                 <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                <h3 className="font-semibold text-lg mb-2">لا يوجد كورسات</h3>
-                <p className="text-muted-foreground text-sm">لم تقم بالاشتراك في أي كورس بعد.</p>
+                <h3 className="font-semibold text-lg mb-2">{t("studentDashboard.noCourses")}</h3>
+                <p className="text-muted-foreground text-sm">{t("studentDashboard.noCoursesDesc")}</p>
               </CardContent>
             </Card>
           )}
@@ -67,11 +70,11 @@ export default function StudentDashboard() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold flex items-center gap-2">
               <FileText className="w-6 h-6 text-primary" />
-              الملازم وملفات PDF ({pdfFiles.length})
+              {t("studentDashboard.pdfFiles", { count: pdfFiles.length })}
             </h2>
             <Button variant="outline" asChild>
               <Link href="/library">
-                تصفح المكتبة
+                {t("studentDashboard.browseLibrary")}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
             </Button>
@@ -88,7 +91,7 @@ export default function StudentDashboard() {
                   key={file.id}
                   course={file}
                   actionHref={`/courses/${file.id}`}
-                  actionLabel="تصفح الملف"
+                  actionLabel={t("studentDashboard.browseFile")}
                 />
               ))}
             </div>
@@ -96,8 +99,8 @@ export default function StudentDashboard() {
             <Card className="py-12 border-dashed bg-muted/30">
               <CardContent className="text-center">
                 <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                <h3 className="font-semibold text-lg mb-2">لا يوجد ملفات</h3>
-                <p className="text-muted-foreground text-sm">لم تقم بالاشتراك في أي ملزمة أو ملف PDF.</p>
+                <h3 className="font-semibold text-lg mb-2">{t("studentDashboard.noFiles")}</h3>
+                <p className="text-muted-foreground text-sm">{t("studentDashboard.noFilesDesc")}</p>
               </CardContent>
             </Card>
           )}

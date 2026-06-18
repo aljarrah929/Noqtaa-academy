@@ -151,6 +151,19 @@ const resources = {
         libraryPurchasesTitle: "Library Purchase Requests",
         libraryPurchasesDesc: "Review PDF file receipts",
       },
+      studentDashboard: {
+        title: "Dashboard | My Courses & Files",
+        enrolledCourses: "Enrolled Courses ({{count}})",
+        browseCourses: "Browse Courses",
+        continueLearning: "Continue Learning",
+        noCourses: "No Courses",
+        noCoursesDesc: "You haven't enrolled in any course yet.",
+        pdfFiles: "Booklets & PDF Files ({{count}})",
+        browseLibrary: "Browse Library",
+        browseFile: "Browse File",
+        noFiles: "No Files",
+        noFilesDesc: "You haven't enrolled in any booklet or PDF file.",
+      },
       library: {
         // AdminLibraryPurchases
         purchasesTitle: "Library File Purchase Requests",
@@ -614,6 +627,19 @@ const resources = {
         statsUpdateFailed: "فشل تحديث إحصائيات اللوحة.",
         libraryPurchasesTitle: "طلبات شراء المكتبة",
         libraryPurchasesDesc: "مراجعة إيصالات ملفات PDF",
+      },
+      studentDashboard: {
+        title: "لوحة التحكم | دوراتي وملفاتي",
+        enrolledCourses: "الكورسات المسجل بها ({{count}})",
+        browseCourses: "تصفح الكورسات",
+        continueLearning: "متابعة التعلم",
+        noCourses: "لا يوجد كورسات",
+        noCoursesDesc: "لم تقم بالاشتراك في أي كورس بعد.",
+        pdfFiles: "الملازم وملفات PDF ({{count}})",
+        browseLibrary: "تصفح المكتبة",
+        browseFile: "تصفح الملف",
+        noFiles: "لا يوجد ملفات",
+        noFilesDesc: "لم تقم بالاشتراك في أي ملزمة أو ملف PDF.",
       },
       library: {
         // AdminLibraryPurchases
