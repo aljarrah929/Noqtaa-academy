@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRoute, useLocation, Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,7 @@ declare global {
   interface Window { pdfjsLib: any; }
 }
 
-function loadPdfJs(): Promise<any> {
+function loadPdfJs(errMsg: string): Promise<any> {
   return new Promise((resolve, reject) => {
     if (window.pdfjsLib) {
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
@@ -27,7 +28,7 @@ function loadPdfJs(): Promise<any> {
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
       resolve(window.pdfjsLib);
     };
-    script.onerror = () => reject(new Error("تعذّر تحميل محرك العرض"));
+    script.onerror = () => reject(new Error(errMsg));
     document.body.appendChild(script);
   });
 }
@@ -37,6 +38,7 @@ export default function LibraryReader() {
   const id = params?.id;
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const pdfRef = useRef<any>(null);
@@ -48,7 +50,7 @@ export default function LibraryReader() {
   const [page, setPage] = useState(1);
   const [scale, setScale] = useState(1.3);
 
-  const watermark = user?.publicId || user?.email || "محمي";
+  const watermark = user?.publicId || user?.email || t("library.protected");
   // ===== الحماية: منع right-click و keyboard shortcuts للحفظ/الطباعة =====
   useEffect(() => {
     const blockContext = (e: MouseEvent) => { e.preventDefault(); return false; };
@@ -77,13 +79,13 @@ export default function LibraryReader() {
       setLoading(true);
       setError(null);
       try {
-        const pdfjsLib = await loadPdfJs();
+        const pdfjsLib = await loadPdfJs(t("library.engineLoadFailed"));
 
         // نجيب الملف من الـ stream الآمن (credentials للسيشن)
         const res = await fetch(`/api/library/${id}/stream`, { credentials: "include" });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new Error(err.message || "تعذّر فتح الملف");
+          throw new Error(err.message || t("library.fileOpenFailed"));
         }
         const buf = await res.arrayBuffer();
         if (cancelled) return;
@@ -97,14 +99,14 @@ export default function LibraryReader() {
         setLoading(false);
       } catch (e: any) {
         if (!cancelled) {
-          setError(e.message || "حدث خطأ");
+          setError(e.message || t("library.genericError"));
           setLoading(false);
         }
       }
     })();
 
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, t]);
 
   // ===== رسم الصفحة الحالية على canvas مع watermark =====
   const renderPage = useCallback(async () => {
@@ -135,7 +137,7 @@ export default function LibraryReader() {
       ctx.font = "bold 22px sans-serif";
       ctx.translate(canvas.width / 2, canvas.height / 2);
       ctx.rotate(-Math.PI / 6);
-      const text = watermark || "محمي";
+      const text = watermark || t("library.protected");
       for (let y = -canvas.height; y < canvas.height; y += 140) {
         for (let x = -canvas.width; x < canvas.width; x += 360) {
           ctx.fillText(text, x, y);
@@ -151,7 +153,7 @@ export default function LibraryReader() {
     } finally {
       renderingRef.current = false;
     }
-  }, [page, scale, watermark]);
+  }, [page, scale, watermark, t]);
 
   useEffect(() => {
     if (!loading && pdfRef.current) renderPage();
@@ -170,12 +172,12 @@ export default function LibraryReader() {
       {/* شريط علوي */}
       <div className="sticky top-0 z-10 bg-background border-b flex items-center justify-between gap-3 px-4 py-3 shadow-sm">
         <Button variant="ghost" size="sm" onClick={() => setLocation(`/library/${id}`)}>
-          <ArrowRight className="w-4 h-4 ml-1" /> رجوع
+          <ArrowRight className="w-4 h-4 ml-1" /> {t("common.back")}
         </Button>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={zoomOut} title="تصغير"><ZoomOut className="w-4 h-4" /></Button>
-          <Button variant="outline" size="icon" onClick={zoomIn} title="تكبير"><ZoomIn className="w-4 h-4" /></Button>
+          <Button variant="outline" size="icon" onClick={zoomOut} title={t("library.zoomOut")}><ZoomOut className="w-4 h-4" /></Button>
+          <Button variant="outline" size="icon" onClick={zoomIn} title={t("library.zoomIn")}><ZoomIn className="w-4 h-4" /></Button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -192,14 +194,14 @@ export default function LibraryReader() {
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
             <Loader2 className="w-10 h-10 animate-spin" />
-            <p>جاري تحميل الملف...</p>
+            <p>{t("library.loadingFile")}</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
             <AlertCircle className="w-12 h-12 text-destructive" />
             <p className="text-destructive font-medium">{error}</p>
             <Button asChild variant="outline">
-              <Link href={`/library/${id}`}><ArrowLeft className="w-4 h-4 ml-2" /> رجوع لصفحة الملف</Link>
+              <Link href={`/library/${id}`}><ArrowLeft className="w-4 h-4 ml-2" /> {t("library.backToFile")}</Link>
             </Button>
           </div>
         ) : (

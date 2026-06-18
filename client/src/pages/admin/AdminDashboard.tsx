@@ -243,8 +243,8 @@ export default function AdminDashboard() {
                     <FileText className="w-5 h-5 text-indigo-600" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">طلبات شراء المكتبة</CardTitle>
-                    <p className="text-sm text-muted-foreground">مراجعة إيصالات ملفات PDF</p>
+                    <CardTitle className="text-lg">{t("admin.libraryPurchasesTitle")}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{t("admin.libraryPurchasesDesc")}</p>
                   </div>
                 </div>
                 <ArrowRight className="w-5 h-5 text-muted-foreground" />
