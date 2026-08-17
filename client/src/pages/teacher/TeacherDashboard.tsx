@@ -129,7 +129,7 @@ export default function TeacherDashboard() {
                 </div>
                 <div>
                   <h3 className="font-semibold">{t("library.filesTitle")}</h3>
-                  <p className="text-sm text-muted-foreground">رفع وإدارة ملازم PDF</p>
+                  <p className="text-sm text-muted-foreground">{t("library.manegefile")}</p>
                 </div>
                 <ArrowRight className="w-5 h-5 ml-auto text-muted-foreground" />
               </CardContent>
