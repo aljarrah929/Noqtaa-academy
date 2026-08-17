@@ -181,6 +181,7 @@ const resources = {
         receiptOpenFailed: "Couldn't open the receipt",
         // TeacherLibrary
         filesTitle: "Library Files",
+        manegefile: "Upload and manage PDF files",
         uploadNewFile: "Upload a New Library File",
         uploadDesc: "Upload a PDF and link it to a course. It will be free for enrolled students and paid for everyone else.",
         fileTitle: "File Title *",
@@ -658,6 +659,7 @@ const resources = {
         receiptOpenFailed: "تعذّر فتح الإيصال",
         // TeacherLibrary
         filesTitle: "ملفات المكتبة",
+        manegefile: "رفع وإدارة ملفات pdf",
         uploadNewFile: "رفع ملف جديد للمكتبة",
         uploadDesc: "ارفع ملف PDF واربطه بكورس. سيكون مجانياً للمشتركين بالكورس، ومدفوعاً لغيرهم.",
         fileTitle: "عنوان الملف *",
