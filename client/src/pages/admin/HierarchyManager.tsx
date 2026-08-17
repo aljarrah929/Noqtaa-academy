@@ -108,6 +108,7 @@ export default function HierarchyManager() {
   });
 
   // --- Image Upload Handler ---
+  // --- Image Upload Handler ---
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -127,9 +128,11 @@ export default function HierarchyManager() {
     setUploadingLogo(true);
     try {
       const formData = new FormData();
-      formData.append("image", file); // تأكد إن حقل الاستقبال بالباك إند اسمه 'image'
+      // 🔥 التعديل الأول: الباك إند عندك بيستقبل الملف باسم 'file'
+      formData.append("file", file); 
 
-      const response = await fetch("/api/upload/image", {
+      // 🔥 التعديل الثاني: استخدام الراوت الموجود عندك بالسيرفر
+      const response = await fetch("/api/b2/image/upload", {
         method: "POST",
         body: formData,
       });
@@ -139,8 +142,8 @@ export default function HierarchyManager() {
       }
 
       const data = await response.json();
-      // ببحث عن الرابط سواء كان اسمه url أو imageUrl أو cdnUrl
-      const uploadedUrl = data.url || data.imageUrl || data.cdnUrl;
+      // الباك إند عندك برجع الرابط باسم cdnUrl بناءً على الكود اللي بعثته
+      const uploadedUrl = data.cdnUrl;
       
       if (uploadedUrl) {
         setCollegeLogo(uploadedUrl);
