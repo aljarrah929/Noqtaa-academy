@@ -67,6 +67,7 @@ export default function HierarchyManager() {
   const [collegeThemeName, setCollegeThemeName] = useState("");
   const [collegePrimaryColor, setCollegePrimaryColor] = useState("#3B82F6");
   const [collegeSecondaryColor, setCollegeSecondaryColor] = useState("#60A5FA");
+  const [collegeLogo, setCollegeLogo] = useState(""); // 🔥 حقل الصورة الجديد للكلية
 
   // Major States
   const [majorDialogOpen, setMajorDialogOpen] = useState(false);
@@ -155,6 +156,7 @@ export default function HierarchyManager() {
         themeName: collegeThemeName || collegeName,
         primaryColor: collegePrimaryColor,
         secondaryColor: collegeSecondaryColor,
+        logoUrl: collegeLogo || null, // 🔥 إضافة الصورة عند الإنشاء
       });
     },
     onSuccess: () => {
@@ -174,6 +176,7 @@ export default function HierarchyManager() {
         themeName: collegeThemeName || collegeName,
         primaryColor: collegePrimaryColor,
         secondaryColor: collegeSecondaryColor,
+        logoUrl: collegeLogo || null, // 🔥 إضافة الصورة عند التعديل
       });
     },
     onSuccess: () => {
@@ -265,7 +268,7 @@ export default function HierarchyManager() {
     setUniLogo("");
   };
 
-  const openCollegeDialog = (college?: College) => {
+  const openCollegeDialog = (college?: College & { logoUrl?: string | null }) => {
     if (college) {
       setEditingCollege(college);
       setCollegeUniId(String(college.universityId));
@@ -274,6 +277,7 @@ export default function HierarchyManager() {
       setCollegeThemeName(college.themeName || college.name);
       setCollegePrimaryColor(college.primaryColor || "#3B82F6");
       setCollegeSecondaryColor(college.secondaryColor || "#60A5FA");
+      setCollegeLogo(college.logoUrl || ""); // 🔥 تحميل الصورة عند التعديل
     } else {
       setEditingCollege(null);
       setCollegeUniId("");
@@ -282,6 +286,7 @@ export default function HierarchyManager() {
       setCollegeThemeName("");
       setCollegePrimaryColor("#3B82F6");
       setCollegeSecondaryColor("#60A5FA");
+      setCollegeLogo("");
     }
     setCollegeDialogOpen(true);
   };
@@ -295,6 +300,7 @@ export default function HierarchyManager() {
     setCollegeThemeName("");
     setCollegePrimaryColor("#3B82F6");
     setCollegeSecondaryColor("#60A5FA");
+    setCollegeLogo("");
   };
 
   const openMajorDialog = (major?: Major) => {
@@ -381,9 +387,13 @@ export default function HierarchyManager() {
                     data-testid={`university-item-${uni.id}`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Landmark className="w-4 h-4 text-primary" />
-                      </div>
+                      {uni.logoUrl ? (
+                        <img src={uni.logoUrl} alt={uni.name} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Landmark className="w-4 h-4 text-primary" />
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <p className="font-medium truncate">{uni.name}</p>
                         <p className="text-xs text-muted-foreground">{uni.slug}</p>
@@ -425,7 +435,7 @@ export default function HierarchyManager() {
               </div>
             ) : allColleges && allColleges.length > 0 ? (
               <div className="space-y-2">
-                {allColleges.map((college) => {
+                {allColleges.map((college: any) => {
                   const parentUni = universities?.find((u) => u.id === college.universityId);
                   return (
                     <div
@@ -434,12 +444,16 @@ export default function HierarchyManager() {
                       data-testid={`college-item-${college.id}`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                          style={{ backgroundColor: college.primaryColor + "20" }}
-                        >
-                          <Building2 className="w-4 h-4" style={{ color: college.primaryColor }} />
-                        </div>
+                        {college.logoUrl ? (
+                          <img src={college.logoUrl} alt={college.name} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                        ) : (
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: college.primaryColor + "20" }}
+                          >
+                            <Building2 className="w-4 h-4" style={{ color: college.primaryColor }} />
+                          </div>
+                        )}
                         <div className="min-w-0">
                           <p className="font-medium truncate">{college.name}</p>
                           <p className="text-xs text-muted-foreground">
@@ -624,6 +638,19 @@ export default function HierarchyManager() {
                 data-testid="input-college-slug"
               />
             </div>
+            
+            {/* 🔥 حقل رابط الصورة للكلية */}
+            <div className="space-y-2">
+              <Label htmlFor="college-logo">College Image URL (optional)</Label>
+              <Input
+                id="college-logo"
+                value={collegeLogo}
+                onChange={(e) => setCollegeLogo(e.target.value)}
+                placeholder="https://..."
+                data-testid="input-college-logo"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="college-theme">Theme Name</Label>
               <Input
