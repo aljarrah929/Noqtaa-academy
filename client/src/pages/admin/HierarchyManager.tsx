@@ -51,13 +51,16 @@ export default function HierarchyManager() {
   const { toast } = useToast();
   const isAdmin = user ? canAccessAdminDashboard(user.role) : false;
 
+  // University States
   const [uniDialogOpen, setUniDialogOpen] = useState(false);
   const [editingUni, setEditingUni] = useState<University | null>(null);
   const [uniName, setUniName] = useState("");
   const [uniSlug, setUniSlug] = useState("");
   const [uniLogo, setUniLogo] = useState("");
 
+  // College States
   const [collegeDialogOpen, setCollegeDialogOpen] = useState(false);
+  const [editingCollege, setEditingCollege] = useState<College | null>(null);
   const [collegeUniId, setCollegeUniId] = useState("");
   const [collegeName, setCollegeName] = useState("");
   const [collegeSlug, setCollegeSlug] = useState("");
@@ -65,7 +68,9 @@ export default function HierarchyManager() {
   const [collegePrimaryColor, setCollegePrimaryColor] = useState("#3B82F6");
   const [collegeSecondaryColor, setCollegeSecondaryColor] = useState("#60A5FA");
 
+  // Major States
   const [majorDialogOpen, setMajorDialogOpen] = useState(false);
+  const [editingMajor, setEditingMajor] = useState<Major | null>(null);
   const [majorUniId, setMajorUniId] = useState("");
   const [majorCollegeId, setMajorCollegeId] = useState("");
   const [majorName, setMajorName] = useState("");
@@ -95,6 +100,7 @@ export default function HierarchyManager() {
     queryKey: ["/api/majors"],
   });
 
+  // --- University Mutations ---
   const createUniMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/universities", {
@@ -139,6 +145,7 @@ export default function HierarchyManager() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  // --- College Mutations ---
   const createCollegeMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/colleges", {
@@ -158,6 +165,25 @@ export default function HierarchyManager() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  const updateCollegeMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("PATCH", `/api/colleges/${editingCollege!.id}`, {
+        name: collegeName,
+        slug: collegeSlug,
+        universityId: Number(collegeUniId),
+        themeName: collegeThemeName || collegeName,
+        primaryColor: collegePrimaryColor,
+        secondaryColor: collegeSecondaryColor,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/colleges"] });
+      toast({ title: "College updated" });
+      closeCollegeDialog();
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const deleteCollegeMutation = useMutation({
     mutationFn: async (id: number) => {
       await apiRequest("DELETE", `/api/colleges/${id}`);
@@ -170,6 +196,7 @@ export default function HierarchyManager() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  // --- Major Mutations ---
   const createMajorMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("POST", "/api/majors", {
@@ -181,6 +208,22 @@ export default function HierarchyManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/majors"] });
       toast({ title: "Major created" });
+      closeMajorDialog();
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const updateMajorMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("PATCH", `/api/majors/${editingMajor!.id}`, {
+        name: majorName,
+        slug: majorSlug,
+        collegeId: Number(majorCollegeId),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/majors"] });
+      toast({ title: "Major updated" });
       closeMajorDialog();
     },
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
@@ -198,6 +241,7 @@ export default function HierarchyManager() {
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
+  // --- Dialog Handlers ---
   const openUniDialog = (uni?: University) => {
     if (uni) {
       setEditingUni(uni);
@@ -221,8 +265,30 @@ export default function HierarchyManager() {
     setUniLogo("");
   };
 
+  const openCollegeDialog = (college?: College) => {
+    if (college) {
+      setEditingCollege(college);
+      setCollegeUniId(String(college.universityId));
+      setCollegeName(college.name);
+      setCollegeSlug(college.slug);
+      setCollegeThemeName(college.themeName || college.name);
+      setCollegePrimaryColor(college.primaryColor || "#3B82F6");
+      setCollegeSecondaryColor(college.secondaryColor || "#60A5FA");
+    } else {
+      setEditingCollege(null);
+      setCollegeUniId("");
+      setCollegeName("");
+      setCollegeSlug("");
+      setCollegeThemeName("");
+      setCollegePrimaryColor("#3B82F6");
+      setCollegeSecondaryColor("#60A5FA");
+    }
+    setCollegeDialogOpen(true);
+  };
+
   const closeCollegeDialog = () => {
     setCollegeDialogOpen(false);
+    setEditingCollege(null);
     setCollegeUniId("");
     setCollegeName("");
     setCollegeSlug("");
@@ -231,8 +297,27 @@ export default function HierarchyManager() {
     setCollegeSecondaryColor("#60A5FA");
   };
 
+  const openMajorDialog = (major?: Major) => {
+    if (major) {
+      setEditingMajor(major);
+      const parentCol = allColleges?.find(c => c.id === major.collegeId);
+      setMajorUniId(parentCol ? String(parentCol.universityId) : "");
+      setMajorCollegeId(String(major.collegeId));
+      setMajorName(major.name);
+      setMajorSlug(major.slug);
+    } else {
+      setEditingMajor(null);
+      setMajorUniId("");
+      setMajorCollegeId("");
+      setMajorName("");
+      setMajorSlug("");
+    }
+    setMajorDialogOpen(true);
+  };
+
   const closeMajorDialog = () => {
     setMajorDialogOpen(false);
+    setEditingMajor(null);
     setMajorUniId("");
     setMajorCollegeId("");
     setMajorName("");
@@ -269,6 +354,8 @@ export default function HierarchyManager() {
   return (
     <DashboardLayout title="Academic Structure">
       <div className="max-w-5xl mx-auto space-y-8">
+        
+        {/* Universities Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <CardTitle className="flex items-center gap-2">
@@ -319,13 +406,14 @@ export default function HierarchyManager() {
           </CardContent>
         </Card>
 
+        {/* Colleges Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <CardTitle className="flex items-center gap-2">
               <Building2 className="w-5 h-5" />
               Colleges
             </CardTitle>
-            <Button size="sm" onClick={() => setCollegeDialogOpen(true)} data-testid="button-add-college">
+            <Button size="sm" onClick={() => openCollegeDialog()} data-testid="button-add-college">
               <Plus className="w-4 h-4 mr-1" />
               Add College
             </Button>
@@ -360,6 +448,9 @@ export default function HierarchyManager() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button variant="ghost" size="icon" onClick={() => openCollegeDialog(college)} data-testid={`button-edit-college-${college.id}`}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: "college", id: college.id, name: college.name })} data-testid={`button-delete-college-${college.id}`}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
@@ -374,13 +465,14 @@ export default function HierarchyManager() {
           </CardContent>
         </Card>
 
+        {/* Majors Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="w-5 h-5" />
               Majors
             </CardTitle>
-            <Button size="sm" onClick={() => setMajorDialogOpen(true)} data-testid="button-add-major">
+            <Button size="sm" onClick={() => openMajorDialog()} data-testid="button-add-major">
               <Plus className="w-4 h-4 mr-1" />
               Add Major
             </Button>
@@ -413,6 +505,9 @@ export default function HierarchyManager() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button variant="ghost" size="icon" onClick={() => openMajorDialog(major)} data-testid={`button-edit-major-${major.id}`}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: "major", id: major.id, name: major.name })} data-testid={`button-delete-major-${major.id}`}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
@@ -428,6 +523,7 @@ export default function HierarchyManager() {
         </Card>
       </div>
 
+      {/* University Dialog */}
       <Dialog open={uniDialogOpen} onOpenChange={setUniDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -483,10 +579,11 @@ export default function HierarchyManager() {
         </DialogContent>
       </Dialog>
 
+      {/* College Dialog */}
       <Dialog open={collegeDialogOpen} onOpenChange={setCollegeDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add College</DialogTitle>
+            <DialogTitle>{editingCollege ? "Edit College" : "Add College"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -509,7 +606,9 @@ export default function HierarchyManager() {
                 value={collegeName}
                 onChange={(e) => {
                   setCollegeName(e.target.value);
-                  setCollegeSlug(e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""));
+                  if (!editingCollege) {
+                    setCollegeSlug(e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""));
+                  }
                 }}
                 placeholder="e.g. Faculty of Engineering"
                 data-testid="input-college-name"
@@ -577,20 +676,21 @@ export default function HierarchyManager() {
           <DialogFooter>
             <Button variant="outline" onClick={closeCollegeDialog}>Cancel</Button>
             <Button
-              onClick={() => createCollegeMutation.mutate()}
-              disabled={!collegeUniId || !collegeName || !collegeSlug || createCollegeMutation.isPending}
+              onClick={() => editingCollege ? updateCollegeMutation.mutate() : createCollegeMutation.mutate()}
+              disabled={!collegeUniId || !collegeName || !collegeSlug || createCollegeMutation.isPending || updateCollegeMutation.isPending}
               data-testid="button-save-college"
             >
-              {createCollegeMutation.isPending ? "Saving..." : "Create"}
+              {(createCollegeMutation.isPending || updateCollegeMutation.isPending) ? "Saving..." : editingCollege ? "Update" : "Create"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Major Dialog */}
       <Dialog open={majorDialogOpen} onOpenChange={setMajorDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Major</DialogTitle>
+            <DialogTitle>{editingMajor ? "Edit Major" : "Add Major"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
@@ -636,7 +736,9 @@ export default function HierarchyManager() {
                 value={majorName}
                 onChange={(e) => {
                   setMajorName(e.target.value);
-                  setMajorSlug(e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""));
+                  if (!editingMajor) {
+                    setMajorSlug(e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""));
+                  }
                 }}
                 placeholder="e.g. Computer Science"
                 disabled={!majorCollegeId}
@@ -658,11 +760,11 @@ export default function HierarchyManager() {
           <DialogFooter>
             <Button variant="outline" onClick={closeMajorDialog}>Cancel</Button>
             <Button
-              onClick={() => createMajorMutation.mutate()}
-              disabled={!majorCollegeId || !majorName || !majorSlug || createMajorMutation.isPending}
+              onClick={() => editingMajor ? updateMajorMutation.mutate() : createMajorMutation.mutate()}
+              disabled={!majorCollegeId || !majorName || !majorSlug || createMajorMutation.isPending || updateMajorMutation.isPending}
               data-testid="button-save-major"
             >
-              {createMajorMutation.isPending ? "Saving..." : "Create"}
+              {(createMajorMutation.isPending || updateMajorMutation.isPending) ? "Saving..." : editingMajor ? "Update" : "Create"}
             </Button>
           </DialogFooter>
         </DialogContent>
