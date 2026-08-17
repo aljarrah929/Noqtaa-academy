@@ -110,6 +110,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const superAdminMenuItems = [
     { href: "/admin/users", label: t("sidebar.userManagement"), icon: UserCog },
     { href: "/admin/structure", label: t("sidebar.manageUniversities"), icon: Landmark },
+    { href: "/admin/colleges", label: t("sidebar.colleges"), icon: Building2 },
     { href: "/admin/featured-profiles", label: t("sidebar.featuredProfiles"), icon: Star },
     { href: "/admin/home-stats", label: t("sidebar.homeStats"), icon: BarChart3 },
   ];
@@ -133,6 +134,10 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     
     if (canAccessAdminDashboard(user.role)) {
       items.push({ group: t("sidebar.admin"), items: adminMenuItems });
+    }
+    
+    if (canManageRoles(user.role) || canManageColleges(user.role)) {
+      items.push({ group: t("sidebar.superAdmin"), items: superAdminMenuItems });
     }
 
     if (canAccessAccountantDashboard(user.role)) {
