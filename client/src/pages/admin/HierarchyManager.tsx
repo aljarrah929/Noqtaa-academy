@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,8 @@ import {
   Pencil,
   Trash2,
   ShieldAlert,
+  Camera,
+  Loader2,
 } from "lucide-react";
 import { canAccessAdminDashboard } from "@/lib/authUtils";
 import type { University, College, Major } from "@shared/schema";
@@ -67,7 +69,11 @@ export default function HierarchyManager() {
   const [collegeThemeName, setCollegeThemeName] = useState("");
   const [collegePrimaryColor, setCollegePrimaryColor] = useState("#3B82F6");
   const [collegeSecondaryColor, setCollegeSecondaryColor] = useState("#60A5FA");
-  const [collegeLogo, setCollegeLogo] = useState(""); // 🔥 حقل الصورة الجديد للكلية
+  const [collegeLogo, setCollegeLogo] = useState(""); 
+  
+  // 🔥 حالات رفع الصورة
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Major States
   const [majorDialogOpen, setMajorDialogOpen] = useState(false);
@@ -100,6 +106,58 @@ export default function HierarchyManager() {
   const { data: allMajors, isLoading: majorsLoading } = useQuery<Major[]>({
     queryKey: ["/api/majors"],
   });
+
+  // --- Image Upload Handler ---
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast({ title: "Error", description: "Invalid file type. Only images are allowed.", variant: "destructive" });
+      return;
+    }
+
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      toast({ title: "Error", description: "File is too large. Maximum size is 2MB.", variant: "destructive" });
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file); // تأكد إن حقل الاستقبال بالباك إند اسمه 'image'
+
+      const response = await fetch("/api/upload/image", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload image");
+      }
+
+      const data = await response.json();
+      // ببحث عن الرابط سواء كان اسمه url أو imageUrl أو cdnUrl
+      const uploadedUrl = data.url || data.imageUrl || data.cdnUrl;
+      
+      if (uploadedUrl) {
+        setCollegeLogo(uploadedUrl);
+        toast({ title: "Success", description: "Image uploaded successfully" });
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error: any) {
+      console.error("Logo upload error:", error);
+      toast({ title: "Error", description: error.message || "Failed to upload image", variant: "destructive" });
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) {
+        logoInputRef.current.value = "";
+      }
+    }
+  };
 
   // --- University Mutations ---
   const createUniMutation = useMutation({
@@ -156,7 +214,7 @@ export default function HierarchyManager() {
         themeName: collegeThemeName || collegeName,
         primaryColor: collegePrimaryColor,
         secondaryColor: collegeSecondaryColor,
-        logoUrl: collegeLogo || null, // 🔥 إضافة الصورة عند الإنشاء
+        logoUrl: collegeLogo || null,
       });
     },
     onSuccess: () => {
@@ -176,7 +234,7 @@ export default function HierarchyManager() {
         themeName: collegeThemeName || collegeName,
         primaryColor: collegePrimaryColor,
         secondaryColor: collegeSecondaryColor,
-        logoUrl: collegeLogo || null, // 🔥 إضافة الصورة عند التعديل
+        logoUrl: collegeLogo || null, 
       });
     },
     onSuccess: () => {
@@ -277,7 +335,7 @@ export default function HierarchyManager() {
       setCollegeThemeName(college.themeName || college.name);
       setCollegePrimaryColor(college.primaryColor || "#3B82F6");
       setCollegeSecondaryColor(college.secondaryColor || "#60A5FA");
-      setCollegeLogo(college.logoUrl || ""); // 🔥 تحميل الصورة عند التعديل
+      setCollegeLogo(college.logoUrl || ""); 
     } else {
       setEditingCollege(null);
       setCollegeUniId("");
@@ -639,16 +697,48 @@ export default function HierarchyManager() {
               />
             </div>
             
-            {/* 🔥 حقل رابط الصورة للكلية */}
+            {/* 🔥 حقل رفع الصورة الجديد بدلاً من الرابط المباشر */}
             <div className="space-y-2">
-              <Label htmlFor="college-logo">College Image URL (optional)</Label>
-              <Input
-                id="college-logo"
-                value={collegeLogo}
-                onChange={(e) => setCollegeLogo(e.target.value)}
-                placeholder="https://..."
-                data-testid="input-college-logo"
-              />
+              <Label>College Logo</Label>
+              <div className="flex items-center gap-4 mt-1">
+                <div className="relative">
+                  <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center overflow-hidden border">
+                    {collegeLogo ? (
+                      <img src={collegeLogo} alt="Logo" className="w-full h-full object-cover" />
+                    ) : (
+                      <Building2 className="w-6 h-6 text-muted-foreground" />
+                    )}
+                  </div>
+                  {uploadingLogo && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    className="hidden"
+                    onChange={handleLogoUpload}
+                    data-testid="input-college-logo-file"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                  >
+                    {uploadingLogo ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploading...</>
+                    ) : (
+                      <><Camera className="w-4 h-4 mr-2" /> Upload Image</>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -704,7 +794,7 @@ export default function HierarchyManager() {
             <Button variant="outline" onClick={closeCollegeDialog}>Cancel</Button>
             <Button
               onClick={() => editingCollege ? updateCollegeMutation.mutate() : createCollegeMutation.mutate()}
-              disabled={!collegeUniId || !collegeName || !collegeSlug || createCollegeMutation.isPending || updateCollegeMutation.isPending}
+              disabled={!collegeUniId || !collegeName || !collegeSlug || createCollegeMutation.isPending || updateCollegeMutation.isPending || uploadingLogo}
               data-testid="button-save-college"
             >
               {(createCollegeMutation.isPending || updateCollegeMutation.isPending) ? "Saving..." : editingCollege ? "Update" : "Create"}
