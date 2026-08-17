@@ -128,7 +128,7 @@ export default function TeacherDashboard() {
                   <FileText className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">ملفات المكتبة</h3>
+                  <h3 className="font-semibold">{t("library.filesTitle")}</h3>
                   <p className="text-sm text-muted-foreground">رفع وإدارة ملازم PDF</p>
                 </div>
                 <ArrowRight className="w-5 h-5 ml-auto text-muted-foreground" />
