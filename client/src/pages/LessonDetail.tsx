@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
 import { useAuth } from "@/hooks/useAuth";
 import { LockedContentMessage } from "@/components/courses/LessonList";
-import { ProtectedVideo } from "@/components/ProtectedVideo";
+// 🔥 التعديل الأول: استوردنا المشغل الاحترافي اللي عملناه بدل ProtectedVideo
+import CustomVideoPlayer from "@/components/CustomVideoPlayer"; 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -77,18 +78,20 @@ export default function LessonDetail() {
   const isContentLocked = lesson?.locked === true;
   const isCourseLocked = course?.isLocked === true;
   const isLoading = courseLoading || lessonLoading || enrollmentLoading;
-   const hasAccessToLesson = (lesson: any) => {
-  if (!isEnrolled) return false;
-  const lessonPkg = lesson.packageType || "all";
-  return userPackages.includes("all") || userPackages.includes(lessonPkg);
-};
+  
+  const hasAccessToLesson = (lesson: any) => {
+    if (!isEnrolled) return false;
+    const lessonPkg = lesson.packageType || "all";
+    return userPackages.includes("all") || userPackages.includes(lessonPkg);
+  };
+  
   const sortedLessons = course?.lessons?.sort((a, b) => a.orderIndex - b.orderIndex) || [];
   const currentIndex = sortedLessons.findIndex(l => l.id === Number(lessonId));
   const prevLesson = currentIndex > 0 ? sortedLessons[currentIndex - 1] : null;
-const nextLesson = currentIndex < sortedLessons.length - 1 ? sortedLessons[currentIndex + 1] : null;
+  const nextLesson = currentIndex < sortedLessons.length - 1 ? sortedLessons[currentIndex + 1] : null;
 
-const prevLessonAccessible = prevLesson ? hasAccessToLesson(prevLesson) : false;
-const nextLessonAccessible = nextLesson ? hasAccessToLesson(nextLesson) : false;
+  const prevLessonAccessible = prevLesson ? hasAccessToLesson(prevLesson) : false;
+  const nextLessonAccessible = nextLesson ? hasAccessToLesson(nextLesson) : false;
   
   const getContentTypeIcon = (contentType?: string) => {
     switch (contentType) {
@@ -116,7 +119,7 @@ const nextLessonAccessible = nextLesson ? hasAccessToLesson(nextLesson) : false;
 
     switch (lesson.contentType) {
       case "video":
-        // Check if it's a Cloudflare Stream UID (32-character hex string)
+        // Check if it's a Cloudflare Stream UID
         const isCloudflareStreamUid = /^[a-f0-9]{32}$/i.test(lesson.content);
         if (isCloudflareStreamUid) {
           return (
@@ -145,7 +148,7 @@ const nextLessonAccessible = nextLesson ? hasAccessToLesson(nextLesson) : false;
             </div>
           );
         }
-        // Show error state if video failed to load
+
         if (videoError) {
           return (
             <div className="aspect-video rounded-lg overflow-hidden bg-muted flex flex-col items-center justify-center p-8" data-testid="video-player-error">
@@ -169,15 +172,10 @@ const nextLessonAccessible = nextLesson ? hasAccessToLesson(nextLesson) : false;
           );
         }
 
+        // 🔥 التعديل الثاني: استبدال <ProtectedVideo> بـ <CustomVideoPlayer> اللي عملناه
         return (
-          <div data-testid="video-player-native">
-            <ProtectedVideo 
-              src={lesson.content}
-              onError={() => {
-                setVideoError("The video file could not be loaded. It may have been deleted or the link is broken.");
-              }}
-              // شلنا خصائص الـ Watermark من هون كمان عشان الكود يكون نظيف
-            />
+          <div data-testid="video-player-native" className="w-full">
+            <CustomVideoPlayer src={lesson.content} />
           </div>
         );
 
@@ -355,41 +353,40 @@ const nextLessonAccessible = nextLesson ? hasAccessToLesson(nextLesson) : false;
 
         <div className="flex items-center justify-between gap-4">
           {prevLesson ? (
-  prevLessonAccessible ? (
-    <Button variant="outline" asChild>
-      <Link href={`/courses/${courseId}/lessons/${prevLesson.id}`}>
-        <ChevronLeft className="w-4 h-4 mr-1" />
-        Previous: {prevLesson.title}
-      </Link>
-    </Button>
-  ) : (
-    <Button variant="outline" disabled>
-      <Lock className="w-4 h-4 mr-1" />
-      Previous: {prevLesson.title}
-    </Button>
-  )
-) : <div />}
+            prevLessonAccessible ? (
+              <Button variant="outline" asChild>
+                <Link href={`/courses/${courseId}/lessons/${prevLesson.id}`}>
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous: {prevLesson.title}
+                </Link>
+              </Button>
+            ) : (
+              <Button variant="outline" disabled>
+                <Lock className="w-4 h-4 mr-1" />
+                Previous: {prevLesson.title}
+              </Button>
+            )
+          ) : <div />}
 
-{nextLesson ? (
-  nextLessonAccessible ? (
-    <Button asChild>
-      <Link href={`/courses/${courseId}/lessons/${nextLesson.id}`}>
-        Next: {nextLesson.title}
-        <ChevronRight className="w-4 h-4 ml-1" />
-      </Link>
-    </Button>
-  ) : (
-    <Button disabled>
-      <Lock className="w-4 h-4 mr-1" />
-      Next: {nextLesson.title}
-    </Button>
-  )
-) : (
-  <Button variant="outline" asChild>
-    <Link href={`/courses/${courseId}`}>Back to Course</Link>
-  </Button>
-)}
-         
+          {nextLesson ? (
+            nextLessonAccessible ? (
+              <Button asChild>
+                <Link href={`/courses/${courseId}/lessons/${nextLesson.id}`}>
+                  Next: {nextLesson.title}
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </Button>
+            ) : (
+              <Button disabled>
+                <Lock className="w-4 h-4 mr-1" />
+                Next: {nextLesson.title}
+              </Button>
+            )
+          ) : (
+            <Button variant="outline" asChild>
+              <Link href={`/courses/${courseId}`}>Back to Course</Link>
+            </Button>
+          )}
         </div>
       </div>
     </div>
